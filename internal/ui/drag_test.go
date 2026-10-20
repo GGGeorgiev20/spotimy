@@ -27,10 +27,10 @@ func TestReorderDrop(t *testing.T) {
 	}
 }
 
-func TestFmtMins(t *testing.T) {
-	for ms, want := range map[int]string{20000: "1 min", 45 * 60000: "45 min", 2*3600000 + 24*60000: "2 hr 24 min", 3600000: "1 hr"} {
-		if got := FmtMins(ms); got != want {
-			t.Errorf("FmtMins(%d) = %q, want %q", ms, got, want)
+func TestFmtEpisodeLen(t *testing.T) {
+	for ms, want := range map[int]string{20000: "20 sec", 45 * 60000: "45 min", 35*60000 + 42000: "35 min 42 sec", 2*3600000 + 24*60000: "2 hr 24 min", 3600000: "1 hr"} {
+		if got := FmtEpisodeLen(ms); got != want {
+			t.Errorf("FmtEpisodeLen(%d) = %q, want %q", ms, got, want)
 		}
 	}
 }

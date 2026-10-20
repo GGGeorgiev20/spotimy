@@ -74,21 +74,21 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			d := p.header.Layout(gtx, ui.HeaderOpts{
 				Images: ep.Images, Type: "Podcast Episode", Title: ep.Name, Color: p.color, Icon: "note",
 				Meta: func(gtx layout.Context) layout.Dimensions {
-					return p.show.Layout(gtx, ep.ShowName, 16, ui.Bold, ui.ColText, ui.ColNone)
+					return p.show.Layout(gtx, ep.ShowName, 24, ui.Bold, ui.ColText, ui.ColNone)
 				},
 			})
 			p.headerH = d.Size.Y
 			return d
 		case 1:
 			playing := p.playing()
-			return p.actions.Layout(gtx, ui.ActionOpts{ContextURI: p.uri, OnPlay: p.play, Playing: &playing, SaveURI: p.uri})
+			return p.actions.Layout(gtx, ui.ActionOpts{
+				ContextURI: p.uri, OnPlay: p.play, Playing: &playing, SaveURI: p.uri,
+				Above: func(gtx layout.Context) layout.Dimensions { return meta(gtx, ep) },
+			})
 		}
 		return ui.PageInset(gtx, 0, 32, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, ui.Dp(gtx, 800))
 			return ui.Column(gtx,
-				func(gtx layout.Context) layout.Dimensions {
-					return ui.Pad(gtx, 0, 0, 24, 0, func(gtx layout.Context) layout.Dimensions { return meta(gtx, ep) })
-				},
 				func(gtx layout.Context) layout.Dimensions {
 					return ui.Pad(gtx, 0, 0, 12, 0, func(gtx layout.Context) layout.Dimensions {
 						return ui.Text(gtx, "Episode Description", 24, ui.Bold, ui.ColText)
@@ -103,13 +103,13 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func meta(gtx layout.Context, ep *spotify.Episode) layout.Dimensions {
-	s := ui.FmtAdded(ep.ReleaseDate, gtx.Now)
+	s := ui.FmtEpisodeDate(ep.ReleaseDate, gtx.Now)
 	if s != "" {
 		s += " • "
 	}
-	s += ui.FmtMins(ep.DurationMs)
+	s += ui.FmtEpisodeLen(ep.DurationMs)
 	if ep.State == "IN_PROGRESS" {
-		s += " • " + ui.FmtMins(ep.DurationMs-ep.PlayedMs) + " left"
+		s += " • " + ui.FmtEpisodeLen(ep.DurationMs-ep.PlayedMs) + " left"
 	}
 	return ui.Label{Text: s, Size: 14, Color: ui.ColText2}.Layout(gtx)
 }

@@ -74,7 +74,7 @@ func (p *page) more(total int) {
 func about(gtx layout.Context, s *spotify.Show) layout.Dimensions {
 	return ui.Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions { return ui.Text(gtx, "About", 24, ui.Bold, ui.ColText) })
+			return ui.Pad(gtx, 16, 0, 16, 0, func(gtx layout.Context) layout.Dimensions { return ui.Text(gtx, "About", 24, ui.Bold, ui.ColText) })
 		},
 		func(gtx layout.Context) layout.Dimensions {
 			return ui.Label{Text: s.Description, Size: 14, Color: ui.ColText2, MaxLines: -1}.Layout(gtx)
@@ -94,7 +94,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		p.setup(s)
 	}
 	w := gtx.Constraints.Max.X
-	pad, gap := ui.ContentPad(gtx), ui.Dp(gtx, 32)
+	pad, gap := ui.ContentPad(gtx), ui.Dp(gtx, 44)
 	// Wide: episodes left (2fr), About right (1fr); narrow: About comes first.
 	col := (w - 2*pad - gap) / 3
 	wide := w > ui.Dp(gtx, 900) && col >= ui.Dp(gtx, 220)
@@ -116,7 +116,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			d := p.header.Layout(gtx, ui.HeaderOpts{
 				Images: s.Images, Type: "Podcast", Title: s.Name, Color: p.color, Icon: "note",
 				Meta: func(gtx layout.Context) layout.Dimensions {
-					return ui.Text(gtx, s.Publisher, 16, ui.Bold, ui.ColText)
+					return ui.Text(gtx, s.Publisher, 24, ui.Bold, ui.ColText)
 				},
 			})
 			p.headerH = d.Size.Y
@@ -131,7 +131,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			p.aboveH = p.headerH + d.Size.Y
 			return d
 		case i == heading:
-			return ui.PageInset(gtx, 0, 16, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 16, 16, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, "All Episodes", 24, ui.Bold, ui.ColText)
 			})
 		case i < heading:

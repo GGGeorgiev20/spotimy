@@ -241,7 +241,11 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 	if rows == 0 {
 		rows = 1
 	}
-	pad, gapBelow, shift := o.Inset, float32(24), float32(0)
+	// Shelves are 24dp apart on Home and 40dp apart elsewhere.
+	pad, gapBelow, shift := o.Inset, float32(40), float32(0)
+	if o.Carousel {
+		gapBelow = 24
+	}
 	if o.Boxed {
 		pad, gapBelow, shift = 0, 0, 12
 	} else if pad == 0 {
@@ -271,6 +275,11 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 		},
 		Gap(0, gapBelow),
 	)
+}
+
+// HeaderRow draws just the shelf's 48dp header row (a section page's title).
+func (s *Shelf) HeaderRow(gtx layout.Context, o ShelfOpts) layout.Dimensions {
+	return s.header(gtx, o)
 }
 
 func (s *Shelf) header(gtx layout.Context, o ShelfOpts) layout.Dimensions {

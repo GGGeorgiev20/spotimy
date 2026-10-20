@@ -187,6 +187,8 @@ type ActionOpts struct {
 	Extra layout.Widget
 	// Menu items for "…" (nil hides it).
 	Menu func() []MenuItem
+	// Above is a line drawn over the buttons (an episode's date and length).
+	Above layout.Widget
 }
 
 func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
@@ -267,7 +269,13 @@ func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
 		}))
 	}
 	return Pad(gtx, pad, pad, pad, pad, func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
+		row := func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
+		}
+		if o.Above == nil {
+			return row(gtx)
+		}
+		return Column(gtx, o.Above, Gap(0, 16), row)
 	})
 }
 
