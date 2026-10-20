@@ -157,6 +157,7 @@ func Frame(gtx layout.Context) {
 	layoutToasts(gtx, Dp(gtx, 96))
 	layoutModal(gtx)
 	layoutMenus(gtx)
+	layoutHoverTip(gtx)
 	flushClipboard(gtx)
 	savePrefs()
 }
