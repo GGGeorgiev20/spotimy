@@ -27,10 +27,13 @@ const (
 )
 
 type Options struct {
-	ConfigDir   string
-	CacheDir    string
-	ClientToken string
-	Log         *slog.Logger
+	ConfigDir string
+	CacheDir  string
+	Log       *slog.Logger
+
+	// ClientToken supplies the client-token so the daemon and the internal
+	// API client present the same identity. On error the daemon fetches its own.
+	ClientToken func(context.Context) (string, error)
 
 	OnEvent    func(*daemon.ApiEvent) // player events, delivered in order off the player loop
 	OnState    func(State, error)
@@ -80,7 +83,6 @@ func (p *Player) config() *daemon.Config {
 	cfg := &daemon.Config{
 		DeviceName:       "Personal Spotify",
 		DeviceType:       "computer",
-		ClientToken:      p.opts.ClientToken,
 		AudioBackend:     "pulseaudio", // PipeWire serves the pulse protocol too
 		Bitrate:          320,
 		VolumeSteps:      65535,
@@ -93,6 +95,15 @@ func (p *Player) config() *daemon.Config {
 	cfg.Cache.SizeLimit = 1 << 30
 	cfg.Metadata.Enabled = true
 	cfg.Credentials.Type = "interactive"
+	if p.opts.ClientToken != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if tok, err := p.opts.ClientToken(ctx); err == nil {
+			cfg.ClientToken = tok
+		} else {
+			p.opts.Log.Warn("client-token unavailable, daemon will fetch its own", "err", err)
+		}
+	}
 	return cfg
 }
 
@@ -210,6 +221,15 @@ func (p *Player) Stop() {
 		cancel()
 		<-done
 	}
+}
+
+// DeviceID is the persisted Spotify device id ("" before the first run).
+func (p *Player) DeviceID() string {
+	st, err := p.store.Load()
+	if err != nil {
+		return ""
+	}
+	return st.DeviceId
 }
 
 // Logout stops the session, wipes credentials, state and the audio cache,

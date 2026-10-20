@@ -4,20 +4,25 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/GGGeorgiev20/personal-spotify/internal/imgcache"
 	"github.com/GGGeorgiev20/personal-spotify/internal/player"
+	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	"github.com/devgianlu/go-librespot/daemon"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is bound to the frontend. Methods here stay thin: they forward to the
-// player (and, from milestone 2, to internal/spotify).
+// player or to internal/spotify.
 type App struct {
 	ctx    context.Context
 	log    *slog.Logger
 	player *player.Player
+	sp     *spotify.Client
+	img    *imgcache.Cache
 
 	mu       sync.Mutex
 	state    player.State
@@ -31,12 +36,16 @@ type AppState struct {
 	LoginURL string       `json:"loginUrl,omitempty"`
 }
 
-func NewApp(log *slog.Logger, configDir, cacheDir string) *App {
+func NewApp(log *slog.Logger, cfg Config) *App {
 	a := &App{log: log, state: player.StateConnecting}
+	a.img = imgcache.New(filepath.Join(cfg.CacheDir, "images"), 300<<20, log)
 	a.player = player.New(player.Options{
-		ConfigDir: configDir,
-		CacheDir:  cacheDir,
+		ConfigDir: cfg.ConfigDir,
+		CacheDir:  cfg.CacheDir,
 		Log:       log,
+		ClientToken: func(ctx context.Context) (string, error) {
+			return a.sp.ClientToken(ctx)
+		},
 		OnEvent: func(ev *daemon.ApiEvent) {
 			runtime.EventsEmit(a.ctx, "player:event", ev)
 		},
@@ -60,7 +69,26 @@ func NewApp(log *slog.Logger, configDir, cacheDir string) *App {
 			runtime.EventsEmit(a.ctx, "app:state", a.GetState())
 		},
 	})
+
+	id := spotify.DefaultIdentity()
+	id.DeviceID = a.player.DeviceID()
+	if cfg.AppVersion != "" {
+		id.AppVersion = cfg.AppVersion
+	}
+	if cfg.Language != "" {
+		id.Language = cfg.Language
+	}
+	a.sp = spotify.New(id, a.token, log, filepath.Join(cfg.ConfigDir, "operations.json"))
 	return a
+}
+
+// token asks the session for a login5 bearer token.
+func (a *App) token(ctx context.Context) (string, error) {
+	res, err := a.player.Do(ctx, daemon.ApiRequestTypeToken, nil)
+	if err != nil {
+		return "", err
+	}
+	return res.(*daemon.ApiToken).Token, nil
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -83,7 +111,10 @@ func (a *App) OpenLoginURL() {
 	}
 }
 
-func (a *App) Logout() error { return a.player.Logout() }
+func (a *App) Logout() error {
+	a.sp.Reset()
+	return errors.Join(a.player.Logout(), a.img.Clear())
+}
 
 // do forwards a request to the daemon. Payload types must match what the
 // daemon's handler type-asserts (see go-librespot daemon/player.go), or its
@@ -139,4 +170,8 @@ func (a *App) SetRepeat(mode string) error {
 	}
 	_, err := a.do(daemon.ApiRequestTypeSetRepeatingTrack, mode == "track")
 	return err
+}
+
+func (a *App) OpenAccountPage() {
+	runtime.BrowserOpenURL(a.ctx, "https://www.spotify.com/account/overview/")
 }

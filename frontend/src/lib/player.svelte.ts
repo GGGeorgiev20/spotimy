@@ -87,11 +87,3 @@ export const controls = {
   },
   play: (uri: string, skipTo = '') => App.Play(uri, skipTo),
 }
-
-export function fmtTime(ms: number) {
-  const s = Math.floor(ms / 1000)
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const ss = String(s % 60).padStart(2, '0')
-  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`
-}

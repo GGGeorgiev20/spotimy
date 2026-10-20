@@ -1,7 +1,10 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
   import Slider from './Slider.svelte'
-  import { player, playing, position, repeatMode, controls, fmtTime } from '../lib/player.svelte'
+  import { player, playing, position, repeatMode, controls } from '../lib/player.svelte'
+  import { fmtDuration as fmtTime } from '../lib/format'
+  import { img, saved, loadSaved, toggleSaved } from '../lib/api.svelte'
+  import { openUri } from '../lib/router.svelte'
 
   const s = $derived(player.status)
   const track = $derived(s?.track)
@@ -16,21 +19,28 @@
       controls.setVolume(0)
     } else controls.setVolume(lastVolume || max / 2)
   }
+  $effect(() => {
+    if (track?.uri) loadSaved([track.uri])
+  })
+
   const volIcon = $derived(!s || s.volume === 0 ? 'volume-off' : s.volume < max / 2 ? 'volume-low' : 'volume')
 </script>
 
 <footer class="bar">
   <div class="left">
     {#if track}
-      {#if track.album_cover_url}
-        <img class="cover" src={track.album_cover_url} alt="" />
-      {:else}
-        <div class="cover"></div>
-      {/if}
+      <button class="cover-btn" onclick={() => track.album_uri && openUri(track.album_uri)} aria-label="Open album">
+        {#if track.album_cover_url}<img class="cover" src={img(track.album_cover_url)} alt="" />{:else}<div class="cover"></div>{/if}
+      </button>
       <div class="meta">
-        <div class="title ellipsis">{track.name}</div>
-        <div class="artists ellipsis">{track.artist_names.join(', ')}</div>
+        <a class="title ellipsis" href="/" onclick={(e) => (e.preventDefault(), track.album_uri && openUri(track.album_uri))}>{track.name}</a>
+        <div class="artists ellipsis">
+          {#each track.artist_names as name, i}{#if i > 0}, {/if}<a href="/" onclick={(e) => (e.preventDefault(), track.artist_uris?.[i] && openUri(track.artist_uris[i]))}>{name}</a>{/each}
+        </div>
       </div>
+      <button class="icon-btn save" class:on={saved[track.uri]} onclick={() => toggleSaved(track.uri)} title={saved[track.uri] ? 'Remove from Liked Songs' : 'Save to Liked Songs'}>
+        <Icon name={saved[track.uri] ? 'check-circle' : 'plus-circle'} />
+      </button>
     {/if}
   </div>
 
@@ -88,8 +98,12 @@
   .left { display: flex; align-items: center; gap: 12px; min-width: 0; padding-left: 8px; }
   .cover { width: 56px; height: 56px; border-radius: 4px; background: var(--surface-3); flex: none; object-fit: cover; }
   .meta { min-width: 0; }
-  .title { font-size: 14px; color: var(--text); }
+  .title { display: block; font-size: 14px; color: var(--text); }
   .artists { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .artists a:hover { color: var(--text); }
+  .cover-btn { flex: none; display: block; }
+  .save { flex: none; }
+  .save.on { color: var(--accent); }
 
   .center { display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 722px; width: 100%; justify-self: center; }
   .buttons { display: flex; align-items: center; gap: 8px; }

@@ -1,45 +1,90 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { GetState, Logout } from '../wailsjs/go/main/App'
+  import { GetState } from '../wailsjs/go/main/App'
   import { EventsOn } from '../wailsjs/runtime/runtime'
   import type { main } from '../wailsjs/go/models'
   import Login from './components/Login.svelte'
+  import TopBar from './components/TopBar.svelte'
+  import LibraryPanel from './components/LibraryPanel.svelte'
+  import Main from './components/Main.svelte'
   import PlayerBar from './components/PlayerBar.svelte'
-  import { controls, initPlayer, refresh } from './lib/player.svelte'
+  import { initPlayer, refresh } from './lib/player.svelte'
+  import { loadMe } from './lib/me.svelte'
+  import { prefs } from './lib/prefs.svelte'
+  import { toasts } from './lib/api.svelte'
 
-  let appState: main.AppState | null = $state(null)
-  let uri = $state('spotify:track:4cOdK2wGLETKBW3PvgPWqT')
+  let appState = $state<main.AppState | null>(null)
 
   onMount(() => {
-    GetState().then((s) => (appState = s))
-    EventsOn('app:state', (s: main.AppState) => {
+    const ready = (s: main.AppState) => {
       appState = s
-      if (s.state === 'ready') refresh()
-    })
+      if (s.state === 'ready') {
+        refresh()
+        loadMe()
+      }
+    }
+    GetState().then(ready)
+    EventsOn('app:state', ready)
     initPlayer()
   })
+
+  // Library panel resize: drag the gap; dragging far left collapses it.
+  const MIN = 280,
+    MAX = 600,
+    COLLAPSED = 72
+  let dragging = $state(false)
+  function startDrag(e: PointerEvent) {
+    dragging = true
+    const startX = e.clientX
+    const startW = prefs.libCollapsed ? COLLAPSED : prefs.libWidth
+    const move = (ev: PointerEvent) => {
+      const w = startW + ev.clientX - startX
+      if (w < MIN - 80) prefs.libCollapsed = true
+      else {
+        prefs.libCollapsed = false
+        prefs.libWidth = Math.max(MIN, Math.min(MAX, w))
+      }
+    }
+    const up = () => {
+      dragging = false
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  const libWidth = $derived(prefs.libCollapsed ? COLLAPSED : prefs.libWidth)
 </script>
 
 {#if appState?.state === 'ready'}
-  <div class="shell">
-    <main class="main">
-      <h2>Milestone 1</h2>
-      <form onsubmit={(e) => { e.preventDefault(); controls.play(uri) }}>
-        <input bind:value={uri} placeholder="spotify:track:…" />
-        <button type="submit">Play</button>
-      </form>
-      <button class="logout" onclick={Logout}>Log out</button>
-    </main>
+  <div class="app" class:dragging>
+    <TopBar />
+    <div class="middle" style:--lib="{libWidth}px">
+      <div class="left">
+        <LibraryPanel collapsed={prefs.libCollapsed} ontoggle={() => (prefs.libCollapsed = !prefs.libCollapsed)} />
+      </div>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="resizer" onpointerdown={startDrag}></div>
+      <div class="center"><Main /></div>
+    </div>
     <PlayerBar />
+    <div class="toasts">
+      {#each toasts as t (t.id)}<div class="toast">{t.text}</div>{/each}
+    </div>
   </div>
 {:else if appState}
   <Login state={appState} />
 {/if}
 
 <style>
-  .shell { height: 100%; display: grid; grid-template-rows: 1fr auto; gap: 8px; padding-top: 8px; }
-  .main { margin: 0 8px; background: var(--surface); border-radius: var(--radius); padding: 24px; }
-  form { display: flex; gap: 8px; margin: 16px 0; }
-  input { flex: 1; max-width: 480px; background: var(--surface-2); border: 1px solid var(--surface-3); border-radius: 4px; padding: 8px 12px; }
-  form button, .logout { background: var(--text); color: #000; font-weight: 700; border-radius: 999px; padding: 8px 20px; }
+  .app { height: 100%; display: grid; grid-template-rows: 64px minmax(0, 1fr) auto; }
+  .app.dragging { cursor: col-resize; }
+  .app.dragging * { user-select: none; }
+  .middle { display: grid; grid-template-columns: var(--lib) 8px minmax(0, 1fr); padding: 0 8px; min-height: 0; }
+  .left, .center { min-height: 0; min-width: 0; }
+  .resizer { cursor: col-resize; position: relative; }
+  .resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; border-radius: 1px; }
+  .resizer:hover::after { background: hsla(0, 0%, 100%, .3); }
+  .toasts { position: fixed; bottom: 96px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; z-index: 100; }
+  .toast { background: #3d91f4; color: #fff; padding: 12px 16px; border-radius: 8px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 </style>
