@@ -61,9 +61,15 @@ export function refresh() {
 
 export function initPlayer() {
   EventsOn('player:event', refresh)
-  setInterval(() => {
+  // Tick once per second, on the playback position's second boundary, so the
+  // time label and bar change together and the (software-rendered) webview
+  // repaints as little as possible.
+  const tick = () => {
     if (playing()) player.now = Date.now()
-  }, 250)
+    const ms = playing() ? 1000 - (position() % 1000) : 1000
+    setTimeout(tick, Math.max(50, ms))
+  }
+  tick()
   // Re-sync occasionally so drift and missed events can't accumulate.
   setInterval(() => player.status && refresh(), 15000)
   refresh()

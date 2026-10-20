@@ -4,6 +4,7 @@
 //	spdev query <operation> '<variables json>'
 //	spdev get <spclient path>
 //	spdev create <name> | rename <uri> <name> | delete <uri>
+//	spdev cluster | play <context uri>
 package main
 
 import (
@@ -71,6 +72,13 @@ func main() {
 		case "delete":
 			err = client.DeletePlaylist(ctx, os.Args[2])
 		}
+	case "play": // play a context on this app's device (for testing without clicking)
+		var cn *spotify.Connect
+		cn, err = client.StartConnect(ctx, deviceID, nil)
+		check(err)
+		time.Sleep(2 * time.Second)
+		err = cn.CommandTo(ctx, deviceID, "play", map[string]any{"context": map[string]any{"uri": os.Args[2], "url": "context://" + os.Args[2]}})
+		cn.Close()
 	case "cluster":
 		var cn *spotify.Connect
 		cn, err = client.StartConnect(ctx, deviceID, nil)

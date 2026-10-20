@@ -261,6 +261,11 @@ func (cn *Connect) Command(ctx context.Context, endpoint string, fields map[stri
 	if err != nil {
 		return &Error{Op: "command " + endpoint, Err: err}
 	}
+	return cn.CommandTo(ctx, to, endpoint, fields)
+}
+
+// CommandTo sends a player command to a specific device.
+func (cn *Connect) CommandTo(ctx context.Context, to, endpoint string, fields map[string]any) error {
 	cmd := map[string]any{"endpoint": endpoint}
 	for k, v := range fields {
 		cmd[k] = v
