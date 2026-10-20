@@ -93,6 +93,13 @@ func (a *App) Profile(username string) (*spotify.Profile, error) {
 	return a.sp.Profile(ctx, username)
 }
 
+// ProfileUsers lists a profile's followers or following.
+func (a *App) ProfileUsers(username, kind string) ([]spotify.Card, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.ProfileUsers(ctx, username, kind)
+}
+
 func (a *App) Friends() ([]spotify.Friend, error) {
 	ctx, cancel := a.call()
 	defer cancel()

@@ -85,19 +85,17 @@ func (c *Client) Profile(ctx context.Context, username string) (*Profile, error)
 		card := Card{URI: pl.URI, Type: "playlist", Name: pl.Name, Subtitle: "By " + pl.OwnerName, Images: imageFromURL(pl.ImageURL)}
 		if pl.OwnerURI == resp.URI {
 			card.Subtitle = fmt.Sprintf("%d Followers", pl.Followers)
+			if pl.Followers == 1 {
+				card.Subtitle = "1 Follower"
+			}
 		}
 		p.Playlists = append(p.Playlists, card)
 	}
 	for kind, list := range map[string]*[]Card{"followers": &p.FollowerList, "following": &p.FollowingList} {
-		var r struct {
-			Profiles []profileUser `json:"profiles"`
-		}
-		if err := c.getJSON(ctx, "profile "+kind, "/user-profile-view/v3/profile/"+url.PathEscape(username)+"/"+kind+"?market=from_token", &r); err != nil {
+		if cards, err := c.ProfileUsers(ctx, username, kind); err != nil {
 			c.log.Warn("profile list unavailable", "kind", kind, "err", err)
-			continue
-		}
-		for _, u := range r.Profiles {
-			*list = append(*list, u.card())
+		} else {
+			*list = cards
 		}
 	}
 	if p.IsMe {
@@ -107,6 +105,22 @@ func (c *Client) Profile(ctx context.Context, username string) (*Profile, error)
 		}
 	}
 	return p, nil
+}
+
+// ProfileUsers lists the profiles that follow username (kind "followers") or
+// that they follow ("following").
+func (c *Client) ProfileUsers(ctx context.Context, username, kind string) ([]Card, error) {
+	var r struct {
+		Profiles []profileUser `json:"profiles"`
+	}
+	if err := c.getJSON(ctx, "profile "+kind, "/user-profile-view/v3/profile/"+url.PathEscape(username)+"/"+kind+"?market=from_token", &r); err != nil {
+		return nil, err
+	}
+	cards := make([]Card, len(r.Profiles))
+	for i, u := range r.Profiles {
+		cards[i] = u.card()
+	}
+	return cards, nil
 }
 
 func (c *Client) topContent(ctx context.Context, p *Profile) error {

@@ -191,6 +191,8 @@ type ShelfOpts struct {
 	Card        CardOpts
 	// Rows of cards to show (default 1).
 	Rows int
+	// Below is drawn between the header and the cards (the discography chips).
+	Below layout.Widget
 }
 
 // Layout draws the shelf: header row, then one row of cards that fit.
@@ -228,6 +230,7 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 					return s.header(gtx, o)
 				})
 			},
+			o.Below,
 			func(gtx layout.Context) layout.Dimensions {
 				return CardGrid(gtx, len(items), minW, rows, func(gtx layout.Context, i int) layout.Dimensions {
 					return s.Cards[i].Layout(gtx, items[i], o.Card)

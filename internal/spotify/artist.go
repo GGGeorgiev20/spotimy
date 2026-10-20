@@ -3,30 +3,40 @@ package spotify
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"time"
 )
 
 type ArtistPage struct {
-	URI              string   `json:"uri"`
-	Name             string   `json:"name"`
-	Verified         bool     `json:"verified"`
-	Avatar           []Image  `json:"avatar"`
-	Header           []Image  `json:"header"` // banner; empty for artists without one
-	Gallery          []Image  `json:"gallery"`
-	MonthlyListeners int      `json:"monthlyListeners"`
-	Followers        int      `json:"followers"`
-	WorldRank        int      `json:"worldRank"`
-	Bio              string   `json:"bio"`
-	Following        bool     `json:"following"`
-	TopTracks        []Track  `json:"topTracks"`
-	Popular          []Card   `json:"popular"` // popular releases
-	Albums           []Card   `json:"albums"`
-	Singles          []Card   `json:"singles"`
-	Compilations     []Card   `json:"compilations"`
-	Totals           [3]int   `json:"totals"` // albums, singles, compilations
-	Shelves          []Shelf  `json:"shelves"`
-	Cities           []string `json:"cities"`
+	URI              string  `json:"uri"`
+	Name             string  `json:"name"`
+	Verified         bool    `json:"verified"`
+	Avatar           []Image `json:"avatar"`
+	Header           []Image `json:"header"` // banner; empty for artists without one
+	Gallery          []Image `json:"gallery"`
+	MonthlyListeners int     `json:"monthlyListeners"`
+	Followers        int     `json:"followers"`
+	WorldRank        int     `json:"worldRank"`
+	Bio              string  `json:"bio"`
+	Following        bool    `json:"following"`
+	TopTracks        []Track `json:"topTracks"`
+	Popular          []Card  `json:"popular"` // popular releases
+	Albums           []Card  `json:"albums"`
+	Singles          []Card  `json:"singles"`
+	Compilations     []Card  `json:"compilations"`
+	Totals           [3]int  `json:"totals"` // albums, singles, compilations
+	Shelves          []Shelf `json:"shelves"`
+	Cities           []City  `json:"cities"`
 }
+
+// City is one of an artist's top listener cities.
+type City struct {
+	Name      string `json:"name"` // "London, GB"
+	Listeners int    `json:"listeners"`
+}
+
+// paragraphRE matches the tags that end a paragraph of a biography.
+var paragraphRE = regexp.MustCompile(`(?i)<br\s*/?>|</p>`)
 
 type gqlRelease struct {
 	URI      string     `json:"uri"`
@@ -104,8 +114,9 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 				WorldRank        int `json:"worldRank"`
 				TopCities        struct {
 					Items []struct {
-						City    string `json:"city"`
-						Country string `json:"country"`
+						City      string `json:"city"`
+						Country   string `json:"country"`
+						Listeners int    `json:"numberOfListeners"`
 					} `json:"items"`
 				} `json:"topCities"`
 			} `json:"stats"`
@@ -146,10 +157,10 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 		URI: a.URI, Name: a.Profile.Name, Verified: a.Profile.Verified,
 		Avatar: a.Visuals.AvatarImage.images(), Gallery: a.Visuals.Gallery.first(),
 		MonthlyListeners: a.Stats.MonthlyListeners, Followers: a.Stats.Followers, WorldRank: a.Stats.WorldRank,
-		Bio: stripHTML(a.Profile.Biography.Text), Following: a.Saved,
+		Bio: stripHTML(paragraphRE.ReplaceAllString(a.Profile.Biography.Text, "\n")), Following: a.Saved,
 		Albums: d.Albums.cards(), Singles: d.Singles.cards(), Compilations: d.Compilations.cards(),
 		Totals:    [3]int{d.Albums.TotalCount, d.Singles.TotalCount, d.Compilations.TotalCount},
-		TopTracks: []Track{}, Popular: []Card{}, Shelves: []Shelf{}, Cities: []string{},
+		TopTracks: []Track{}, Popular: []Card{}, Shelves: []Shelf{}, Cities: []City{},
 	}
 	if a.HeaderImage != nil {
 		out.Header = a.HeaderImage.Data.images()
@@ -163,7 +174,7 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 		out.Popular = append(out.Popular, r.card())
 	}
 	for _, ci := range a.Stats.TopCities.Items {
-		out.Cities = append(out.Cities, ci.City+", "+ci.Country)
+		out.Cities = append(out.Cities, City{Name: ci.City + ", " + ci.Country, Listeners: ci.Listeners})
 	}
 
 	var related []Card

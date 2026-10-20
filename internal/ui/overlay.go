@@ -164,6 +164,7 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 				act := it.Action
 				CloseMenu()
 				act()
+				m.Stop()
 				return layout.Dimensions{}
 			}
 		}

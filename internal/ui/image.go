@@ -132,6 +132,9 @@ type Image struct {
 	Placeholder color.NRGBA // zero = ColSurface3
 	// Icon is drawn centered on the placeholder (e.g. "note", "user").
 	Icon string
+	// FocusY is where a vertically cropped image is anchored, 0..1 from the
+	// top (0 = centered, like CSS object-position 50% 50%).
+	FocusY float32
 }
 
 func (im Image) Layout(gtx layout.Context, size image.Point) layout.Dimensions {
@@ -166,7 +169,11 @@ func (im Image) Layout(gtx layout.Context, size image.Point) layout.Dimensions {
 		return layout.Dimensions{Size: size}
 	}
 	sc := max(float32(size.X)/float32(e.w), float32(size.Y)/float32(e.h))
-	off := f32.Pt((float32(size.X)-float32(e.w)*sc)/2, (float32(size.Y)-float32(e.h)*sc)/2)
+	fy := im.FocusY
+	if fy == 0 {
+		fy = .5
+	}
+	off := f32.Pt((float32(size.X)-float32(e.w)*sc)/2, (float32(size.Y)-float32(e.h)*sc)*fy)
 	defer op.Affine(f32.AffineId().Scale(f32.Pt(0, 0), f32.Pt(sc, sc)).Offset(off)).Push(gtx.Ops).Pop()
 	e.op.Add(gtx.Ops)
 	paint.PaintOp{}.Add(gtx.Ops)

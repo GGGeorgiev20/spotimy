@@ -339,8 +339,12 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 					if current {
 						col = ColAccent
 					}
-					layout.E.Layout(g, func(gtx layout.Context) layout.Dimensions {
-						return Text(gtx, num, 16, Regular, col)
+					// Two digits are wider than the column: let them grow leftwards.
+					g.Constraints = layout.Exact(image.Pt(2*c.idx, h))
+					Offset(gtx, -c.idx, 0, func() {
+						layout.E.Layout(g, func(gtx layout.Context) layout.Dimensions {
+							return Text(gtx, num, 16, Regular, col)
+						})
 					})
 				}
 			})
