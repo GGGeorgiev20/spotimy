@@ -16,6 +16,7 @@ type Paged struct {
 	Items []*spotify.Track // nil = not loaded yet
 	Total int
 	Err   error
+	Gen   int // bumped whenever rows arrive
 	fetch func(offset, limit int) (*spotify.TrackPage, error)
 	size  int
 	busy  map[int]bool
@@ -38,6 +39,7 @@ func (p *Paged) SetAll(tracks []spotify.Track) {
 }
 
 func (p *Paged) put(off int, items []spotify.Track) {
+	p.Gen++
 	keys := make([]string, 0, len(items))
 	for i := range items {
 		if off+i < len(p.Items) {
@@ -94,13 +96,17 @@ type TrackTable struct {
 	CanEdit     bool
 	// OnPlayed runs when a row starts playing (search saves a recent search).
 	OnPlayed func(spotify.Track)
+	// OnMove enables drag-reorder: row from was dropped above/below row to.
+	OnMove func(from, to int, after bool)
 
 	Selected int
 	rows     map[int]*trackRow
+	reorder  Reorder
 }
 
 type trackRow struct {
 	row, play, save, more Click
+	drag                  RowDrag
 	artists               []Link
 	album                 Link
 }
@@ -119,7 +125,7 @@ func (tt *TrackTable) row(i int) *trackRow {
 }
 
 // Reset drops per-row state (after the list's contents change).
-func (tt *TrackTable) Reset() { tt.rows = nil; tt.Selected = -1 }
+func (tt *TrackTable) Reset() { tt.rows = nil; tt.Selected = -1; tt.reorder = Reorder{} }
 
 type cols struct {
 	idx, title, album, added, plays, dur int
@@ -243,9 +249,12 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 	if t == nil {
 		Offset(gtx, Dp(gtx, 24+16), 0, func() {
 			g := gtx
-			g.Constraints = layout.Exact(image.Pt(Dp(gtx, 16), h))
-			layout.E.Layout(g, func(gtx layout.Context) layout.Dimensions {
-				return Text(gtx, FmtNumber(i+1), 16, Regular, ColText2)
+			ex := Dp(gtx, 16)
+			g.Constraints = layout.Exact(image.Pt(Dp(gtx, 16)+ex, h))
+			Offset(gtx, -ex, 0, func() {
+				layout.E.Layout(g, func(gtx layout.Context) layout.Dimensions {
+					return Text(gtx, FmtNumber(i+1), 16, Regular, ColText2)
+				})
 			})
 			FillRect(gtx.Ops, image.Rect(Dp(gtx, 32), h/2-Dp(gtx, 7), Dp(gtx, 32)+w*4/10, h/2+Dp(gtx, 7)), Dp(gtx, 7), ColSurface2)
 		})
@@ -294,8 +303,13 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 	return Pad(gtx, 0, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
 		rw := w - 2*pad
 		return r.row.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			if tt.OnMove != nil && t.UID != "" {
+				r.drag.Handle(gtx, &tt.reorder, i, h, tt.OnMove)
+			}
 			hov := r.row.Hovered()
 			switch {
+			case tt.reorder.Active && tt.reorder.From == i:
+				FillRect(gtx.Ops, image.Rect(0, 0, rw, h), Dp(gtx, 4), ColRowHover)
 			case tt.Selected == i:
 				FillRect(gtx.Ops, image.Rect(0, 0, rw, h), Dp(gtx, 4), ColRowSelected)
 			case hov:
@@ -456,6 +470,13 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 					})
 				}
 			})
+			if d := tt.reorder.DropLine(i); d != 0 {
+				ly := 0
+				if d > 0 {
+					ly = h - Dp(gtx, 2)
+				}
+				FillRect(gtx.Ops, image.Rect(0, ly, rw, ly+Dp(gtx, 2)), 0, ColAccent)
+			}
 			return layout.Dimensions{Size: image.Pt(rw, h)}
 		})
 	})
