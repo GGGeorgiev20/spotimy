@@ -1,0 +1,600 @@
+{
+ "data": {
+  "home": {
+   "__typename": "HomeResponsePayload",
+   "greeting": {
+    "transformedLabel": "Good afternoon",
+    "translatedBaseText": "Good afternoon"
+   },
+   "sectionContainer": {
+    "sections": {
+     "items": [
+      {
+       "data": {
+        "__typename": "HomeShortsSectionData"
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "AlbumResponseWrapper",
+           "data": {
+            "__typename": "Album",
+            "artists": {
+             "items": [
+              {
+               "profile": {
+                "name": "Radiohead"
+               },
+               "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+              }
+             ]
+            },
+            "coverArt": {
+             "sources": [
+              {
+               "height": 300,
+               "url": "https://i.scdn.co/image/ab67616d00001e02de3c04b5fc750b68899b20a9",
+               "width": 300
+              },
+              {
+               "height": 64,
+               "url": "https://i.scdn.co/image/ab67616d00004851de3c04b5fc750b68899b20a9",
+               "width": 64
+              },
+              {
+               "height": 640,
+               "url": "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9",
+               "width": 640
+              }
+             ]
+            },
+            "isPreRelease": false,
+            "name": "Test Item 0",
+            "playability": {
+             "playable": true,
+             "reason": "PLAYABLE"
+            },
+            "preReleaseEndDateTime": null,
+            "albumType": "ALBUM",
+            "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+           }
+          },
+          "data": null,
+          "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+         },
+         {
+          "content": {
+           "__typename": "AlbumResponseWrapper",
+           "data": {
+            "__typename": "Album",
+            "artists": {
+             "items": [
+              {
+               "profile": {
+                "name": "Radiohead"
+               },
+               "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+              }
+             ]
+            },
+            "coverArt": {
+             "sources": [
+              {
+               "height": 300,
+               "url": "https://i.scdn.co/image/ab67616d00001e02f1ac4f358752b321586b3d78",
+               "width": 300
+              },
+              {
+               "height": 64,
+               "url": "https://i.scdn.co/image/ab67616d00004851f1ac4f358752b321586b3d78",
+               "width": 64
+              },
+              {
+               "height": 640,
+               "url": "https://i.scdn.co/image/ab67616d0000b273f1ac4f358752b321586b3d78",
+               "width": 640
+              }
+             ]
+            },
+            "isPreRelease": false,
+            "name": "Test Item 1",
+            "playability": {
+             "playable": true,
+             "reason": "PLAYABLE"
+            },
+            "preReleaseEndDateTime": null,
+            "albumType": "ALBUM",
+            "uri": "spotify:album:6J6nlVu4JMveJz0YM9zDgL"
+           }
+          },
+          "data": null,
+          "uri": "spotify:album:6J6nlVu4JMveJz0YM9zDgL"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": 10
+        },
+        "totalCount": 64
+       },
+       "uri": "spotify:section:0JQ5DAIiKWzVFULQfUm85Y"
+      },
+      {
+       "data": {
+        "__typename": "HomeGenericSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "subtitle": {
+         "transformedLabel": "",
+         "translatedBaseText": null
+        },
+        "title": {
+         "transformedLabel": "Made For Test User",
+         "translatedBaseText": "Made For {0}"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 30
+            },
+            "description": "Your shortcut to hidden gems, deep cuts, and future faves, updated every Monday. You’ll know when you hear it.",
+            "format": "discover-weekly",
+            "images": {
+             "items": [
+              {
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/dw/cover/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Test Item 0",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZEVXcPHELnNuCS73"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZEVXcPHELnNuCS73"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "TOOL, Seether, Staind and more",
+            "format": "daily-mix",
+            "images": {
+             "items": [
+              {
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/1/ab6761610000e5eb13f5472b709101616c87cba3/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Test Item 1",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1E3af03mqY0j7p"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1E3af03mqY0j7p"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 9
+       },
+       "uri": "spotify:section:0JQ5DAUnp4wcj0bCb3wh3S"
+      },
+      {
+       "data": {
+        "__typename": "HomeRecentlyPlayedSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "title": {
+         "transformedLabel": "Recents",
+         "translatedBaseText": "Recents"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "ListResponseWrapper",
+           "data": {
+            "__typename": "List",
+            "items": {
+             "items": [
+              {
+               "entity": {
+                "__typename": "EntityResponseWrapper",
+                "_uri": "spotify:playlist:4ViOSBzHA4WOXGhlNnAOEr",
+                "data": {
+                 "__typename": "Entity",
+                 "consumptionExperienceTrait": {
+                  "__typename": "NotFound"
+                 },
+                 "entityTypeTrait": {
+                  "__typename": "EntityTypeTrait",
+                  "type": "ENTITY_TYPE_PLAYLIST"
+                 },
+                 "identityTrait": {
+                  "__typename": "IdentityTrait",
+                  "contentHierarchyParent": null,
+                  "contributors": {
+                   "items": [
+                    {
+                     "name": "Test User",
+                     "uri": "spotify:user:testuser"
+                    }
+                   ],
+                   "totalCount": 1
+                  },
+                  "description": "https://open.spotify.com/playlist/0Vl7xTZw4HgBFYCzIhquC8?si=0067e58ac49a4694",
+                  "name": "LARRY MIX 🔥💯💢",
+                  "type": "Playlist"
+                 },
+                 "typedEntity": {
+                  "__typename": "PlaylistResponseWrapper"
+                 },
+                 "uri": "spotify:playlist:4ViOSBzHA4WOXGhlNnAOEr",
+                 "visualIdentityTrait": {
+                  "__typename": "VisualIdentityTrait",
+                  "squareCoverImage": {
+                   "image": {
+                    "data": {
+                     "__typename": "ImageV2",
+                     "sources": [
+                      {
+                       "imageFormat": "JPEG",
+                       "maxHeight": 0,
+                       "maxWidth": 0,
+                       "url": "https://mosaic.scdn.co/300/ab67616d00001e0230a0123ba90945a09c2e667bab67616d00001e0238f8ce20e86c918d0b528b7fab67616d00001e023e4602585630e66a8a384447ab67616d00001e02f64ef8f3ce3f2c86158ebbca"
+                      }
+                     ]
+                    }
+                   },
+                   "originalInstances": [
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://mosaic.scdn.co/300/ab67616d00001e0230a0123ba90945a09c2e667bab67616d00001e0238f8ce20e86c918d0b528b7fab67616d00001e023e4602585630e66a8a384447ab67616d00001e02f64ef8f3ce3f2c86158ebbca"
+                     },
+                     "size": "IMAGE_SIZE_DEFAULT"
+                    },
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://mosaic.scdn.co/64/ab67616d0000485130a0123ba90945a09c2e667bab67616d0000485138f8ce20e86c918d0b528b7fab67616d000048513e4602585630e66a8a384447ab67616d00004851f64ef8f3ce3f2c86158ebbca"
+                     },
+                     "size": "IMAGE_SIZE_SMALL"
+                    },
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://mosaic.scdn.co/640/ab67616d0000b27330a0123ba90945a09c2e667bab67616d0000b27338f8ce20e86c918d0b528b7fab67616d0000b2733e4602585630e66a8a384447ab67616d0000b273f64ef8f3ce3f2c86158ebbca"
+                     },
+                     "size": "IMAGE_SIZE_LARGE"
+                    }
+                   ]
+                  }
+                 }
+                }
+               },
+               "formatListAttributes": [
+                {
+                 "key": "group_id_0",
+                 "value": ""
+                },
+                {
+                 "key": "group_metadata",
+                 "value": ""
+                },
+                {
+                 "key": "recent_type_played",
+                 "value": ""
+                }
+               ],
+               "uid": "f57a8086a75992406f968a85f4746f08"
+              },
+              {
+               "entity": {
+                "__typename": "EntityResponseWrapper",
+                "_uri": "spotify:album:6J6nlVu4JMveJz0YM9zDgL",
+                "data": {
+                 "__typename": "Entity",
+                 "consumptionExperienceTrait": {
+                  "__typename": "ConsumptionExperienceTrait",
+                  "contentRatings": [],
+                  "duration": {
+                   "nanoSeconds": 0,
+                   "seconds": 2826
+                  }
+                 },
+                 "entityTypeTrait": {
+                  "__typename": "EntityTypeTrait",
+                  "type": "ENTITY_TYPE_ALBUM"
+                 },
+                 "identityTrait": {
+                  "__typename": "IdentityTrait",
+                  "contentHierarchyParent": null,
+                  "contributors": {
+                   "items": [
+                    {
+                     "name": "Radiohead",
+                     "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+                    }
+                   ],
+                   "totalCount": 1
+                  },
+                  "description": "",
+                  "name": "Kid A",
+                  "type": "Album"
+                 },
+                 "typedEntity": {
+                  "__typename": "AlbumResponseWrapper"
+                 },
+                 "uri": "spotify:album:6J6nlVu4JMveJz0YM9zDgL",
+                 "visualIdentityTrait": {
+                  "__typename": "VisualIdentityTrait",
+                  "squareCoverImage": {
+                   "image": {
+                    "data": {
+                     "__typename": "ImageV2",
+                     "sources": [
+                      {
+                       "imageFormat": "JPEG",
+                       "maxHeight": 300,
+                       "maxWidth": 300,
+                       "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02f1ac4f358752b321586b3d78"
+                      },
+                      {
+                       "imageFormat": "JPEG",
+                       "maxHeight": 64,
+                       "maxWidth": 64,
+                       "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00004851f1ac4f358752b321586b3d78"
+                      },
+                      {
+                       "imageFormat": "JPEG",
+                       "maxHeight": 640,
+                       "maxWidth": 640,
+                       "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d0000b273f1ac4f358752b321586b3d78"
+                      }
+                     ]
+                    }
+                   },
+                   "originalInstances": [
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://i.scdn.co/image/ab67616d00004851f1ac4f358752b321586b3d78"
+                     },
+                     "size": "IMAGE_SIZE_SMALL"
+                    },
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://i.scdn.co/image/ab67616d00001e02f1ac4f358752b321586b3d78"
+                     },
+                     "size": "IMAGE_SIZE_DEFAULT"
+                    },
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://i.scdn.co/image/ab67616d0000b273f1ac4f358752b321586b3d78"
+                     },
+                     "size": "IMAGE_SIZE_LARGE"
+                    }
+                   ]
+                  }
+                 }
+                }
+               },
+               "formatListAttributes": [
+                {
+                 "key": "group_id_0",
+                 "value": ""
+                },
+                {
+                 "key": "group_metadata",
+                 "value": ""
+                },
+                {
+                 "key": "recent_type_played",
+                 "value": ""
+                }
+               ],
+               "uid": "82ff66c21041e98dfad61fd533f3a061"
+              },
+              {
+               "entity": {
+                "__typename": "EntityResponseWrapper",
+                "_uri": "spotify:collection:tracks",
+                "data": {
+                 "__typename": "Entity",
+                 "consumptionExperienceTrait": {
+                  "__typename": "NotFound"
+                 },
+                 "entityTypeTrait": {
+                  "__typename": "EntityTypeTrait",
+                  "type": "ENTITY_TYPE_PLAYLIST"
+                 },
+                 "identityTrait": {
+                  "__typename": "IdentityTrait",
+                  "contentHierarchyParent": null,
+                  "contributors": {
+                   "items": [
+                    {
+                     "name": "Spotify",
+                     "uri": "spotify:user:spotify"
+                    }
+                   ],
+                   "totalCount": 1
+                  },
+                  "description": "",
+                  "name": "Liked Songs",
+                  "type": "Playlist"
+                 },
+                 "typedEntity": {
+                  "__typename": "UnknownType"
+                 },
+                 "uri": "spotify:collection:tracks",
+                 "visualIdentityTrait": {
+                  "__typename": "VisualIdentityTrait",
+                  "squareCoverImage": {
+                   "image": {
+                    "data": {
+                     "__typename": "ImageV2",
+                     "sources": [
+                      {
+                       "imageFormat": "JPEG",
+                       "maxHeight": 0,
+                       "maxWidth": 0,
+                       "url": "https://misc.scdn.co/liked-songs/liked-songs-300.png"
+                      }
+                     ]
+                    }
+                   },
+                   "originalInstances": [
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://misc.scdn.co/liked-songs/liked-songs-300.png"
+                     },
+                     "size": "IMAGE_SIZE_DEFAULT"
+                    },
+                    {
+                     "flatFile": {
+                      "cdnUrl": "https://misc.scdn.co/liked-songs/liked-songs-640.png"
+                     },
+                     "size": "IMAGE_SIZE_XLARGE"
+                    }
+                   ]
+                  }
+                 }
+                }
+               },
+               "formatListAttributes": [
+                {
+                 "key": "group_id_0",
+                 "value": ""
+                },
+                {
+                 "key": "children_group_id",
+                 "value": "3"
+                },
+                {
+                 "key": "group_metadata",
+                 "value": "CAESJHNwb3RpZnk6dHJhY2s6NFRkNEs0V1JOV0NLZkhZVXFBQzlRRSIJCgVtdXNpYxAB"
+                }
+               ],
+               "uid": "d0079ad425a61593b771592d69e7979d"
+              }
+             ],
+             "totalCount": 20
+            },
+            "uri": "spotify:list:recents:main"
+           }
+          },
+          "data": null,
+          "uri": "spotify:list:recents:main"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 1
+       },
+       "uri": "spotify:section:0JQ5DAroEmF9ANbLaiJ7XR"
+      }
+     ],
+     "totalCount": 31
+    },
+    "uri": "spotify:page:0JQ5DAozXW0GUBAKjHsifH"
+   },
+   "homeChips": [
+    {
+     "highlightColor": null,
+     "highlightScheme": null,
+     "id": "music-chip",
+     "label": {
+      "transformedLabel": "Music",
+      "translatedBaseText": "Music"
+     },
+     "subChips": [
+      {
+       "id": "music-following-chip",
+       "label": {
+        "transformedLabel": "Following",
+        "translatedBaseText": "Following"
+       }
+      }
+     ]
+    },
+    {
+     "highlightColor": null,
+     "highlightScheme": null,
+     "id": "podcasts-chip",
+     "label": {
+      "transformedLabel": "Podcasts",
+      "translatedBaseText": "Podcasts"
+     },
+     "subChips": [
+      {
+       "id": "podcasts-following-chip",
+       "label": {
+        "transformedLabel": "Following",
+        "translatedBaseText": "Following"
+       }
+      }
+     ]
+    },
+    {
+     "highlightColor": null,
+     "highlightScheme": null,
+     "id": "audiobooks-chip",
+     "label": {
+      "transformedLabel": "Audiobooks",
+      "translatedBaseText": "Audiobooks"
+     },
+     "subChips": []
+    }
+   ]
+  }
+ },
+ "extensions": {
+  "responseIds": {
+   "/home": {
+    "continuum": "fdc52f51-c76d-0bf3-aed4-d00fca7804fe"
+   }
+  }
+ }
+}

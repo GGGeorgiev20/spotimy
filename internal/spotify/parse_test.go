@@ -115,3 +115,61 @@ func TestURIType(t *testing.T) {
 		}
 	}
 }
+
+func TestParseHome(t *testing.T) {
+	h, err := fixtureClient(t, "home").Home(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h.Greeting == "" || len(h.Chips) == 0 || len(h.Sections) != 2 {
+		t.Fatalf("home: greeting=%q chips=%d sections=%d", h.Greeting, len(h.Chips), len(h.Sections))
+	}
+	if h.Sections[0].Kind != "shortcuts" || h.Sections[1].Title != "Made For Test User" {
+		t.Errorf("sections: %+v", h.Sections)
+	}
+	for _, s := range h.Sections {
+		for _, c := range s.Items {
+			if c.URI == "" || c.Name == "" || c.Type == "" {
+				t.Errorf("bad card %+v", c)
+			}
+		}
+	}
+}
+
+func TestParseSearch(t *testing.T) {
+	r, err := fixtureClient(t, "search").Search(context.Background(), "radiohead")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Top == nil || len(r.Tracks) == 0 || r.Totals.Artists == 0 || len(r.Groups) < 4 {
+		t.Fatalf("search: top=%v tracks=%d groups=%d", r.Top != nil, len(r.Tracks), len(r.Groups))
+	}
+	if r.Groups[0].Title != "Artists" || r.Groups[0].Items[0].Name != "Radiohead" || len(r.Groups[0].Items[0].Images) == 0 {
+		t.Errorf("artists group: %+v", r.Groups[0].Items[0])
+	}
+}
+
+func TestParseArtist(t *testing.T) {
+	a, err := fixtureClient(t, "artist").Artist(context.Background(), "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Name != "Radiohead" || a.MonthlyListeners == 0 || len(a.TopTracks) == 0 {
+		t.Fatalf("artist: name=%q listeners=%d top=%d", a.Name, a.MonthlyListeners, len(a.TopTracks))
+	}
+	if sub := a.Albums[0].Subtitle; len(sub) < 6 || sub[:2] != "20" {
+		t.Errorf("album subtitle should start with the year: %q", sub)
+	}
+	if len(a.Albums) == 0 || len(a.Popular) == 0 || len(a.Header) == 0 {
+		t.Errorf("discography/header missing")
+	}
+	var fans bool
+	for _, s := range a.Shelves {
+		if s.Title == "Fans also like" && len(s.Items) > 0 && s.Items[0].Type == "artist" {
+			fans = true
+		}
+	}
+	if !fans {
+		t.Errorf("no related artists shelf: %+v", a.Shelves)
+	}
+}

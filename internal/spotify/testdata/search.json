@@ -1,0 +1,1770 @@
+{
+ "data": {
+  "searchV2": {
+   "albumsV2": {
+    "__typename": "AlbumOrPrereleasePage",
+    "items": [
+     {
+      "__typename": "AlbumResponseWrapper",
+      "data": {
+       "__typename": "Album",
+       "artists": {
+        "items": [
+         {
+          "onPlatformReputationTrait": {
+           "verification": {
+            "aiPersona": null
+           }
+          },
+          "profile": {
+           "name": "Radiohead"
+          },
+          "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+         }
+        ]
+       },
+       "coverArt": {
+        "sources": [
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02de3c04b5fc750b68899b20a9",
+          "width": 300
+         },
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851de3c04b5fc750b68899b20a9",
+          "width": 64
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9",
+          "width": 640
+         }
+        ]
+       },
+       "date": {
+        "year": 2007
+       },
+       "isAlbumPreRelease": false,
+       "name": "In Rainbows",
+       "playability": {
+        "playable": true,
+        "reason": "PLAYABLE"
+       },
+       "preReleaseEndDateTime": null,
+       "type": "ALBUM",
+       "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+      }
+     },
+     {
+      "__typename": "AlbumResponseWrapper",
+      "data": {
+       "__typename": "Album",
+       "artists": {
+        "items": [
+         {
+          "onPlatformReputationTrait": {
+           "verification": {
+            "aiPersona": null
+           }
+          },
+          "profile": {
+           "name": "Radiohead"
+          },
+          "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+         }
+        ]
+       },
+       "coverArt": {
+        "sources": [
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e029293c743fa542094336c5e12",
+          "width": 300
+         },
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d000048519293c743fa542094336c5e12",
+          "width": 64
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b2739293c743fa542094336c5e12",
+          "width": 640
+         }
+        ]
+       },
+       "date": {
+        "year": 1995
+       },
+       "isAlbumPreRelease": false,
+       "name": "The Bends",
+       "playability": {
+        "playable": true,
+        "reason": "PLAYABLE"
+       },
+       "preReleaseEndDateTime": null,
+       "type": "ALBUM",
+       "uri": "spotify:album:35UJLpClj5EDrhpNIi4DFg"
+      }
+     },
+     {
+      "__typename": "AlbumResponseWrapper",
+      "data": {
+       "__typename": "Album",
+       "artists": {
+        "items": [
+         {
+          "onPlatformReputationTrait": {
+           "verification": {
+            "aiPersona": null
+           }
+          },
+          "profile": {
+           "name": "Radiohead"
+          },
+          "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+         }
+        ]
+       },
+       "coverArt": {
+        "sources": [
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02c8b444df094279e70d0ed856",
+          "width": 300
+         },
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851c8b444df094279e70d0ed856",
+          "width": 64
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856",
+          "width": 640
+         }
+        ]
+       },
+       "date": {
+        "year": 1997
+       },
+       "isAlbumPreRelease": false,
+       "name": "OK Computer",
+       "playability": {
+        "playable": true,
+        "reason": "PLAYABLE"
+       },
+       "preReleaseEndDateTime": null,
+       "type": "ALBUM",
+       "uri": "spotify:album:6dVIqQ8qmQ5GBnJ9shOYGE"
+      }
+     }
+    ],
+    "totalCount": 199
+   },
+   "artists": {
+    "items": [
+     {
+      "__typename": "ArtistResponseWrapper",
+      "data": {
+       "__typename": "Artist",
+       "onPlatformReputationTrait": {
+        "verification": {
+         "aiPersona": null,
+         "isVerified": true
+        }
+       },
+       "profile": {
+        "name": "Radiohead"
+       },
+       "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb959527d2fabc9c64287e57b9",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178959527d2fabc9c64287e57b9",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174959527d2fabc9c64287e57b9",
+           "width": 320
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "__typename": "ArtistResponseWrapper",
+      "data": {
+       "__typename": "Artist",
+       "onPlatformReputationTrait": {
+        "verification": {
+         "aiPersona": null,
+         "isVerified": true
+        }
+       },
+       "profile": {
+        "name": "The Smiths"
+       },
+       "uri": "spotify:artist:3yY2gUcIsjMr8hjo51PoJ8",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 970,
+           "url": "https://i.scdn.co/image/4bf08a9e6eea088b20d4092d1322bbd3f39ff9af",
+           "width": 640
+          },
+          {
+           "height": 97,
+           "url": "https://i.scdn.co/image/d3a2542f2811b5b01ee3483ec7c193f72a882ea1",
+           "width": 64
+          },
+          {
+           "height": 303,
+           "url": "https://i.scdn.co/image/bd4c7f5ff2c5c4385604e60c71eac1dd498ddbd9",
+           "width": 200
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "__typename": "ArtistResponseWrapper",
+      "data": {
+       "__typename": "Artist",
+       "onPlatformReputationTrait": {
+        "verification": {
+         "aiPersona": null,
+         "isVerified": true
+        }
+       },
+       "profile": {
+        "name": "Deftones"
+       },
+       "uri": "spotify:artist:6Ghvu1VvMGScGpOUJBAHNH",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebe3ac5eb948e78d9285d1dbdb",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178e3ac5eb948e78d9285d1dbdb",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174e3ac5eb948e78d9285d1dbdb",
+           "width": 320
+          }
+         ]
+        }
+       }
+      }
+     }
+    ],
+    "totalCount": 120
+   },
+   "audiobooks": {
+    "items": [
+     {
+      "__typename": "AudiobookResponseWrapper",
+      "data": {
+       "__typename": "Audiobook",
+       "accessInfo": {
+        "accessExplanation": {
+         "__typename": "ConsumptionCappedAccessExplanation",
+         "actionText": "Ways to keep listening",
+         "body": "Add hours to keep the story going. Explore ways to keep listening.",
+         "ctaUrl": "https://www.spotify.com/account/audiobook-listening-time",
+         "dismiss": "Dismiss",
+         "title": "You're out of audiobook hours"
+        },
+        "isUserMemberOfAtLeastOneGroup": false,
+        "signifier": {
+         "text": "Access with Audiobooks+"
+        }
+       },
+       "authorsV2": [
+        {
+         "name": "David Williams",
+         "uri": "spotify:author:5Grft5Aof8NGGxdr8xHAlD"
+        }
+       ],
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6766630000703b9e9d500aa145d940ebaba077",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab6766630000db5b9e9d500aa145d940ebaba077",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab676663000022a89e9d500aa145d940ebaba077",
+          "width": 640
+         }
+        ]
+       },
+       "description": "Author(s): David Williams\nNarrator(s): David Williams\n\nExperience Radiohead: Anxiety into Art with authoritative, journalistic, factual narration. A biography examining Radiohead’s rejection of industry norms, emotional depth, and technological experimentation....",
+       "audiobookDuration": {
+        "totalMilliseconds": 2092018
+       },
+       "isPreRelease": false,
+       "mediaType": "AUDIO",
+       "name": "Radiohead: Anxiety into Art",
+       "preReleaseEndDateTime": {
+        "isoString": "2026-10-16T00:27:02Z"
+       },
+       "publishDate": {
+        "isoString": "2026-02-16T00:00:00Z",
+        "precision": "MINUTE"
+       },
+       "topics": {
+        "items": []
+       },
+       "uri": "spotify:show:2JqIxp8MergBafEiqbSV0t"
+      }
+     },
+     {
+      "__typename": "AudiobookResponseWrapper",
+      "data": {
+       "__typename": "Audiobook",
+       "accessInfo": {
+        "accessExplanation": {
+         "__typename": "ConsumptionCappedAccessExplanation",
+         "actionText": "Ways to keep listening",
+         "body": "Add hours to keep the story going. Explore ways to keep listening.",
+         "ctaUrl": "https://www.spotify.com/account/audiobook-listening-time",
+         "dismiss": "Dismiss",
+         "title": "You're out of audiobook hours"
+        },
+        "isUserMemberOfAtLeastOneGroup": false,
+        "signifier": {
+         "text": "Access with Audiobooks+"
+        }
+       },
+       "authorsV2": [
+        {
+         "name": "Dai Griffiths",
+         "uri": "spotify:author:3hXF9AQZZOIAd0CCbIAc1s"
+        }
+       ],
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6766630000703bbe26ac583710d1d1915011ef",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab6766630000db5bbe26ac583710d1d1915011ef",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab676663000022a8be26ac583710d1d1915011ef",
+          "width": 640
+         }
+        ]
+       },
+       "description": "Author(s): Dai Griffiths\nNarrator(s): Ralph Lister\n\nSeemingly granted ‘classic album’ status within days of its release in 1997, OK Computer transformed Radiohead from a highly promising rock act into The Most Important Band in the World – a label the band has been burdened by (and has fooled around with) ever since. Through close musical analysis of each song, Dai Griffiths explores the themes and ideas that have made this album resonate so deeply with its audience, and argues that OK Computer is one of the most successfully realized CD albums so far created.",
+       "audiobookDuration": {
+        "totalMilliseconds": 11609846
+       },
+       "isPreRelease": false,
+       "mediaType": "AUDIO",
+       "name": "Radiohead's OK Computer",
+       "preReleaseEndDateTime": {
+        "isoString": "2026-10-15T16:16:17Z"
+       },
+       "publishDate": {
+        "isoString": "2025-05-13T00:00:00Z",
+        "precision": "MINUTE"
+       },
+       "topics": {
+        "items": []
+       },
+       "uri": "spotify:show:5UY9F8lp5GJoKXQDregcIS"
+      }
+     },
+     {
+      "__typename": "AudiobookResponseWrapper",
+      "data": {
+       "__typename": "Audiobook",
+       "accessInfo": {
+        "accessExplanation": {
+         "__typename": "ConsumptionCappedAccessExplanation",
+         "actionText": "Ways to keep listening",
+         "body": "Add hours to keep the story going. Explore ways to keep listening.",
+         "ctaUrl": "https://www.spotify.com/account/audiobook-listening-time",
+         "dismiss": "Dismiss",
+         "title": "You're out of audiobook hours"
+        },
+        "isUserMemberOfAtLeastOneGroup": false,
+        "signifier": {
+         "text": "Access with Audiobooks+"
+        }
+       },
+       "authorsV2": [
+        {
+         "name": "〔德〕赫尔曼·黑塞",
+         "uri": "spotify:author:2vssUqBaXokc4jdA3eEjW1"
+        }
+       ],
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6766630000703ba7e1c3c12f3f1f26c92e17bb",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab6766630000db5ba7e1c3c12f3f1f26c92e17bb",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab676663000022a8a7e1c3c12f3f1f26c92e17bb",
+          "width": 640
+         }
+        ]
+       },
+       "description": "Author(s): 〔德〕赫尔曼·黑塞\nNarrator(s): 风缘\n\n《悉达多》并非佛陀的故事，它讲述了一个人的一生，也是万千个人会经历的一生。悉达多一生追求的是生命的圆融统一，看似宏大，却是每个人都无法回避的问题。本书语言充满诗性和智慧，细细品读，会有深刻感悟，让你发现、体验属于自己的人生。《悉达多》是黑塞最具代表性的成长小说，无数年轻又迷惘的灵魂，都从黑塞的作品中窥见了生命的真谛、找到自我！《悉达多》以诗意的语言，写了世上千千万万普通人的一生。历史上可能再也没有人能像悉达多一样，那么接近人类智慧的终极形态。德语直译，译文忠于原文，力求最大程度还原黑塞的语言精髓，豆瓣评分9.0。西方大学生人手一册的成长之书，被译成60多种语言，畅销全球70年。影响了从尼克·德雷克到radiohead等音乐人。Notice: The audiobook is narrated in Mandarin注意：有声书的演播语言是中文（普通话）",
+       "audiobookDuration": {
+        "totalMilliseconds": 15127645
+       },
+       "isPreRelease": false,
+       "mediaType": "AUDIO",
+       "name": "悉达多",
+       "preReleaseEndDateTime": {
+        "isoString": "2026-10-15T05:13:06Z"
+       },
+       "publishDate": {
+        "isoString": "2024-01-27T00:00:00Z",
+        "precision": "MINUTE"
+       },
+       "topics": {
+        "items": []
+       },
+       "uri": "spotify:show:5Ds07QnpzQCnisjaAHGy3R"
+      }
+     }
+    ],
+    "totalCount": 112
+   },
+   "chipOrder": {
+    "items": [
+     {
+      "typeName": "TRACKS"
+     },
+     {
+      "typeName": "VIDEOS"
+     },
+     {
+      "typeName": "PLAYLISTS"
+     }
+    ]
+   },
+   "episodes": {
+    "items": [
+     {
+      "__typename": "EpisodeResponseWrapper",
+      "data": {
+       "__typename": "Episode",
+       "contentRating": {
+        "label": "NONE"
+       },
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6765630000f68d844e160ba5e1d71b7753986d",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67656300005f1f844e160ba5e1d71b7753986d",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6765630000ba8a844e160ba5e1d71b7753986d",
+          "width": 640
+         }
+        ]
+       },
+       "description": "radiohead",
+       "duration": {
+        "totalMilliseconds": 237087
+       },
+       "gatedEntityRelations": [],
+       "mediaTypes": [
+        "AUDIO"
+       ],
+       "name": "radiohead motion picture soundtrack(demo)",
+       "playability": {
+        "reason": "PLAYABLE"
+       },
+       "playedState": {
+        "playPositionMilliseconds": 0,
+        "state": "NOT_STARTED"
+       },
+       "podcastV2": {
+        "__typename": "PodcastResponseWrapper",
+        "data": {
+         "__typename": "Podcast",
+         "coverArt": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab6765630000f68d93295190bec518f079c86317",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67656300005f1f93295190bec518f079c86317",
+            "width": 300
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab6765630000ba8a93295190bec518f079c86317",
+            "width": 640
+           }
+          ]
+         },
+         "mediaType": "AUDIO",
+         "name": "Nova Waves",
+         "publisher": {
+          "name": "rosa"
+         },
+         "uri": "spotify:show:4IQBYLKt9g0P99IFKBzJUL"
+        }
+       },
+       "releaseDate": {
+        "isoString": "2026-01-19T20:26:00Z",
+        "precision": "MINUTE"
+       },
+       "restrictions": {
+        "paywallContent": false
+       },
+       "uri": "spotify:episode:21cLdj5EOYsPL9KrqHgUaD",
+       "videoPreviewThumbnail": null
+      }
+     },
+     {
+      "__typename": "EpisodeResponseWrapper",
+      "data": {
+       "__typename": "Episode",
+       "contentRating": {
+        "label": "NONE"
+       },
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6765630000f68d9b88218a4bcf2aacf3ac615f",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67656300005f1f9b88218a4bcf2aacf3ac615f",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6765630000ba8a9b88218a4bcf2aacf3ac615f",
+          "width": 640
+         }
+        ]
+       },
+       "description": "Meowww",
+       "duration": {
+        "totalMilliseconds": 136022
+       },
+       "gatedEntityRelations": [],
+       "mediaTypes": [
+        "AUDIO"
+       ],
+       "name": "Faust Arp (Scotch Mist)",
+       "playability": {
+        "reason": "PLAYABLE"
+       },
+       "playedState": {
+        "playPositionMilliseconds": 0,
+        "state": "NOT_STARTED"
+       },
+       "podcastV2": {
+        "__typename": "PodcastResponseWrapper",
+        "data": {
+         "__typename": "Podcast",
+         "coverArt": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab6765630000f68d9b88218a4bcf2aacf3ac615f",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67656300005f1f9b88218a4bcf2aacf3ac615f",
+            "width": 300
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab6765630000ba8a9b88218a4bcf2aacf3ac615f",
+            "width": 640
+           }
+          ]
+         },
+         "mediaType": "AUDIO",
+         "name": "Meow",
+         "publisher": {
+          "name": "Simon Flora"
+         },
+         "uri": "spotify:show:3bJkRPjGSEhH1uKD8vX3xQ"
+        }
+       },
+       "releaseDate": {
+        "isoString": "2024-09-01T04:40:00Z",
+        "precision": "MINUTE"
+       },
+       "restrictions": {
+        "paywallContent": false
+       },
+       "uri": "spotify:episode:4vyAoecBFW7c7N7aKbc7kO",
+       "videoPreviewThumbnail": null
+      }
+     },
+     {
+      "__typename": "EpisodeResponseWrapper",
+      "data": {
+       "__typename": "Episode",
+       "contentRating": {
+        "label": "NONE"
+       },
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6765630000f68de35e243ecb822e39cd51e528",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67656300005f1fe35e243ecb822e39cd51e528",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6765630000ba8ae35e243ecb822e39cd51e528",
+          "width": 640
+         }
+        ]
+       },
+       "description": "A Ted talk about sad fandoms reference frfr and I’m too lazy to change the intro cuz my app that I use to make these became those memberships stuff 🫩🫩 hope y’all enjoy the song! And if this does get banned, imma do your requests tomorrow or this month! (Sorry for the long wait. My school is draining as 💔💔)",
+       "duration": {
+        "totalMilliseconds": 289901
+       },
+       "gatedEntityRelations": [],
+       "mediaTypes": [
+        "AUDIO"
+       ],
+       "name": "Creep - Radiohead 1993",
+       "playability": {
+        "reason": "PLAYABLE"
+       },
+       "playedState": {
+        "playPositionMilliseconds": 0,
+        "state": "NOT_STARTED"
+       },
+       "podcastV2": {
+        "__typename": "PodcastResponseWrapper",
+        "data": {
+         "__typename": "Podcast",
+         "coverArt": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab6765630000f68d7f5f1b685aec10b35675c3a2",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67656300005f1f7f5f1b685aec10b35675c3a2",
+            "width": 300
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab6765630000ba8a7f5f1b685aec10b35675c3a2",
+            "width": 640
+           }
+          ]
+         },
+         "mediaType": "AUDIO",
+         "name": "Sakori ",
+         "publisher": {
+          "name": "Sakorinchi"
+         },
+         "uri": "spotify:show:4yBXDBjp4VwtiIZxQIEWa7"
+        }
+       },
+       "releaseDate": {
+        "isoString": "2026-10-11T18:03:00Z",
+        "precision": "MINUTE"
+       },
+       "restrictions": {
+        "paywallContent": false
+       },
+       "uri": "spotify:episode:759CJbX0Nta9wxmV4qlYa0",
+       "videoPreviewThumbnail": null
+      }
+     }
+    ],
+    "totalCount": 1000
+   },
+   "genres": {
+    "items": [
+     {
+      "__typename": "GenreResponseWrapper",
+      "data": {
+       "__typename": "Genre",
+       "image": {
+        "sources": [
+         {
+          "height": 274,
+          "url": "https://t.scdn.co/images/728ed47fc1674feb95f7ac20236eb6d7.jpeg",
+          "width": 274
+         }
+        ]
+       },
+       "name": "The Golden Age of Grunge",
+       "uri": "spotify:genre:0JQ5IMCbQBLuaYGb6mdn3h"
+      }
+     },
+     {
+      "__typename": "GenreResponseWrapper",
+      "data": {
+       "__typename": "Genre",
+       "image": {
+        "sources": [
+         {
+          "height": 274,
+          "url": "https://t.scdn.co/images/728ed47fc1674feb95f7ac20236eb6d7.jpeg",
+          "width": 274
+         }
+        ]
+       },
+       "name": "Felt Emo Might Delete",
+       "uri": "spotify:genre:0JQ5IMCbQBLxKjP3AW4Hh7"
+      }
+     },
+     {
+      "__typename": "GenreResponseWrapper",
+      "data": {
+       "__typename": "Genre",
+       "image": {
+        "sources": [
+         {
+          "height": 274,
+          "url": "https://i.scdn.co/image/ab67fb8200005cafed2d384c6d8708dc5394fc68",
+          "width": 274
+         }
+        ]
+       },
+       "name": "RADAR",
+       "uri": "spotify:genre:0JQ5DAqbMKFOOxftoKZxod"
+      }
+     }
+    ],
+    "totalCount": 23
+   },
+   "playlists": {
+    "items": [
+     {
+      "__typename": "PlaylistResponseWrapper",
+      "data": {
+       "__typename": "Playlist",
+       "description": "This is Radiohead. The essential tracks, all in one playlist.",
+       "format": "artistsets",
+       "images": {
+        "items": [
+         {
+          "sources": [
+           {
+            "height": null,
+            "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/thisisv3/4Z8W4fKeB5YxbusRsdQVPb/en",
+            "width": null
+           }
+          ]
+         }
+        ]
+       },
+       "name": "This Is Radiohead",
+       "ownerV2": {
+        "__typename": "UserResponseWrapper",
+        "data": {
+         "__typename": "User",
+         "avatar": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+            "width": 300
+           }
+          ]
+         },
+         "name": "Spotify",
+         "socialHandle": null,
+         "uri": "spotify:user:spotify",
+         "username": "spotify"
+        }
+       },
+       "uri": "spotify:playlist:37i9dQZF1DZ06evO2VxlyE"
+      }
+     },
+     {
+      "__typename": "PlaylistResponseWrapper",
+      "data": {
+       "__typename": "Playlist",
+       "description": "",
+       "format": "",
+       "images": {
+        "items": [
+         {
+          "sources": [
+           {
+            "height": 640,
+            "url": "https://mosaic.scdn.co/640/ab67616d00001e024b88d5c1b3358cca2c94ec0bab67616d00001e029293c743fa542094336c5e12ab67616d00001e02a9be6a9b8b5831a4c431ab9fab67616d00001e02c8b444df094279e70d0ed856",
+            "width": 640
+           },
+           {
+            "height": 300,
+            "url": "https://mosaic.scdn.co/300/ab67616d00001e024b88d5c1b3358cca2c94ec0bab67616d00001e029293c743fa542094336c5e12ab67616d00001e02a9be6a9b8b5831a4c431ab9fab67616d00001e02c8b444df094279e70d0ed856",
+            "width": 300
+           },
+           {
+            "height": 60,
+            "url": "https://mosaic.scdn.co/60/ab67616d00001e024b88d5c1b3358cca2c94ec0bab67616d00001e029293c743fa542094336c5e12ab67616d00001e02a9be6a9b8b5831a4c431ab9fab67616d00001e02c8b444df094279e70d0ed856",
+            "width": 60
+           }
+          ]
+         }
+        ]
+       },
+       "name": "THE BEST OF RADIOHEAD",
+       "ownerV2": {
+        "__typename": "UserResponseWrapper",
+        "data": {
+         "__typename": "User",
+         "avatar": null,
+         "name": "David",
+         "socialHandle": null,
+         "uri": "spotify:user:d3qa8umk1v9sttcclj710wgjd",
+         "username": "d3qa8umk1v9sttcclj710wgjd"
+        }
+       },
+       "uri": "spotify:playlist:28nxGp2hLho3BA0dX3cb5P"
+      }
+     },
+     {
+      "__typename": "PlaylistResponseWrapper",
+      "data": {
+       "__typename": "Playlist",
+       "description": "ah porra",
+       "format": "",
+       "images": {
+        "items": [
+         {
+          "sources": [
+           {
+            "height": null,
+            "url": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84080faa1762bbc172de71814a",
+            "width": null
+           }
+          ]
+         }
+        ]
+       },
+       "name": "radiohead saddest songs",
+       "ownerV2": {
+        "__typename": "UserResponseWrapper",
+        "data": {
+         "__typename": "User",
+         "avatar": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67757000003b8203f7362cec97e32daeb639af",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab6775700000ee8503f7362cec97e32daeb639af",
+            "width": 300
+           }
+          ]
+         },
+         "name": "gabriela",
+         "socialHandle": null,
+         "uri": "spotify:user:gabriela.stom",
+         "username": "gabriela.stom"
+        }
+       },
+       "uri": "spotify:playlist:5cQFRubPngoWvJ96rd1ENp"
+      }
+     }
+    ],
+    "totalCount": 197
+   },
+   "podcasts": {
+    "items": [
+     {
+      "__typename": "PodcastResponseWrapper",
+      "data": {
+       "__typename": "Podcast",
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6765630000f68dfbf8047a600599bf334390ec",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67656300005f1ffbf8047a600599bf334390ec",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6765630000ba8afbf8047a600599bf334390ec",
+          "width": 640
+         }
+        ]
+       },
+       "mediaType": "AUDIO",
+       "name": "Radiohead Heads Radio",
+       "publisher": {
+        "name": "Kristina Hoffman & Sime Viduka"
+       },
+       "topics": {
+        "items": [
+         {
+          "__typename": "PodcastTopic",
+          "title": "Comedy",
+          "uri": "spotify:genre:0JQ5DAqbMKFNr6gDrHHVKL"
+         },
+         {
+          "__typename": "PodcastTopic",
+          "title": "Entertainment",
+          "uri": "spotify:genre:entertainment_v2_podcasts-page"
+         },
+         {
+          "__typename": "PodcastTopic",
+          "title": "Music",
+          "uri": "spotify:genre:music_interviews_podcasts-page"
+         }
+        ]
+       },
+       "uri": "spotify:show:0Leerdp77UiUWLco4vXq5E"
+      }
+     },
+     {
+      "__typename": "PodcastResponseWrapper",
+      "data": {
+       "__typename": "Podcast",
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6765630000f68db42085b00cd605acab12aefe",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67656300005f1fb42085b00cd605acab12aefe",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6765630000ba8ab42085b00cd605acab12aefe",
+          "width": 640
+         }
+        ]
+       },
+       "mediaType": "AUDIO",
+       "name": "radioheadwork",
+       "publisher": {
+        "name": "lue"
+       },
+       "topics": {
+        "items": [
+         {
+          "__typename": "PodcastTopic",
+          "title": "Comedy",
+          "uri": "spotify:genre:0JQ5DAqbMKFNr6gDrHHVKL"
+         }
+        ]
+       },
+       "uri": "spotify:show:6HTdfUN9lpliVg9TdUkzpu"
+      }
+     },
+     {
+      "__typename": "PodcastResponseWrapper",
+      "data": {
+       "__typename": "Podcast",
+       "coverArt": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab6765630000f68d9396ad5d8490c668a1caf416",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67656300005f1f9396ad5d8490c668a1caf416",
+          "width": 300
+         },
+         {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6765630000ba8a9396ad5d8490c668a1caf416",
+          "width": 640
+         }
+        ]
+       },
+       "mediaType": "AUDIO",
+       "name": "\"Ani are you allright\" x radiohead All i need",
+       "publisher": {
+        "name": "thomg"
+       },
+       "topics": {
+        "items": []
+       },
+       "uri": "spotify:show:6rYFAzByiqDwRXMW3mNpIP"
+      }
+     }
+    ],
+    "totalCount": 193
+   },
+   "topResultsV2": {
+    "featured": [
+     {
+      "__typename": "PlaylistResponseWrapper",
+      "data": {
+       "__typename": "Playlist",
+       "description": "The complete soundtrack to Love Story: John F. Kennedy Jr. & Carolyn Bessette, airing now on FX. ",
+       "format": "editorial",
+       "images": {
+        "items": [
+         {
+          "sources": [
+           {
+            "height": null,
+            "url": "https://i.scdn.co/image/ab67706f00000002d0f93a1de47a51afd0c7edd7",
+            "width": null
+           }
+          ]
+         }
+        ]
+       },
+       "name": "Love Story Official Playlist",
+       "ownerV2": {
+        "__typename": "UserResponseWrapper",
+        "data": {
+         "__typename": "User",
+         "avatar": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+            "width": 300
+           }
+          ]
+         },
+         "name": "Spotify",
+         "socialHandle": null,
+         "uri": "spotify:user:spotify",
+         "username": "spotify"
+        }
+       },
+       "uri": "spotify:playlist:37i9dQZF1DX4H8KVg1X5jq"
+      }
+     },
+     {
+      "__typename": "PlaylistResponseWrapper",
+      "data": {
+       "__typename": "Playlist",
+       "description": "With Nirvana, The Smiths, Jeff Buckley and more",
+       "format": "inspiredby-mix",
+       "images": {
+        "items": [
+         {
+          "sources": [
+           {
+            "height": null,
+            "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/artist/4Z8W4fKeB5YxbusRsdQVPb/en",
+            "width": null
+           }
+          ]
+         }
+        ]
+       },
+       "name": "Radiohead Radio",
+       "ownerV2": {
+        "__typename": "UserResponseWrapper",
+        "data": {
+         "__typename": "User",
+         "avatar": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+            "width": 300
+           }
+          ]
+         },
+         "name": "Spotify",
+         "socialHandle": null,
+         "uri": "spotify:user:spotify",
+         "username": "spotify"
+        }
+       },
+       "uri": "spotify:playlist:37i9dQZF1E4EgTnU7Hvt0A"
+      }
+     },
+     {
+      "__typename": "PlaylistResponseWrapper",
+      "data": {
+       "__typename": "Playlist",
+       "description": "songs that make you feel like you're levitating",
+       "format": "format-shows-shuffle",
+       "images": {
+        "items": [
+         {
+          "sources": [
+           {
+            "height": null,
+            "url": "https://i.scdn.co/image/ab67706f0000000245b715182e164258989971d5",
+            "width": null
+           }
+          ]
+         }
+        ]
+       },
+       "name": "Levitate",
+       "ownerV2": {
+        "__typename": "UserResponseWrapper",
+        "data": {
+         "__typename": "User",
+         "avatar": {
+          "sources": [
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+            "width": 64
+           },
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+            "width": 300
+           }
+          ]
+         },
+         "name": "Spotify",
+         "socialHandle": null,
+         "uri": "spotify:user:spotify",
+         "username": "spotify"
+        }
+       },
+       "uri": "spotify:playlist:37i9dQZF1DWVY5eNJoKHd2"
+      }
+     }
+    ],
+    "itemsV2": [
+     {
+      "item": {
+       "__typename": "ArtistResponseWrapper",
+       "data": {
+        "__typename": "Artist",
+        "onPlatformReputationTrait": {
+         "verification": {
+          "aiPersona": null,
+          "isVerified": true
+         }
+        },
+        "profile": {
+         "name": "Radiohead"
+        },
+        "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb",
+        "visuals": {
+         "avatarImage": {
+          "sources": [
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab6761610000e5eb959527d2fabc9c64287e57b9",
+            "width": 640
+           },
+           {
+            "height": 160,
+            "url": "https://i.scdn.co/image/ab6761610000f178959527d2fabc9c64287e57b9",
+            "width": 160
+           },
+           {
+            "height": 320,
+            "url": "https://i.scdn.co/image/ab67616100005174959527d2fabc9c64287e57b9",
+            "width": 320
+           }
+          ]
+         }
+        }
+       }
+      },
+      "matchedFields": []
+     },
+     {
+      "item": {
+       "__typename": "SearchSectionEntity",
+       "data": {
+        "items": [
+         {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "description": "The complete soundtrack to Love Story: John F. Kennedy Jr. & Carolyn Bessette, airing now on FX. ",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002d0f93a1de47a51afd0c7edd7",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Love Story Official Playlist",
+           "ownerV2": {
+            "__typename": "UserResponseWrapper",
+            "data": {
+             "__typename": "User",
+             "avatar": {
+              "sources": [
+               {
+                "height": 64,
+                "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+                "width": 64
+               },
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+                "width": 300
+               }
+              ]
+             },
+             "name": "Spotify",
+             "socialHandle": null,
+             "uri": "spotify:user:spotify",
+             "username": "spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX4H8KVg1X5jq"
+          }
+         },
+         {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "description": "With Nirvana, The Smiths, Jeff Buckley and more",
+           "format": "inspiredby-mix",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/artist/4Z8W4fKeB5YxbusRsdQVPb/en",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Radiohead Radio",
+           "ownerV2": {
+            "__typename": "UserResponseWrapper",
+            "data": {
+             "__typename": "User",
+             "avatar": {
+              "sources": [
+               {
+                "height": 64,
+                "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+                "width": 64
+               },
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+                "width": 300
+               }
+              ]
+             },
+             "name": "Spotify",
+             "socialHandle": null,
+             "uri": "spotify:user:spotify",
+             "username": "spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1E4EgTnU7Hvt0A"
+          }
+         },
+         {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "description": "songs that make you feel like you're levitating",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f0000000245b715182e164258989971d5",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Levitate",
+           "ownerV2": {
+            "__typename": "UserResponseWrapper",
+            "data": {
+             "__typename": "User",
+             "avatar": {
+              "sources": [
+               {
+                "height": 64,
+                "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+                "width": 64
+               },
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+                "width": 300
+               }
+              ]
+             },
+             "name": "Spotify",
+             "socialHandle": null,
+             "uri": "spotify:user:spotify",
+             "username": "spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWVY5eNJoKHd2"
+          }
+         }
+        ],
+        "sectionType": "GENERIC"
+       }
+      },
+      "matchedFields": []
+     },
+     {
+      "item": {
+       "__typename": "PlaylistResponseWrapper",
+       "data": {
+        "__typename": "Playlist",
+        "description": "This is Radiohead. The essential tracks, all in one playlist.",
+        "format": "artistsets",
+        "images": {
+         "items": [
+          {
+           "sources": [
+            {
+             "height": null,
+             "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/thisisv3/4Z8W4fKeB5YxbusRsdQVPb/en",
+             "width": null
+            }
+           ]
+          }
+         ]
+        },
+        "name": "This Is Radiohead",
+        "ownerV2": {
+         "__typename": "UserResponseWrapper",
+         "data": {
+          "__typename": "User",
+          "avatar": {
+           "sources": [
+            {
+             "height": 64,
+             "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+             "width": 64
+            },
+            {
+             "height": 300,
+             "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+             "width": 300
+            }
+           ]
+          },
+          "name": "Spotify",
+          "socialHandle": null,
+          "uri": "spotify:user:spotify",
+          "username": "spotify"
+         }
+        },
+        "uri": "spotify:playlist:37i9dQZF1DZ06evO2VxlyE"
+       }
+      },
+      "matchedFields": []
+     }
+    ]
+   },
+   "tracksV2": {
+    "items": [
+     {
+      "item": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02de3c04b5fc750b68899b20a9",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851de3c04b5fc750b68899b20a9",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9",
+            "width": 640
+           }
+          ]
+         },
+         "id": "5vkqYmiPBYLaalcmjujWxK",
+         "name": "In Rainbows",
+         "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+        },
+        "artists": {
+         "items": [
+          {
+           "onPlatformReputationTrait": {
+            "verification": {
+             "aiPersona": null
+            }
+           },
+           "profile": {
+            "name": "Radiohead"
+           },
+           "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+          }
+         ]
+        },
+        "associationsV3": {
+         "audioAssociations": {
+          "totalCount": 0
+         },
+         "videoAssociations": {
+          "totalCount": 0
+         }
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "duration": {
+         "totalMilliseconds": 228746
+        },
+        "id": "5Qv2Nby1xTr9pQyjkrc94J",
+        "trackMediaType": "AUDIO",
+        "name": "All I Need",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:5Qv2Nby1xTr9pQyjkrc94J"
+       }
+      },
+      "matchedFields": []
+     },
+     {
+      "item": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02c8b444df094279e70d0ed856",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851c8b444df094279e70d0ed856",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856",
+            "width": 640
+           }
+          ]
+         },
+         "id": "6dVIqQ8qmQ5GBnJ9shOYGE",
+         "name": "OK Computer",
+         "uri": "spotify:album:6dVIqQ8qmQ5GBnJ9shOYGE"
+        },
+        "artists": {
+         "items": [
+          {
+           "onPlatformReputationTrait": {
+            "verification": {
+             "aiPersona": null
+            }
+           },
+           "profile": {
+            "name": "Radiohead"
+           },
+           "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+          }
+         ]
+        },
+        "associationsV3": {
+         "audioAssociations": {
+          "totalCount": 0
+         },
+         "videoAssociations": {
+          "totalCount": 1
+         }
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "duration": {
+         "totalMilliseconds": 264066
+        },
+        "id": "63OQupATfueTdZMWTxW03A",
+        "trackMediaType": "AUDIO",
+        "name": "Karma Police",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:63OQupATfueTdZMWTxW03A"
+       }
+      },
+      "matchedFields": []
+     },
+     {
+      "item": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02de3c04b5fc750b68899b20a9",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851de3c04b5fc750b68899b20a9",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9",
+            "width": 640
+           }
+          ]
+         },
+         "id": "5vkqYmiPBYLaalcmjujWxK",
+         "name": "In Rainbows",
+         "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+        },
+        "artists": {
+         "items": [
+          {
+           "onPlatformReputationTrait": {
+            "verification": {
+             "aiPersona": null
+            }
+           },
+           "profile": {
+            "name": "Radiohead"
+           },
+           "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+          }
+         ]
+        },
+        "associationsV3": {
+         "audioAssociations": {
+          "totalCount": 0
+         },
+         "videoAssociations": {
+          "totalCount": 1
+         }
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "duration": {
+         "totalMilliseconds": 248893
+        },
+        "id": "0YJ9FWWHn9EfnN0lHwbzvV",
+        "trackMediaType": "AUDIO",
+        "name": "Jigsaw Falling Into Place",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:0YJ9FWWHn9EfnN0lHwbzvV"
+       }
+      },
+      "matchedFields": []
+     }
+    ],
+    "totalCount": 436
+   },
+   "users": {
+    "items": [
+     {
+      "__typename": "UserResponseWrapper",
+      "data": {
+       "__typename": "User",
+       "avatar": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67757000003b8230107205b76932443c515df4",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab6775700000ee8530107205b76932443c515df4",
+          "width": 300
+         }
+        ]
+       },
+       "id": "1lraw41j34xwqf7jy3zcsgbdv",
+       "displayName": "Radiohead Office Charts",
+       "socialHandle": null,
+       "uri": "spotify:user:1lraw41j34xwqf7jy3zcsgbdv",
+       "username": "1lraw41j34xwqf7jy3zcsgbdv"
+      }
+     },
+     {
+      "__typename": "UserResponseWrapper",
+      "data": {
+       "__typename": "User",
+       "avatar": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67757000003b821034c921dfdc579348d7d12e",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab6775700000ee851034c921dfdc579348d7d12e",
+          "width": 300
+         }
+        ]
+       },
+       "id": "a398p5g65fxdw1y4pc0g449z4",
+       "displayName": "radiohead",
+       "socialHandle": null,
+       "uri": "spotify:user:a398p5g65fxdw1y4pc0g449z4",
+       "username": "a398p5g65fxdw1y4pc0g449z4"
+      }
+     },
+     {
+      "__typename": "UserResponseWrapper",
+      "data": {
+       "__typename": "User",
+       "avatar": {
+        "sources": [
+         {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67757000003b82fa3d8e9946a1c87ef1c73f22",
+          "width": 64
+         },
+         {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab6775700000ee85fa3d8e9946a1c87ef1c73f22",
+          "width": 300
+         }
+        ]
+       },
+       "id": "316356bcip2ncgizpgpx7mjsvcsa",
+       "displayName": "radiohead",
+       "socialHandle": null,
+       "uri": "spotify:user:316356bcip2ncgizpgpx7mjsvcsa",
+       "username": "316356bcip2ncgizpgpx7mjsvcsa"
+      }
+     }
+    ],
+    "totalCount": 819
+   }
+  }
+ },
+ "extensions": {
+  "requestIds": {
+   "/searchV2": {
+    "search-api": "314e7a20-c67f-13d1-371a-1e5ba2d13687/EJJR"
+   },
+   "/searchV2/topResultsV2": {
+    "search-api": "314e7a20-c67f-13d1-371a-1e5ba2d13687/p7r1"
+   }
+  }
+ }
+}

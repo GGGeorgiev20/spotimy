@@ -1,5 +1,7 @@
 package spotify
 
+import "strconv"
+
 // Raw pathfinder GraphQL fragments, shared by the typed methods.
 
 type gqlImage struct {
@@ -74,6 +76,13 @@ func (a gqlArtists) names() string {
 type gqlDate struct {
 	ISOString string `json:"isoString"`
 	Year      int    `json:"year"`
+}
+
+func (d gqlDate) year() string {
+	if d.Year > 0 {
+		return strconv.Itoa(d.Year)
+	}
+	return year(d.ISOString)
 }
 
 type gqlUser struct {

@@ -59,7 +59,7 @@ func (c *Client) Album(ctx context.Context, uri string) (*Album, error) {
 	out := &Album{
 		URI: a.URI, Name: a.Name, Type: a.Type, Label: a.Label, Saved: a.Saved,
 		Date: a.Date.ISOString, Artists: a.Artists.list(), Images: a.CoverArt.images(),
-		Total: a.TracksV2.TotalCount,
+		Total: a.TracksV2.TotalCount, Tracks: []Track{}, More: []Card{}, Copyright: []string{},
 	}
 	for _, c := range a.Copyright.Items {
 		sym := "©"
@@ -90,4 +90,24 @@ func year(iso string) string {
 		return iso[:4]
 	}
 	return ""
+}
+
+// Tracks returns metadata for track URIs, in order (missing ones are skipped).
+func (c *Client) Tracks(ctx context.Context, uris []string) ([]Track, error) {
+	out := []Track{}
+	for i := 0; i < len(uris); i += 50 {
+		chunk := uris[i:min(i+50, len(uris))]
+		var resp struct {
+			Tracks []gqlTrack `json:"tracks"`
+		}
+		if err := c.query(ctx, "decorateContextTracks", map[string]any{"uris": chunk}, 10*time.Minute, &resp); err != nil {
+			return out, err
+		}
+		for _, t := range resp.Tracks {
+			if tr := t.track(); tr.URI != "" {
+				out = append(out, tr)
+			}
+		}
+	}
+	return out, nil
 }
