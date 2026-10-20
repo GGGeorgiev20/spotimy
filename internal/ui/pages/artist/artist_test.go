@@ -12,3 +12,11 @@ func TestCompact(t *testing.T) {
 		}
 	}
 }
+
+func TestConcertCols(t *testing.T) {
+	for w, want := range map[int]int{300: 1, 359: 1, 360: 2, 539: 2, 540: 3, 1096: 3} {
+		if got := concertCols(w); got != want {
+			t.Errorf("concertCols(%d) = %d, want %d", w, got, want)
+		}
+	}
+}

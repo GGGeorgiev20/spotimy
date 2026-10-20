@@ -11,6 +11,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 
+	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
 )
@@ -20,7 +21,7 @@ var rankBlue = ui.RGB(0x0d72ea)
 // aboutSection is the "About" heading and its picture card (opens the modal).
 func (p *page) aboutSection(gtx layout.Context) layout.Dimensions {
 	a := p.res.V
-	return ui.Pad(gtx, 0, 24, 40, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.Pad(gtx, 0, 24, sectionGap(len(a.Merch) == 0), 24, func(gtx layout.Context) layout.Dimensions {
 		return ui.Column(gtx,
 			func(gtx layout.Context) layout.Dimensions {
 				return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
@@ -78,6 +79,7 @@ type about struct {
 	a     *spotify.ArtistPage
 	list  ui.List
 	close ui.Click
+	links []ui.Click
 	box   bool
 }
 
@@ -86,6 +88,11 @@ func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 	if m.close.Clicked(gtx) {
 		ui.CloseModal()
 		return layout.Dimensions{Size: win}
+	}
+	for i := range m.links {
+		if m.links[i].Clicked(gtx) {
+			backend.OpenURL(m.a.Links[i].URL)
+		}
 	}
 	w, h := min(ui.Dp(gtx, 768), win.X*9/10), min(ui.Dp(gtx, 560), win.Y*7/10)
 	ui.Offset(gtx, (win.X-w)/2, (win.Y-h)/2, func() {
@@ -168,6 +175,12 @@ func (m *about) body(gtx layout.Context) layout.Dimensions {
 			})
 		})
 	}
+	if len(a.Links) > 0 {
+		left = append(left, ui.Gap(0, 8))
+	}
+	for i, l := range a.Links {
+		left = append(left, m.linkRow(&m.links[i], l))
+	}
 	var paras []layout.Widget
 	for _, s := range strings.Split(a.Bio, "\n") {
 		if s = strings.TrimSpace(s); s != "" {
@@ -189,4 +202,43 @@ func (m *about) body(gtx layout.Context) layout.Dimensions {
 	hl := place(pad, leftW, left)
 	hr := place(pad+leftW, rightW, paras)
 	return layout.Dimensions{Size: image.Pt(w, max(hl, hr)+2*pad)}
+}
+
+// linkLabels are the services' display names; other names are shown as sent.
+var linkLabels = map[string]string{
+	"FACEBOOK": "Facebook", "INSTAGRAM": "Instagram", "TWITTER": "X", "WIKIPEDIA": "Wikipedia", "TIKTOK": "TikTok", "YOUTUBE": "YouTube",
+}
+
+// linkIcon is a link's glyph: the service's logo, or a link-out arrow.
+func linkIcon(name string) string {
+	switch name {
+	case "FACEBOOK", "INSTAGRAM", "TIKTOK":
+		return strings.ToLower(name)
+	case "TWITTER":
+		return "x"
+	}
+	return "link-out"
+}
+
+// linkRow is a social link: logo and name, opening in the browser.
+func (m *about) linkRow(click *ui.Click, l spotify.Link) layout.Widget {
+	label, ok := linkLabels[l.Name]
+	if !ok {
+		label = strings.ToUpper(l.Name[:1]) + strings.ToLower(l.Name[1:])
+	}
+	return func(gtx layout.Context) layout.Dimensions {
+		click.Label = label
+		return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
+			return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				s := ui.Dp(gtx, 24)
+				ui.IconPx(gtx, linkIcon(l.Name), s, ui.ColText)
+				ui.Offset(gtx, s+ui.Dp(gtx, 4), ui.Dp(gtx, 2), func() {
+					g := gtx
+					g.Constraints.Max.X = max(0, gtx.Constraints.Max.X-s-ui.Dp(gtx, 4))
+					ui.Text(g, label, 16, ui.Regular, ui.ColText)
+				})
+				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, s)}
+			})
+		})
+	}
 }

@@ -34,6 +34,7 @@ type page struct {
 	color     color.NRGBA
 	list      ui.List
 	header    ui.EntityHeader
+	follow    ui.Pill
 	more      ui.IconButton
 	followers ui.Link
 	following ui.Link
@@ -57,6 +58,7 @@ func (p *page) Chrome() ui.Chrome {
 
 func (p *page) setup(pr *spotify.Profile) {
 	p.ready = true
+	ui.Saved[pr.URI] = pr.IsFollowing
 	p.table = ui.TrackTable{Variant: "search"}
 	p.tracks = &ui.Paged{}
 	p.tracks.SetAll(pr.TopTracks)
@@ -107,6 +109,9 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	if p.following.Click.Clicked(gtx) {
 		ui.Navigate("/user/" + url.PathEscape(p.id) + "/following")
 	}
+	if p.follow.Click.Clicked(gtx) {
+		ui.ToggleFollow(pr.URI)
+	}
 	if p.more.Click.Clicked(gtx) {
 		ui.OpenMenu(ui.CardMenu(spotify.Card{URI: pr.URI, Type: "user", Name: pr.Name}, ui.CardMenuOpts{}))
 	}
@@ -147,10 +152,24 @@ func (p *page) meta(gtx layout.Context, pr *spotify.Profile) layout.Dimensions {
 	return ui.Inline(gtx, 14, ui.Regular, ui.ColText, ui.ColNone, segs...)
 }
 
-// actionRow keeps the header's "…" button where the official page has it.
+// actionRow is the Follow button (other users) and the "…" menu.
 func (p *page) actionRow(gtx layout.Context) layout.Dimensions {
+	pr := p.res.V
 	return ui.Pad(gtx, 17, 24, 17, 24, func(gtx layout.Context) layout.Dimensions {
-		d := p.more.Layout(gtx, ui.IconStyle{Icon: "more", Size: 32, Box: 32, Label: "More options"})
+		var kids []layout.FlexChild
+		if pr.CanFollow {
+			txt := "Follow"
+			if ui.Saved[pr.URI] {
+				txt = "Following"
+			}
+			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return p.follow.Layout(gtx, ui.PillStyle{Text: txt, Size: 13, Weight: ui.Bold, Outline: true})
+			}), layout.Rigid(ui.Gap(18, 0)))
+		}
+		kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return p.more.Layout(gtx, ui.IconStyle{Icon: "more", Size: 32, Box: 32, Label: "More options"})
+		}))
+		d := layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
 		d.Size.Y = ui.Dp(gtx, 56)
 		return d
 	})

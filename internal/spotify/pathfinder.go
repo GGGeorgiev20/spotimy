@@ -101,6 +101,11 @@ func (c *Client) query(ctx context.Context, op string, vars map[string]any, ttl 
 
 // mutate runs a persisted mutation (never retried on 5xx, never cached).
 func (c *Client) mutate(ctx context.Context, op string, vars map[string]any) error {
+	return c.mutateInto(ctx, op, vars, nil)
+}
+
+// mutateInto is mutate that also decodes the response's data into out.
+func (c *Client) mutateInto(ctx context.Context, op string, vars map[string]any, out any) error {
 	hash, ok := c.ops[op]
 	if !ok {
 		return &Error{Op: op, Err: errors.New("operation not in registry")}
@@ -118,10 +123,16 @@ func (c *Client) mutate(ctx context.Context, op string, vars map[string]any) err
 		return err
 	}
 	var resp struct {
-		Errors []gqlError `json:"errors"`
+		Data   json.RawMessage `json:"data"`
+		Errors []gqlError      `json:"errors"`
 	}
 	if json.Unmarshal(body, &resp) == nil && len(resp.Errors) > 0 {
 		return c.fail(op, body, fmt.Errorf("graphql: %s", resp.Errors[0].Message))
+	}
+	if out != nil {
+		if err := json.Unmarshal(resp.Data, out); err != nil {
+			return c.fail(op, body, fmt.Errorf("decoding data: %w", err))
+		}
 	}
 	return nil
 }
