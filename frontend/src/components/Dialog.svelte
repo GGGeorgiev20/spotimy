@@ -1,5 +1,16 @@
 <script lang="ts">
   import { dialog } from '../lib/dialog.svelte'
+  import { App } from '../lib/api.svelte'
+  import { openUri } from '../lib/router.svelte'
+  import type { spotify } from '../../wailsjs/go/models'
+
+  let credits = $state<spotify.Credit[] | null>(null)
+  $effect(() => {
+    const d = dialog.current
+    if (d?.kind !== 'credits') return
+    credits = null
+    App.NowPlaying(d.uri, '').then((i) => (credits = i.credits ?? [])).catch(() => (credits = []))
+  })
 
   let name = $state('')
   let description = $state('')
@@ -35,6 +46,23 @@
           <button class="ghost" onclick={() => close(false)}>Cancel</button>
           <button class="primary" onclick={() => close(true)}>{dialog.current.ok}</button>
         </div>
+      {:else if dialog.current.kind === 'credits'}
+        <h2>Credits</h2>
+        <p class="track">{dialog.current.track}</p>
+        {#if !credits}
+          <p>Loading…</p>
+        {:else if !credits.length}
+          <p>No credits available.</p>
+        {:else}
+          <div class="credits">
+            {#each credits as c (c.name)}
+              <div class="credit">
+                {#if c.uri}<button class="cname" onclick={() => (close(null), openUri(c.uri))}>{c.name}</button>{:else}<span class="cname">{c.name}</span>{/if}
+                <span class="roles">{c.roles}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
       {:else}
         <h2>Edit details</h2>
         <form onsubmit={(e) => (e.preventDefault(), name.trim() && close({ name: name.trim(), description }))}>
@@ -55,6 +83,12 @@
   .box { width: min(524px, 90vw); background: #282828; border-radius: 8px; padding: 24px; box-shadow: 0 4px 60px rgba(0,0,0,.5); }
   h2 { margin: 0 0 16px; font-size: 24px; }
   p { color: var(--text-2); margin: 0 0 24px; }
+  .track { margin: -8px 0 16px; font-weight: 700; color: var(--text); }
+  .credits { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .credit { display: flex; flex-direction: column; }
+  .cname { font-size: 16px; text-align: left; }
+  button.cname:hover { text-decoration: underline; }
+  .roles { font-size: 14px; color: var(--text-2); }
   form { display: flex; flex-direction: column; gap: 12px; }
   input, textarea { background: hsla(0,0%,100%,.1); border: 1px solid transparent; border-radius: 4px; padding: 10px 12px; font-size: 14px; outline: none; resize: none; }
   textarea { height: 120px; font-family: inherit; }

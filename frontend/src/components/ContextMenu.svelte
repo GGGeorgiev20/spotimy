@@ -1,8 +1,9 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
   import { menu, closeMenu } from '../lib/menu.svelte'
-  import { App, saved, toggleSaved, loadSaved, toast } from '../lib/api.svelte'
+  import { App, saved, toggleSaved, loadSaved, toast, likeKey } from '../lib/api.svelte'
   import { openUri } from '../lib/router.svelte'
+  import { showCredits } from '../lib/dialog.svelte'
   import {
     addToQueue, queueContext, addToPlaylist, createPlaylist, editPlaylist, deletePlaylist,
     setPinned, copyLink, toggleLibrary, startRadio,
@@ -70,9 +71,9 @@
           },
         })
       list.push({
-        label: saved[tr.uri] ? 'Remove from Liked Songs' : 'Save to your Liked Songs',
-        icon: saved[tr.uri] ? 'check-circle' : 'plus-circle',
-        run: () => toggleSaved(tr.uri),
+        label: saved[likeKey(tr)] ? 'Remove from Liked Songs' : 'Save to your Liked Songs',
+        icon: saved[likeKey(tr)] ? 'check-circle' : 'plus-circle',
+        run: () => toggleSaved(likeKey(tr)),
       })
       if (t.kind === 'track') list.push({ label: 'Add to queue', icon: 'queue', run: () => addToQueue([tr.uri]) })
       if (t.kind === 'queue')
@@ -81,6 +82,7 @@
       if (tr.artists?.length === 1) list.push({ label: 'Go to artist', icon: 'artist', run: () => openUri(tr.artists[0].uri) })
       else if (tr.artists?.length) list.push({ label: 'Go to artist', icon: 'artist', sub: 'artists' })
       if (tr.album?.uri) list.push({ label: 'Go to album', icon: 'album', run: () => openUri(tr.album!.uri) })
+      if (!tr.episode) list.push({ label: 'View credits', icon: 'info', run: () => showCredits(tr.name, tr.uri) })
       list.push({ label: 'Copy song link', icon: 'share', run: () => copyLink(tr.uri) })
       return list
     }

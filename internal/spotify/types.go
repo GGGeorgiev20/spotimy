@@ -32,6 +32,7 @@ type User struct {
 type Track struct {
 	URI         string    `json:"uri"`
 	UID         string    `json:"uid,omitempty"` // position-specific id inside a playlist/album
+	LinkedURI   string    `json:"linkedUri,omitempty"` // the relinked original; Liked Songs may hold this one
 	Name        string    `json:"name"`
 	Artists     []Artist  `json:"artists"`
 	Album       *AlbumRef `json:"album,omitempty"`

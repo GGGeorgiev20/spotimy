@@ -203,3 +203,14 @@ func TestImageFromURL(t *testing.T) {
 		t.Error("empty url should give no image")
 	}
 }
+
+func TestTrackRelinking(t *testing.T) {
+	var g gqlTrack
+	raw := `{"uri":"spotify:track:a","name":"x","relinkingInformation":{"linkedTrack":{"uri":"spotify:track:b"}}}`
+	if err := json.Unmarshal([]byte(raw), &g); err != nil {
+		t.Fatal(err)
+	}
+	if tr := g.track(); tr.URI != "spotify:track:a" || tr.LinkedURI != "spotify:track:b" {
+		t.Errorf("got %+v", tr)
+	}
+}

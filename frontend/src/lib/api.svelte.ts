@@ -35,6 +35,10 @@ export async function coverColor(images: Image[] | undefined | null): Promise<st
 // Saved-state of library items, shared by every heart/check button.
 export const saved = $state<Record<string, boolean>>({})
 
+// The URI whose saved state a track row shows: a relinked track is liked
+// under its original ID.
+export const likeKey = (t: { uri: string; linkedUri?: string }) => t.linkedUri || t.uri
+
 export async function loadSaved(uris: string[]) {
   // untrack: callers run this inside effects, which must not re-run when the
   // saved map fills in.

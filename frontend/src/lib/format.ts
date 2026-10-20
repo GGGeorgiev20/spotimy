@@ -14,6 +14,16 @@ export function fmtTotal(ms: number): string {
   return h >= 10 ? `about ${h} hr` : `${h} hr ${min % 60} min`
 }
 
+// Length of a long list: exact once every row is loaded, otherwise estimated
+// from the loaded rows, which is what the official client's "about" means.
+export function fmtListLength(loaded: { durationMs: number }[], total: number): string {
+  if (!loaded.length) return ''
+  const ms = loaded.reduce((s, t) => s + t.durationMs, 0)
+  if (loaded.length >= total) return fmtTotal(ms)
+  const est = fmtTotal((ms / loaded.length) * total)
+  return est.startsWith('about') ? est : `about ${est}`
+}
+
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 // Date added: relative for the last few weeks, otherwise "Feb 12, 2026".

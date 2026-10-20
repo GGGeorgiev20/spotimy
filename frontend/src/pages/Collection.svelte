@@ -8,6 +8,7 @@
   import { setChrome } from '../lib/chrome.svelte'
   import { me } from '../lib/me.svelte'
   import { ctxPlaying, playContext } from '../lib/player.svelte'
+  import { fmtListLength } from '../lib/format'
 
   let { scroller }: { scroller: HTMLElement | undefined } = $props()
 
@@ -30,6 +31,7 @@
       .catch((e) => (error = String(e)))
   })
   $effect(() => setChrome({ title: 'Liked Songs', color, contextUri: uri, onplay: play }))
+  const total = $derived(tracks ? fmtListLength(tracks.loaded, tracks.total) : '')
 </script>
 
 {#if error}
@@ -37,7 +39,7 @@
 {:else if tracks}
   <EntityHeader image="/img?u={encodeURIComponent('https://misc.scdn.co/liked-songs/liked-songs-300.png')}" type="Playlist" title="Liked Songs" {color}>
     {#snippet meta()}
-      <span class="owner">{me.user?.name}</span><span class="dot">•</span><span class="sub">{tracks!.total} songs</span>
+      <span class="owner">{me.user?.name}</span><span class="dot">•</span><span class="sub">{tracks!.total} songs{total ? `, ${total}` : ''}</span>
     {/snippet}
   </EntityHeader>
   <ActionBar {isPlaying} onplay={play} contextUri={uri} />

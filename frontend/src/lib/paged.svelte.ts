@@ -1,4 +1,4 @@
-import { loadSaved, type Track } from './api.svelte'
+import { likeKey, loadSaved, type Track } from './api.svelte'
 
 export type Page<T> = { total: number; items: T[] }
 
@@ -13,7 +13,7 @@ export class Paged<T = Track> {
   constructor(
     private fetch: (offset: number, limit: number) => Promise<Page<T>>,
     private size = 100,
-    private onPage: (items: T[]) => void = (items) => loadSaved((items as Track[]).map((t) => t.uri)),
+    private onPage: (items: T[]) => void = (items) => loadSaved((items as Track[]).map(likeKey)),
   ) {}
 
   // Seed with the first page that came with the page header.

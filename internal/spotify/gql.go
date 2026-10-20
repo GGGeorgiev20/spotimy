@@ -133,6 +133,14 @@ type gqlTrack struct {
 		} `json:"data"`
 	} `json:"podcastV2"`
 	CoverArt *gqlSources `json:"coverArt"`
+
+	// Set when this market's copy stands in for another track ID, e.g. an
+	// album's track vs the copy the user liked.
+	RelinkingInformation *struct {
+		LinkedTrack struct {
+			URI string `json:"uri"`
+		} `json:"linkedTrack"`
+	} `json:"relinkingInformation"`
 }
 
 func (t gqlTrack) track() Track {
@@ -145,6 +153,9 @@ func (t gqlTrack) track() Track {
 		Playcount:   t.Playcount,
 		TrackNumber: t.TrackNumber,
 		DiscNumber:  t.DiscNumber,
+	}
+	if r := t.RelinkingInformation; r != nil && r.LinkedTrack.URI != t.URI {
+		out.LinkedURI = r.LinkedTrack.URI
 	}
 	if t.Duration != nil {
 		out.DurationMs = t.Duration.TotalMilliseconds

@@ -9,7 +9,7 @@
   import { editPlaylist, toggleLibrary } from '../lib/actions'
   import { Paged } from '../lib/paged.svelte'
   import { setChrome } from '../lib/chrome.svelte'
-  import { fmtNumber, fmtTotal, headerColor } from '../lib/format'
+  import { fmtListLength, fmtNumber, headerColor } from '../lib/format'
   import { ctxPlaying, playContext } from '../lib/player.svelte'
   import { navigate } from '../lib/router.svelte'
   import type { spotify } from '../../wailsjs/go/models'
@@ -71,16 +71,8 @@
   function text(html: string) {
     return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
   }
-  // Exact once every row is loaded; until then an estimate from the loaded
-  // rows, which is what the official client's "about" means too.
-  const total = $derived.by(() => {
-    const loaded = tracks?.loaded.filter(Boolean) ?? []
-    if (!loaded.length) return ''
-    const ms = loaded.reduce((s, t) => s + t.durationMs, 0)
-    if (loaded.length === tracks!.total) return fmtTotal(ms)
-    const est = fmtTotal((ms / loaded.length) * tracks!.total)
-    return est.startsWith('about') ? est : `about ${est}`
-  })
+  const total = $derived(tracks ? fmtListLength(tracks.loaded, tracks.total) : '')
+
 </script>
 
 {#if error}

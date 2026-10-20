@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
   import Virtual from './Virtual.svelte'
-  import { App, pick, saved, toast, toggleSaved, type Track } from '../lib/api.svelte'
+  import { App, likeKey, pick, saved, toast, toggleSaved, type Track } from '../lib/api.svelte'
   import { openMenu } from '../lib/menu.svelte'
   import type { Paged } from '../lib/paged.svelte'
   import { fmtAdded, fmtDuration, fmtNumber } from '../lib/format'
@@ -153,11 +153,11 @@
           <div class="dur sub">
             <button
               class="save"
-              class:on={saved[t.uri]}
-              onclick={(e) => (e.stopPropagation(), toggleSaved(t.uri))}
-              aria-label={saved[t.uri] ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
+              class:on={saved[likeKey(t)]}
+              onclick={(e) => (e.stopPropagation(), toggleSaved(likeKey(t)))}
+              aria-label={saved[likeKey(t)] ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
             >
-              <Icon name={saved[t.uri] ? 'check-circle' : 'plus-circle'} />
+              <Icon name={saved[likeKey(t)] ? 'check-circle' : 'plus-circle'} />
             </button>
             <span>{fmtDuration(t.durationMs)}</span>
             <button class="more" aria-label="More options for {t.name}" onclick={(e) => ((selected = i), openMenu(e, { kind: 'track', track: t, playlist }))}><Icon name="more" /></button>
