@@ -87,7 +87,8 @@ func (p *Paged) Loaded() []spotify.Track {
 
 // TrackTable draws the official track list rows. Variant: "playlist"
 // (# Title Album Date-added Duration), "album" (no art, track numbers),
-// "artist" (plays column, no header), "search" (Title Album Duration).
+// "artist" (plays column, no header), "search" (Title Album Duration), "compact" (cover, title, duration: search
+// top songs).
 type TrackTable struct {
 	Variant    string
 	ContextURI string // "" plays tracks on their own
@@ -142,7 +143,7 @@ func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 	c.gap, c.idx = gap, px(16)
 	durMin := px(120)
 	switch tt.Variant {
-	case "album":
+	case "album", "compact":
 		fr = []float64{4}
 	case "search", "artist":
 		fr = []float64{4, 2}

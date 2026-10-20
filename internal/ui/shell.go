@@ -309,26 +309,28 @@ func layoutMain(gtx layout.Context) layout.Dimensions {
 	st := clip.Rect{Max: image.Pt(barW, h)}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &stickyPlay.Click.Label)
 	st.Pop()
+	if stickyPlay.Click.Clicked(gtx) && o >= 1 && ch.OnPlay != nil {
+		ch.OnPlay()
+	}
+	m := op.Record(gtx.Ops)
+	x := Dp(gtx, 24)
 	if ch.OnPlay != nil {
-		if stickyPlay.Click.Clicked(gtx) && o >= 1 {
-			ch.OnPlay()
-		}
-		m := op.Record(gtx.Ops)
-		Offset(gtx, Dp(gtx, 24), (h-Dp(gtx, 48))/2, func() {
+		Offset(gtx, x, (h-Dp(gtx, 48))/2, func() {
 			stickyPlay.Layout(gtx, 48, CtxPlaying(ch.ContextURI))
 		})
-		Offset(gtx, Dp(gtx, 24+48+8), 0, func() {
-			g := gtx
-			g.Constraints = layout.Exact(image.Pt(max(0, barW-Dp(gtx, 24+48+8+24)), h))
-			layout.W.Layout(g, func(gtx layout.Context) layout.Dimensions {
-				return Text(gtx, ch.Title, 24, Bold, ColText)
-			})
-		})
-		call := m.Stop()
-		op := paint.PushOpacity(gtx.Ops, o)
-		call.Add(gtx.Ops)
-		op.Pop()
+		x += Dp(gtx, 48+8)
 	}
+	Offset(gtx, x, 0, func() {
+		g := gtx
+		g.Constraints = layout.Exact(image.Pt(max(0, barW-x-Dp(gtx, 24)), h))
+		layout.W.Layout(g, func(gtx layout.Context) layout.Dimensions {
+			return Text(gtx, ch.Title, 24, Bold, ColText)
+		})
+	})
+	call := m.Stop()
+	fade := paint.PushOpacity(gtx.Ops, o)
+	call.Add(gtx.Ops)
+	fade.Pop()
 	return d
 }
 
@@ -553,6 +555,16 @@ func layoutSearchBox(gtx layout.Context, w int) {
 	})
 }
 
+// routeQuery is the query of a /search/<query>[/<tab>] path ("" for others).
+func routeQuery(path string) string {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) < 2 || parts[0] != "search" {
+		return ""
+	}
+	q, _ := url.PathUnescape(parts[1])
+	return q
+}
+
 // searchChanged updates the /search route 250ms after typing stops; it
 // replaces the history entry so each keystroke isn't a "back" step.
 func searchChanged() {
@@ -562,6 +574,9 @@ func searchChanged() {
 	searchTimer = time.AfterFunc(250*time.Millisecond, func() {
 		Post(func() {
 			q := strings.TrimSpace(SearchQuery.Text())
+			if cur := Current().Path; strings.HasPrefix(cur, "/search") && routeQuery(cur) == q {
+				return // set programmatically from the route (or typing came back to it)
+			}
 			path := "/search"
 			if q != "" {
 				path += "/" + url.PathEscape(q)
