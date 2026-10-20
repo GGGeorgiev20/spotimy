@@ -103,9 +103,11 @@ func Frame(gtx layout.Context) {
 	clickDepth = 0
 	win := gtx.Constraints.Max
 	paint.Fill(gtx.Ops, ColBg)
+	// Everything is laid out inside the root area so its handler sees every
+	// pointer event (ancestors receive events too) and can track the position.
 	area := clip.Rect{Max: win}.Push(gtx.Ops)
+	defer area.Pop()
 	trackPointer(gtx, rootTag)
-	area.Pop()
 	shortcuts(gtx)
 	inputFocused = false
 	defer func() { inputFocusedLast = inputFocused }()

@@ -156,10 +156,12 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 		c := &lv.clicks[i]
 		c.Disabled = it.Muted
 		c.Label = it.Label
+		row := image.Rect(pad, y, w-pad, y+rowH)
+		lv.rows = append(lv.rows, row)
 		if c.Clicked(gtx) {
 			switch {
 			case it.Sub != nil:
-				openFlyout(lv, li, i)
+				openFlyout(lv, li, i, it.Sub)
 			case it.Action != nil:
 				act := it.Action
 				CloseMenu()
@@ -168,13 +170,11 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 			}
 		}
 		if c.Hovered() && it.Sub != nil && lv.open != i {
-			openFlyout(lv, li, i)
+			openFlyout(lv, li, i, it.Sub)
 		} else if c.Hovered() && it.Sub == nil && lv.open >= 0 && li == len(menus)-2 {
 			menus = menus[:li+1]
 			lv.open = -1
 		}
-		row := image.Rect(pad, y, w-pad, y+rowH)
-		lv.rows = append(lv.rows, row)
 		Offset(gtx, row.Min.X, row.Min.Y, func() {
 			c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				rw := row.Dx()
@@ -242,12 +242,12 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 	return layout.Dimensions{Size: r.Max}
 }
 
-func openFlyout(lv *menuLevel, li, i int) {
+func openFlyout(lv *menuLevel, li, i int, sub func() []MenuItem) {
 	menus = menus[:li+1]
 	lv.open = i
 	row := lv.rows[i]
 	at := lv.rect.Min.Add(image.Pt(lv.rect.Dx()-4, row.Min.Y-4))
-	menus = append(menus, &menuLevel{sub: lv.items[i].Sub, at: at, open: -1})
+	menus = append(menus, &menuLevel{sub: sub, at: at, open: -1})
 }
 
 // ---- Modals ----

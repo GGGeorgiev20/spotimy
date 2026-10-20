@@ -60,6 +60,15 @@ func (l *List) ScrollTop() int {
 	return top
 }
 
+// itemTop is the content y of item i's top edge.
+func (l *List) itemTop(i int) int {
+	avg, top := l.avg(), 0
+	for k := 0; k < i; k++ {
+		top += l.height(k, avg)
+	}
+	return top
+}
+
 // Scrolled reports whether item i's top edge is above the view.
 func (l *List) Scrolled(i int) bool {
 	return l.Position.First > i || l.Position.First == i && l.Position.Offset > 0
@@ -109,7 +118,7 @@ func (l *List) Layout(gtx layout.Context, n int, item layout.ListElement) layout
 		return d
 	})
 
-	if l.Sticky != nil && l.Scrolled(l.StickyIndex) {
+	if l.Sticky != nil && l.ScrollTop()+l.StickyTop > l.itemTop(l.StickyIndex) {
 		Offset(gtx, 0, l.StickyTop, func() {
 			g := gtx
 			g.Constraints = layout.Constraints{Min: image.Pt(size.X, 0), Max: size}

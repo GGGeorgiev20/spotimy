@@ -339,9 +339,12 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 					if current {
 						col = ColAccent
 					}
-					layout.E.Layout(g, func(gtx layout.Context) layout.Dimensions {
-						return Text(gtx, num, 16, Regular, col)
-					})
+					// Right-aligned and allowed to overflow left, like the CSS column.
+					m := op.Record(gtx.Ops)
+					g.Constraints = layout.Constraints{Max: image.Pt(Dp(gtx, 64), h)}
+					d := Text(g, num, 16, Regular, col)
+					call := m.Stop()
+					Offset(gtx, c.idx-d.Size.X, (h-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
 				}
 			})
 			x += c.idx + c.gap

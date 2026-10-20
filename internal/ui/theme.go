@@ -2,6 +2,7 @@ package ui
 
 import (
 	"embed"
+	"os"
 	"fmt"
 	"image"
 	"image/color"
@@ -112,7 +113,20 @@ func newShaper() *text.Shaper {
 		}
 		faces = append(faces, font.FontFace{Font: font.Font{Typeface: "Figtree", Weight: w}, Face: face})
 	}
-	// System fonts stay loaded as fallbacks for other scripts and emoji.
+	// System fonts stay loaded as fallbacks for other scripts. Go-text's
+	// system scan skips color bitmap fonts, so emoji need their font added.
+	for _, p := range []string{
+		"/usr/share/fonts/truetype/NotoColorEmoji.ttf",
+		"/usr/share/fonts/noto/NotoColorEmoji.ttf",
+		"/usr/share/fonts/google-noto-emoji/NotoColorEmoji.ttf",
+	} {
+		if data, err := os.ReadFile(p); err == nil {
+			if face, err := opentype.Parse(data); err == nil {
+				faces = append(faces, font.FontFace{Font: font.Font{Typeface: "Noto Color Emoji"}, Face: face})
+				break
+			}
+		}
+	}
 	return text.NewShaper(text.WithCollection(faces))
 }
 
