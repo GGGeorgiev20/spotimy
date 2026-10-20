@@ -93,6 +93,7 @@ func (a *App) token(ctx context.Context) (string, error) {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	lowMemoryWebKit()
 	a.player.Start()
 }
 
