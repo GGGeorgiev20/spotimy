@@ -89,7 +89,7 @@ func (p *page) setup(pl *spotify.Playlist) {
 	if pl.CanEdit && !p.recs.res.Done {
 		p.recs.fetch(p.uri, p.haveURIs())
 	}
-	ui.CoverColor(pl.Images, func(c color.NRGBA) { p.color = c })
+	ui.ExtractedColor(pl.Color, pl.Images, func(c color.NRGBA) { p.color = c })
 }
 
 // move applies a drag-reorder at once, then syncs with the server (the

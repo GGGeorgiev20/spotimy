@@ -32,21 +32,20 @@ type HeaderOpts struct {
 	Icon   string // placeholder icon when there's no image
 }
 
-// HeaderTitleSize is the font size (sp) of a header title in a w px wide
-// header: smaller for long titles, as in the official client.
-func HeaderTitleSize(gtx layout.Context, w int, title string) float32 {
-	n := len([]rune(title))
-	pw := float32(w) / gtx.Metric.PxPerSp
-	switch {
-	case n > 40:
-		return max(24, min(48, pw*.04))
-	case n > 18:
-		return max(32, min(72, pw*.06))
+// HeaderTitleSize is the font size (sp) of a header title that has avail px
+// of width: the largest of 96, 72, 48 and 32 that fits on one line (longer
+// titles wrap at 32), as the official client fits it.
+func HeaderTitleSize(gtx layout.Context, avail int, title string) float32 {
+	for _, s := range []float32{96, 72, 48} {
+		if Measure(gtx, title, s, ExtraBold) <= avail {
+			return s
+		}
 	}
-	return max(32, min(96, pw*.08))
+	return 32
 }
 
-// Layout draws the header at full width.
+// Layout draws the header at full width. Padding and artwork scale with the
+// main view's width (ContentT): 16dp and 128dp up to 24dp and 232dp.
 func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimensions {
 	if h.Art.Clicked(gtx) && len(o.Images) > 0 {
 		ShowArtwork(Pick(o.Images, 640))
@@ -56,10 +55,12 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	}
 	w := gtx.Constraints.Max.X
 	px := func(v float32) int { return Dp(gtx, v) }
-	art := max(px(128), min(px(232), w*20/100))
-	size := HeaderTitleSize(gtx, w, o.Title)
-	infoX := px(24) + art + px(24)
-	infoW := max(0, w-infoX-px(24))
+	t := ContentT(gtx)
+	pad := ContentPad(gtx)
+	art := px(128 + 104*t)
+	infoX := pad + art + pad
+	infoW := max(0, w-infoX-pad)
+	size := HeaderTitleSize(gtx, infoW, o.Title)
 
 	// Info column, measured first so the header grows to fit it.
 	m := op.Record(gtx.Ops)
@@ -69,12 +70,12 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 				return layout.Dimensions{}
 			}
 			gtx.Constraints.Max.X = infoW
-			return Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions { return Text(gtx, o.Type, 14, Medium, ColText) })
+			return Text(gtx, o.Type, 14, Regular, ColText)
 		},
 		func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Max.X = infoW
 			title := func(gtx layout.Context) layout.Dimensions {
-				return Label{Text: o.Title, Size: size, Weight: Black, MaxLines: 3, LineHeight: size * 1.08}.Layout(gtx)
+				return Label{Text: o.Title, Size: size, Weight: ExtraBold, MaxLines: 3, LineHeight: size}.Layout(gtx)
 			}
 			if o.OnEdit != nil {
 				h.Title.Label = "Edit details"
@@ -87,9 +88,7 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 				return layout.Dimensions{}
 			}
 			gtx.Constraints.Max.X = infoW
-			return Pad(gtx, 8, 0, 0, 0, func(gtx layout.Context) layout.Dimensions {
-				return Label{Text: o.Description, Size: 14, Color: ColText2, MaxLines: 2}.Layout(gtx)
-			})
+			return Label{Text: o.Description, Size: 14, Color: Alpha(ColText, .7), MaxLines: 2}.Layout(gtx)
 		},
 		Gap(0, 8),
 		func(gtx layout.Context) layout.Dimensions {
@@ -102,18 +101,14 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	)
 	call := m.Stop()
 
-	contentH := max(art, info.Size.Y)
-	total := px(32) + contentH + px(24)
-	if total < px(232)+px(56) {
-		total = max(total, art+px(56))
-	}
+	// The gap above the artwork shrinks from 43.5dp to 20dp as the view widens.
+	total := max(pad+px(43.5-23.5*t)+art, pad+info.Size.Y+px(8))
 	c := o.Color
 	if c == ColNone {
 		c = RGB(0x535353)
 	}
-	VGradient(gtx.Ops, image.Rect(0, 0, w, total), c, Scale(c, .5))
-	ay := total - px(24) - art
-	Offset(gtx, px(24), ay, func() {
+	FillRect(gtx.Ops, image.Rect(0, 0, w, total), 0, c)
+	Offset(gtx, pad, total-pad-art, func() {
 		radius := px(4)
 		if o.Round {
 			radius = art / 2
@@ -128,22 +123,22 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 			return Image{URL: Pick(o.Images, art), Radius: radius, Round: o.Round, Icon: icon}.Layout(gtx, image.Pt(art, art))
 		})
 	})
-	Offset(gtx, infoX, total-px(24)-info.Size.Y, func() { call.Add(gtx.Ops) })
+	Offset(gtx, infoX, total-pad-info.Size.Y, func() { call.Add(gtx.Ops) })
 	return layout.Dimensions{Size: image.Pt(w, total)}
 }
 
-// HeaderFade paints the 232dp gradient that continues a header's color
-// behind the action bar. Draw it before the page list with top = the header's
-// bottom edge minus the list's scroll offset.
+// HeaderFade paints the 173dp gradient that continues a header's color
+// (at 70%) behind the action bar. Draw it before the page list with top = the
+// header's bottom edge minus the list's scroll offset.
 func HeaderFade(gtx layout.Context, c color.NRGBA, top int) {
 	if c == ColNone {
 		c = RGB(0x535353)
 	}
-	h := Dp(gtx, 232)
+	h := Dp(gtx, 173)
 	if top+h <= 0 {
 		return
 	}
-	VGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), Scale(c, .4), ColSurface)
+	VGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), Mix(ColSurface, c, .7), ColSurface)
 }
 
 type artworkView struct {
@@ -192,6 +187,8 @@ type ActionOpts struct {
 	Extra layout.Widget
 	// Menu items for "…" (nil hides it).
 	Menu func() []MenuItem
+	// Above is a line drawn over the buttons (an episode's date and length).
+	Above layout.Widget
 }
 
 func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
@@ -231,7 +228,8 @@ func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
 	kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return a.Play.Layout(gtx, 56, playing)
 	}))
-	gap := layout.Rigid(Gap(24, 0))
+	pad := ContentPadDp(gtx)
+	gap := layout.Rigid(Gap(pad, 0))
 	if o.Shuffle {
 		kids = append(kids, gap, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			d := a.Shuffle.Layout(gtx, IconStyle{Icon: "shuffle", Size: 32, Box: 32, Active: shuffleOn, Dot: true, Label: "Shuffle"})
@@ -270,23 +268,52 @@ func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
 			return d
 		}))
 	}
-	return Pad(gtx, 24, 24, 24, 24, func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
+	return Pad(gtx, pad, pad, pad, pad, func(gtx layout.Context) layout.Dimensions {
+		row := func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
+		}
+		if o.Above == nil {
+			return row(gtx)
+		}
+		return Column(gtx, o.Above, Gap(0, 16), row)
 	})
+}
+
+// ExtractedColor is the header color Spotify extracted from the cover (hex,
+// when the API gave one); otherwise it falls back to CoverColor.
+func ExtractedColor(hex string, images []spotify.Image, done func(color.NRGBA)) {
+	if hex != "" {
+		done(Hex(hex))
+		return
+	}
+	CoverColor(images, done)
 }
 
 // CoverColor loads the header color for a cover (darkened with HeaderColor).
 func CoverColor(images []spotify.Image, done func(color.NRGBA)) {
-	url := Pick(images, 64)
+	url, big := Pick(images, 64), Pick(images, 640) // the extractor is asked about the biggest cover
 	if url == "" {
 		done(RGB(0x535353))
 		return
 	}
-	Async(func() (string, error) { return B.ImageColor(url) }, func(hex string, err error) {
-		if err != nil {
-			done(RGB(0x535353))
-			return
+	type result struct {
+		hex   string
+		exact bool // Spotify's own dark color, used as is
+	}
+	Async(func() (result, error) {
+		if hex, err := B.CoverColor(big); err == nil {
+			return result{hex, true}, nil
 		}
-		done(HeaderColor(Hex(hex)))
+		hex, err := B.ImageColor(url)
+		return result{hex, false}, err
+	}, func(r result, err error) {
+		switch {
+		case err != nil:
+			done(RGB(0x535353))
+		case r.exact:
+			done(Hex(r.hex))
+		default:
+			done(HeaderColor(Hex(r.hex)))
+		}
 	})
 }

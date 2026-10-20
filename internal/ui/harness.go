@@ -295,7 +295,7 @@ func (hr *harness) mux() *http.ServeMux {
 		pos := f32.Pt(num(r, "x"), num(r, "y"))
 		hr.do(func() {
 			hr.pointer(pointer.Move, pos, 0)
-			hr.r.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: pos, Scroll: f32.Pt(0, num(r, "dy")), Time: time.Duration(time.Now().UnixNano())})
+			hr.r.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: pos, Scroll: f32.Pt(num(r, "dx"), num(r, "dy")), Time: time.Duration(time.Now().UnixNano())})
 			hr.frame()
 		})
 		hr.settle(5 * time.Second)

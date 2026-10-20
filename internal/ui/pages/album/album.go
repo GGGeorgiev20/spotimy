@@ -51,7 +51,7 @@ func (p *page) setup(a *spotify.Album) {
 	p.tracks.SetAll(a.Tracks)
 	p.table = ui.TrackTable{Variant: "album", ContextURI: p.uri}
 	p.artists = make([]ui.Link, len(a.Artists))
-	ui.CoverColor(a.Images, func(c color.NRGBA) { p.color = c })
+	ui.ExtractedColor(a.Color, a.Images, func(c color.NRGBA) { p.color = c })
 }
 
 const (
@@ -157,7 +157,7 @@ func (p *page) meta(gtx layout.Context, a *spotify.Album) layout.Dimensions {
 }
 
 func (p *page) footer(gtx layout.Context, a *spotify.Album) layout.Dimensions {
-	return ui.Pad(gtx, 32, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 32, 0, func(gtx layout.Context) layout.Dimensions {
 		rows := []layout.Widget{func(gtx layout.Context) layout.Dimensions {
 			released := a.Date
 			for _, f := range []string{time.RFC3339, "2006-01-02"} {

@@ -285,6 +285,7 @@ var stickyPlay PlayButton
 
 func layoutMain(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
+	mainWidth = size.X
 	page := Current().Page()
 	d := page.Layout(gtx)
 
@@ -306,7 +307,7 @@ func layoutMain(gtx layout.Context) layout.Dimensions {
 		return d
 	}
 	barW := size.X - Dp(gtx, 12)
-	bg := Scale(ch.Color, .5)
+	bg := ch.Color
 	FillRect(gtx.Ops, image.Rect(0, 0, barW, h), 0, Alpha(bg, o))
 	// Block clicks to the list under the bar.
 	st := clip.Rect{Max: image.Pt(barW, h)}.Push(gtx.Ops)
@@ -316,7 +317,7 @@ func layoutMain(gtx layout.Context) layout.Dimensions {
 		ch.OnPlay()
 	}
 	m := op.Record(gtx.Ops)
-	x := Dp(gtx, 24)
+	x := Dp(gtx, 16)
 	if ch.OnPlay != nil {
 		Offset(gtx, x, (h-Dp(gtx, 48))/2, func() {
 			stickyPlay.Layout(gtx, 48, CtxPlaying(ch.ContextURI))
@@ -325,7 +326,7 @@ func layoutMain(gtx layout.Context) layout.Dimensions {
 	}
 	Offset(gtx, x, 0, func() {
 		g := gtx
-		g.Constraints = layout.Exact(image.Pt(max(0, barW-x-Dp(gtx, 24)), h))
+		g.Constraints = layout.Exact(image.Pt(max(0, barW-x-Dp(gtx, 16)), h))
 		layout.W.Layout(g, func(gtx layout.Context) layout.Dimensions {
 			return Text(gtx, ch.Title, 24, Bold, ColText)
 		})

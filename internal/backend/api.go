@@ -68,6 +68,20 @@ func (a *App) SetPinned(uri string, pinned bool) error {
 	return a.sp.SetPinned(ctx, uri, pinned)
 }
 
+// CoverColor returns the header color Spotify extracts from a cover.
+func (a *App) CoverColor(url string) (string, error) {
+	if v, ok := a.coverColors.Load(url); ok {
+		return v.(string), nil
+	}
+	ctx, cancel := a.call()
+	defer cancel()
+	hex, err := a.sp.ImageColor(ctx, url)
+	if err == nil {
+		a.coverColors.Store(url, hex)
+	}
+	return hex, err
+}
+
 // ImageColor returns the dominant color of an image for header gradients.
 func (a *App) ImageColor(url string) (string, error) {
 	ctx, cancel := a.call()

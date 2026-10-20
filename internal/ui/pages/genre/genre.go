@@ -51,7 +51,8 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		p.color = ui.Hex(b.Color)
 		p.shelves = make([]ui.Shelf, len(b.Sections))
 	}
-	ui.HeaderFade(gtx, p.color, ui.Dp(gtx, heroH)-p.list.ScrollTop())
+	// A 232dp band below the hero, as on Home.
+	ui.VGradient(gtx.Ops, image.Rect(0, ui.Dp(gtx, heroH)-p.list.ScrollTop(), gtx.Constraints.Max.X, ui.Dp(gtx, heroH+232)-p.list.ScrollTop()), ui.Scale(p.color, .4), ui.ColSurface)
 
 	ns := len(b.Sections)
 	rows := p.grid.Count(gtx, len(b.Categories))
@@ -65,13 +66,15 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			return p.hero(gtx, b.Title)
 		case i <= ns:
 			s := b.Sections[i-1]
-			d := p.shelves[i-1].Layout(gtx, s.Items, ui.ShelfOpts{Title: s.Title})
-			if i == 1 { // the first shelf sits well below the banner
-				d.Size.Y += ui.Dp(gtx, 67)
+			shelf := func(gtx layout.Context) layout.Dimensions {
+				return p.shelves[i-1].Layout(gtx, s.Items, ui.ShelfOpts{Title: s.Title})
 			}
-			return d
+			if i == 1 { // the first shelf sits 48dp below the banner
+				return ui.Pad(gtx, 48, 0, 0, 0, shelf)
+			}
+			return shelf(gtx)
 		case browse == 1 && i == ns+1:
-			return ui.Pad(gtx, 16, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 16, 16, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, "Browse all", 24, ui.Bold, ui.ColText)
 			})
 		case i < 1+ns+browse+rows:
@@ -88,13 +91,12 @@ func (p *page) hero(gtx layout.Context, title string) layout.Dimensions {
 	w, h := gtx.Constraints.Max.X, ui.Dp(gtx, heroH)
 	p.heroBottom = h
 	ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), p.color, ui.Scale(p.color, .4))
-	// clamp(48px, 10cqi, 96px)
-	size := max(48, min(96, float32(w)/gtx.Metric.PxPerSp*.1))
-	pad := ui.Dp(gtx, 24)
+	pad := ui.ContentPad(gtx)
+	size := ui.HeaderTitleSize(gtx, w-2*pad, title)
 	m := op.Record(gtx.Ops)
 	g := gtx
 	g.Constraints = layout.Constraints{Max: image.Pt(w-2*pad, h-2*pad)}
-	d := ui.Label{Text: title, Size: size, Weight: ui.ExtraBold, MaxLines: 2}.Layout(g)
+	d := ui.Label{Text: title, Size: size, Weight: ui.ExtraBold, MaxLines: 2, LineHeight: size}.Layout(g)
 	call := m.Stop()
 	ui.Offset(gtx, pad, h-pad-d.Size.Y, func() { call.Add(gtx.Ops) })
 	return layout.Dimensions{Size: image.Pt(w, h)}

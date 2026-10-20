@@ -155,7 +155,7 @@ func (p *page) meta(gtx layout.Context, pr *spotify.Profile) layout.Dimensions {
 // actionRow is the Follow button (other users) and the "…" menu.
 func (p *page) actionRow(gtx layout.Context) layout.Dimensions {
 	pr := p.res.V
-	return ui.Pad(gtx, 17, 24, 17, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 17, 17, func(gtx layout.Context) layout.Dimensions {
 		var kids []layout.FlexChild
 		if pr.CanFollow {
 			txt := "Follow"
@@ -176,7 +176,7 @@ func (p *page) actionRow(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *page) tracksTitle(gtx layout.Context) layout.Dimensions {
-	return ui.Pad(gtx, 0, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 0, 16, func(gtx layout.Context) layout.Dimensions {
 		return ui.Column(gtx,
 			func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, "Top tracks this month", 24, ui.Bold, ui.ColText)

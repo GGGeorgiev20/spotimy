@@ -133,55 +133,68 @@ type cols struct {
 	gap                                  int
 }
 
+// columns resolves the CSS grid of the web player's rows: a 16dp index column,
+// then 4fr (title), 2fr (album or plays), 2fr (date added) and 1fr (duration)
+// tracks of at least 120dp each, 16dp apart. Album and date added appear
+// from 600dp and 750dp of main view width. w is the table's width inside the
+// page padding.
 func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 	px := func(v float32) int { return Dp(gtx, v) }
 	gap := px(16)
-	inner := w - 2*px(16)
-	mainW := w + 2*px(24) // the table sits inside 24dp padding of the main view
-	var fr []float64
-	var c cols
-	c.gap, c.idx = gap, px(16)
-	durMin := px(120)
+	main := MainDp(gtx)
+	vars := 0 // album/plays, date added
 	switch tt.Variant {
-	case "album", "compact":
-		fr = []float64{4}
 	case "search", "artist":
-		fr = []float64{4, 2}
-	default:
-		fr = []float64{6, 4, 3}
-		if mainW <= px(900) {
-			fr = fr[:2]
+		if main >= 600 {
+			vars = 1
 		}
-		if mainW <= px(640) {
-			fr = fr[:1]
+	case "playlist":
+		if main >= 600 {
+			vars = 1
+		}
+		if main >= 750 {
+			vars = 2
 		}
 	}
-	if tt.Variant == "search" && mainW <= px(640) {
-		fr = fr[:1]
+	fr := []float64{4, 2, 2}[:1+vars]
+	fr = append(fr, 1) // the duration track
+	size := make([]float64, len(fr))
+	min120 := float64(px(120))
+	free := float64(w - 2*px(16) - px(16) - gap*len(fr)) // minus row padding, index, gaps
+	done := make([]bool, len(fr))
+	for {
+		sum, rest := 0.0, free
+		for i, f := range fr {
+			if done[i] {
+				rest -= size[i]
+			} else {
+				sum += f
+			}
+		}
+		clamped := false
+		for i, f := range fr {
+			if done[i] {
+				continue
+			}
+			size[i] = max(0, rest) * f / sum
+			if size[i] < min120 {
+				size[i], done[i], clamped = min120, true, true
+			}
+		}
+		if !clamped {
+			break
+		}
 	}
-	gaps := gap * (len(fr) + 1)
-	free := inner - c.idx - gaps
-	sum := 1.0
-	for _, f := range fr {
-		sum += f
-	}
-	unit := float64(free) / sum
-	if int(unit) < durMin { // minmax(120px, 1fr)
-		unit = float64(free-durMin) / (sum - 1)
-		c.dur = durMin
-	} else {
-		c.dur = int(unit)
-	}
-	c.title = int(unit * fr[0])
-	if len(fr) > 1 {
+	c := cols{gap: gap, idx: px(16), title: int(size[0]), dur: int(size[len(fr)-1])}
+	if vars > 0 {
 		if tt.Variant == "artist" {
-			c.plays = int(unit * fr[1])
+			c.plays = int(size[1])
 		} else {
-			c.album = int(unit * fr[1])
+			c.album = int(size[1])
 		}
 	}
-	if len(fr) > 2 {
-		c.added = int(unit * fr[2])
+	if vars > 1 {
+		c.added = int(size[2])
 	}
 	return c
 }
@@ -190,14 +203,14 @@ func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 // stuck gives it the darker background used while it's pinned under the top bar.
 func (tt *TrackTable) Header(gtx layout.Context, stuck bool) layout.Dimensions {
 	w := gtx.Constraints.Max.X
-	h := Dp(gtx, 36)
+	h, pad := Dp(gtx, 36), ContentPad(gtx)
 	if stuck {
 		FillRect(gtx.Ops, image.Rect(0, 0, w, h), 0, ColSurface2)
 	} else {
-		Offset(gtx, Dp(gtx, 24), h-1, func() { Hline(gtx, w-Dp(gtx, 48), ColDivider) })
+		Offset(gtx, pad, h-1, func() { Hline(gtx, w-2*pad, ColDivider) })
 	}
-	c := tt.columns(gtx, w-Dp(gtx, 48))
-	x := Dp(gtx, 24+16)
+	c := tt.columns(gtx, w-2*pad)
+	x := pad + Dp(gtx, 16)
 	cell := func(cw int, s string, right bool) {
 		if cw <= 0 {
 			return
@@ -248,7 +261,7 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 	w := gtx.Constraints.Max.X
 	h := Dp(gtx, 56)
 	if t == nil {
-		Offset(gtx, Dp(gtx, 24+16), 0, func() {
+		Offset(gtx, ContentPad(gtx)+Dp(gtx, 16), 0, func() {
 			g := gtx
 			ex := Dp(gtx, 16)
 			g.Constraints = layout.Exact(image.Pt(Dp(gtx, 16)+ex, h))
@@ -300,8 +313,11 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 
 	r.row.Label = tr.Name
 	r.row.Arrow = true // rows keep the arrow cursor, like the official client
-	pad := Dp(gtx, 24)
-	return Pad(gtx, 0, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
+	if tt.Variant == "compact" {
+		return tt.compactRow(gtx, i, tr, r)
+	}
+	pad := ContentPad(gtx)
+	return Pad(gtx, 0, float32(pad)/gtx.Metric.PxPerDp, 0, float32(pad)/gtx.Metric.PxPerDp, func(gtx layout.Context) layout.Dimensions {
 		rw := w - 2*pad
 		return r.row.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			if tt.OnMove != nil && t.UID != "" {
@@ -486,11 +502,11 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 // ExplicitBadge is the small "E" tag.
 func ExplicitBadge(gtx layout.Context) layout.Dimensions {
 	s := Dp(gtx, 16)
-	FillRect(gtx.Ops, image.Rect(0, 0, s, s), Dp(gtx, 2), Alpha(ColText, .6))
+	FillRect(gtx.Ops, image.Rect(0, 0, s, s), Dp(gtx, 4), Alpha(ColText, .1))
 	g := gtx
 	g.Constraints = layout.Exact(image.Pt(s, s))
-	layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions { return Text(gtx, "E", 9, Bold, ColBg) })
-	return layout.Dimensions{Size: image.Pt(s+Dp(gtx, 6), s), Baseline: Dp(gtx, 3)}
+	layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions { return Text(gtx, "E", 12, Bold, ColText) })
+	return layout.Dimensions{Size: image.Pt(s+Dp(gtx, 4), s), Baseline: Dp(gtx, 3)}
 }
 
 // Equalizer draws the animated "playing" bars (size px square).

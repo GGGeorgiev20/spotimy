@@ -24,12 +24,14 @@ func (p *page) tabBar(gtx layout.Context, solid bool) layout.Dimensions {
 		}
 	}
 	m := op.Record(gtx.Ops)
-	d := ui.Pad(gtx, 16, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
-		d, clicked := p.chips.Layout(gtx, tabLabels, sel)
-		if clicked >= 0 && clicked != sel {
-			ui.Navigate(p.tabPath(tabs[clicked].id))
-		}
-		return d
+	d := inBox(gtx, func(gtx layout.Context) layout.Dimensions {
+		return ui.Pad(gtx, 16, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
+			d, clicked := p.chips.Layout(gtx, tabLabels, sel)
+			if clicked >= 0 && clicked != sel {
+				ui.Navigate(p.tabPath(tabs[clicked].id))
+			}
+			return d
+		})
 	})
 	call := m.Stop()
 	if solid {
@@ -70,7 +72,7 @@ func (p *page) single(gtx layout.Context, bar, content layout.Widget) layout.Dim
 }
 
 func hint(gtx layout.Context, q string) layout.Dimensions {
-	return ui.Pad(gtx, 64, 24, 64, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 64, 64, func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return ui.Label{Text: `No results found for "` + q + `"`, Size: 24, Weight: ui.Bold, Align: text.Middle, MaxLines: 2}.Layout(gtx)
@@ -101,7 +103,7 @@ func (p *page) layoutAll(gtx layout.Context, bar layout.Widget) layout.Dimension
 		p.shelves = make([]ui.Shelf, len(r.Groups))
 		if len(r.Tracks) > 0 {
 			p.topRows = &ui.Paged{}
-			p.topRows.SetAll(r.Tracks[:min(4, len(r.Tracks))])
+			p.topRows.SetAll(r.Tracks[:min(3, len(r.Tracks))])
 			p.topTab = ui.TrackTable{Variant: "compact", OnPlayed: func(t spotify.Track) { remember(t.URI) }}
 		}
 	}
@@ -113,85 +115,54 @@ func (p *page) layoutAll(gtx layout.Context, bar layout.Widget) layout.Dimension
 			return p.topRow(gtx, r.Top)
 		case i < 2+len(r.Groups):
 			g := r.Groups[i-2]
-			o := ui.ShelfOpts{Title: g.Title, Card: ui.CardOpts{OnOpen: func(c spotify.Card) { remember(c.URI) }}}
+			o := ui.ShelfOpts{Title: g.Title, Carousel: true, Boxed: true, Pitch: 133.3, Card: ui.CardOpts{OnOpen: func(c spotify.Card) { remember(c.URI) }}}
 			if tab, ok := groupTab[g.Title]; ok {
 				o.OnShowAll = func() { ui.Navigate(p.tabPath(tab)) }
 			}
-			return p.shelves[i-2].Layout(gtx, g.Items, o)
+			return inBox(gtx, func(gtx layout.Context) layout.Dimensions { return p.shelves[i-2].Layout(gtx, g.Items, o) })
 		}
 		return ui.Gap(0, 24)(gtx)
 	})
 }
 
-// topRow is the top result next to the first songs (stacked when narrow).
-func (p *page) topRow(gtx layout.Context, top *spotify.Card) layout.Dimensions {
-	w := gtx.Constraints.Max.X
-	px := func(v float32) int { return ui.Dp(gtx, v) }
-	pad, gap := px(24), px(24)
-	inner := w - 2*pad
-	songs := 0
-	if p.topRows != nil {
-		songs = len(p.topRows.Items)
-	}
-	rowsH := songs * px(56)
-	leftW, rightW := inner, inner
-	if top != nil && songs > 0 && w > px(760) {
-		leftW = max(px(280), (inner-gap)*2/5)
-		rightW = inner - gap - leftW
-	}
-	side := top != nil && songs > 0 && leftW != inner
-	cardH := max(px(220), rowsH)
+// box is the page's content column: the main view less its padding, but at
+// most 1152dp wide and centered.
+func box(gtx layout.Context) (left, w int) {
+	full := gtx.Constraints.Max.X
+	w = min(full-2*ui.ContentPad(gtx), ui.Dp(gtx, 1152))
+	return (full - w) / 2, w
+}
 
-	y := 0
-	heading := func(gtx layout.Context, w int, f func(gtx layout.Context) layout.Dimensions) int {
-		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(w, px(40))}
-		return f(g).Size.Y + px(8)
-	}
-	leftH, rightH := 0, 0
-	if top != nil {
-		ui.Offset(gtx, pad, y, func() {
-			hh := heading(gtx, leftW, func(gtx layout.Context) layout.Dimensions { return ui.Text(gtx, "Top result", 24, ui.Bold, ui.ColText) })
-			ui.Offset(gtx, 0, hh, func() { p.top.layout(gtx, *top, leftW, cardH) })
-			leftH = hh + cardH
-		})
-	}
-	if songs > 0 {
-		x, sy := pad, y
-		if side {
-			x = pad + leftW + gap
-		} else {
-			sy = y + leftH
-			if top != nil {
-				sy += gap
-			}
+// inBox lays f out in the content column (full height, the page's width).
+func inBox(gtx layout.Context, f layout.Widget) layout.Dimensions {
+	left, w := box(gtx)
+	full := gtx.Constraints.Max.X
+	g := gtx
+	g.Constraints.Max.X, g.Constraints.Min.X = w, 0
+	st := op.Offset(image.Pt(left, 0)).Push(gtx.Ops)
+	d := f(g)
+	st.Pop()
+	return layout.Dimensions{Size: image.Pt(full, d.Size.Y)}
+}
+
+// topRow is the web player's best match block: a wide top result card and
+// the first three songs under it.
+func (p *page) topRow(gtx layout.Context, top *spotify.Card) layout.Dimensions {
+	return inBox(gtx, func(gtx layout.Context) layout.Dimensions {
+		w, y := gtx.Constraints.Max.X, 0
+		if top != nil {
+			p.top.layout(gtx, *top, w)
+			y = ui.Dp(gtx, 104+16)
 		}
-		ui.Offset(gtx, x, sy, func() {
-			if p.songs.Click.Clicked(gtx) {
-				ui.Navigate(p.tabPath("tracks"))
+		if p.topRows != nil {
+			rh := ui.SongRowHeight(gtx)
+			for i, t := range p.topRows.Items {
+				ui.Offset(gtx, 0, y+i*rh, func() { p.topTab.Row(gtx, i, t) })
 			}
-			hh := heading(gtx, rightW, func(gtx layout.Context) layout.Dimensions {
-				return p.songs.Layout(gtx, "Songs", 24, ui.Bold, ui.ColText, ui.ColNone)
-			})
-			// Rows carry the table's own 24dp side padding.
-			ui.Offset(gtx, -pad, hh, func() {
-				g := gtx
-				g.Constraints = layout.Constraints{Max: image.Pt(rightW+2*pad, gtx.Constraints.Max.Y)}
-				for i, t := range p.topRows.Items {
-					ui.Offset(g, 0, i*px(56), func() { p.topTab.Row(g, i, t) })
-				}
-			})
-			rightH = hh + rowsH
-		})
-	}
-	h := max(leftH, rightH)
-	if !side {
-		h = leftH + rightH
-		if top != nil && songs > 0 {
-			h += gap
+			y += len(p.topRows.Items) * rh
 		}
-	}
-	return layout.Dimensions{Size: image.Pt(w, h+px(32))}
+		return layout.Dimensions{Size: image.Pt(w, y)}
+	})
 }
 
 // topCard is the "Top result" card.
@@ -208,7 +179,8 @@ func typeWord(t string) string {
 	return strings.ToUpper(t[:1]) + t[1:]
 }
 
-func (t *topCard) layout(gtx layout.Context, c spotify.Card, w, h int) layout.Dimensions {
+// layout draws the 104dp card: cover, name over type, play button on hover.
+func (t *topCard) layout(gtx layout.Context, c spotify.Card, w int) layout.Dimensions {
 	if t.play.Click.Clicked(gtx) {
 		remember(c.URI)
 		ui.PlayContext(c.URI)
@@ -221,20 +193,20 @@ func (t *topCard) layout(gtx layout.Context, c spotify.Card, w, h int) layout.Di
 		ui.OpenMenu(ui.CardMenu(c, ui.CardMenuOpts{}))
 	}
 	t.click.Label = c.Name
+	h := ui.Dp(gtx, 104)
 	return t.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		hov := t.click.Hovered()
-		bg := ui.RGB(0x181818)
+		bg := ui.Mix(ui.ColSurface, ui.ColText, .1)
 		if hov {
-			bg = ui.RGB(0x282828)
+			bg = ui.Mix(ui.ColSurface, ui.ColText, .15)
 		}
-		ui.FillRect(gtx.Ops, image.Rect(0, 0, w, h), ui.Dp(gtx, 8), bg)
-		pad, art := ui.Dp(gtx, 20), ui.Dp(gtx, 92)
+		ui.FillRect(gtx.Ops, image.Rect(0, 0, w, h), ui.Dp(gtx, 6), bg)
+		pad, art := ui.Dp(gtx, 16), ui.Dp(gtx, 72)
 		round := c.Type == "artist"
-		radius := ui.Dp(gtx, 6)
+		radius := ui.Dp(gtx, 4)
 		if round {
 			radius = art / 2
 		}
-		ui.Shadow(gtx.Ops, image.Rect(pad, pad, pad+art, pad+art), radius, ui.Dp(gtx, 12), ui.Dp(gtx, 8), .3)
 		icon := "note"
 		if round {
 			icon = "user"
@@ -242,20 +214,27 @@ func (t *topCard) layout(gtx layout.Context, c spotify.Card, w, h int) layout.Di
 		ui.Offset(gtx, pad, pad, func() {
 			ui.Image{URL: ui.Pick(c.Images, art), Radius: radius, Round: round, Icon: icon}.Layout(gtx, image.Pt(art, art))
 		})
-		y := pad + art + ui.Dp(gtx, 20)
+		bs := ui.Dp(gtx, 48)
+		x := pad + art + ui.Dp(gtx, 24)
 		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(w-2*pad, h)}
-		ui.Offset(gtx, pad, y, func() { y += ui.Text(g, c.Name, 32, ui.Bold, ui.ColText).Size.Y })
-		y += ui.Dp(gtx, 6)
-		segs := []ui.Seg{{Text: typeWord(c.Type), Color: ui.ColText}}
+		g.Constraints = layout.Constraints{Max: image.Pt(max(0, w-pad-bs-ui.Dp(gtx, 8)-x), h)}
+		size := float32(20)
+		if ui.MainDp(gtx) >= 768 {
+			size = 24
+		}
+		m := op.Record(gtx.Ops)
+		nd := ui.Label{Text: c.Name, Size: size, Weight: ui.Bold, LineHeight: size}.Layout(g)
+		segs := []ui.Seg{{Text: typeWord(c.Type), Color: ui.ColText2}}
 		if c.Subtitle != "" && c.Subtitle != "Artist" {
 			segs = append(segs, ui.Seg{Text: " • " + c.Subtitle})
 		}
-		ui.Offset(gtx, pad, y, func() { ui.Inline(g, 14, ui.Regular, ui.ColText2, ui.ColNone, segs...) })
+		var sd layout.Dimensions
+		ui.Offset(gtx, 0, nd.Size.Y+ui.Dp(gtx, 2), func() { sd = ui.Inline(g, 14, ui.Regular, ui.ColText2, ui.ColNone, segs...) })
+		call := m.Stop()
+		ui.Offset(gtx, x, (h-nd.Size.Y-ui.Dp(gtx, 2)-sd.Size.Y)/2, func() { call.Add(gtx.Ops) })
 		playing := ui.CtxPlaying(c.URI)
-		if v := t.hover.Step(gtx, hov || playing, 300*time.Millisecond); v > 0 {
-			bs := ui.Dp(gtx, 48)
-			ui.Offset(gtx, w-pad-bs, h-pad-bs+int((1-v)*float32(ui.Dp(gtx, 8))), func() {
+		if v := t.hover.Step(gtx, hov || playing, 200*time.Millisecond); v > 0 {
+			ui.Offset(gtx, w-pad-bs, (h-bs)/2+int((1-v)*float32(ui.Dp(gtx, 8))), func() {
 				st := paint.PushOpacity(gtx.Ops, v)
 				ui.Shadow(gtx.Ops, image.Rect(0, 0, bs, bs), bs/2, ui.Dp(gtx, 4), ui.Dp(gtx, 6), .3)
 				t.play.Layout(gtx, 48, playing)
@@ -324,7 +303,11 @@ func (p *page) layoutCards(gtx layout.Context, bar layout.Widget) layout.Dimensi
 	case len(p.cards) == 0:
 		return p.single(gtx, bar, func(gtx layout.Context) layout.Dimensions { return hint(gtx, p.query) })
 	}
-	rows := p.cardGrid.Count(gtx, len(p.cards), minCard)
+	p.cardGrid.Boxed = true
+	_, bw := box(gtx)
+	bg := gtx
+	bg.Constraints.Max.X = bw
+	rows := p.cardGrid.Count(bg, len(p.cards), minCard)
 	if _, last := p.list.Range(); last >= rows-1 {
 		p.more()
 	}
@@ -334,7 +317,15 @@ func (p *page) layoutCards(gtx layout.Context, bar layout.Widget) layout.Dimensi
 		case i == 0:
 			return bar(gtx)
 		case i <= rows:
-			return p.cardGrid.Row(gtx, i-1, p.cards, minCard, ui.CardOpts{OnOpen: func(c spotify.Card) { remember(c.URI) }})
+			row := func(gtx layout.Context) layout.Dimensions {
+				return inBox(gtx, func(gtx layout.Context) layout.Dimensions {
+					return p.cardGrid.Row(gtx, i-1, p.cards, minCard, ui.CardOpts{OnOpen: func(c spotify.Card) { remember(c.URI) }})
+				})
+			}
+			if i == 1 { // 24dp between the tabs and the grid
+				return ui.Pad(gtx, 24, 0, 0, 0, row)
+			}
+			return row(gtx)
 		case more:
 			return ui.Loading(gtx)
 		}

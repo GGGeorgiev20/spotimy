@@ -59,7 +59,7 @@ func (c *Client) Album(ctx context.Context, uri string) (*Album, error) {
 	}
 	out := &Album{
 		URI: a.URI, Name: a.Name, Type: a.Type, Label: a.Label, Saved: a.Saved,
-		Date: a.Date.ISOString, Artists: a.Artists.list(), Images: a.CoverArt.images(),
+		Date: a.Date.ISOString, Artists: a.Artists.list(), Images: a.CoverArt.images(), Color: a.CoverArt.color(),
 		Total: a.TracksV2.TotalCount, Tracks: []Track{}, More: []Card{}, Copyright: []string{},
 	}
 	for _, c := range a.Copyright.Items {

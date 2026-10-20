@@ -27,6 +27,7 @@ type page struct {
 	res  ui.Res[*spotify.Shelf]
 	list ui.List
 	grid ui.CardRows
+	head ui.Shelf
 }
 
 const minCard = 176
@@ -39,13 +40,12 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		return ui.Unavailable(gtx, "This section", p.res.Err)
 	}
 	s := p.res.V
-	title := strings.TrimSpace(s.Label + " " + s.Title)
 	rows := p.grid.Count(gtx, len(s.Items), minCard)
 	return p.list.Layout(gtx, rows+2, func(gtx layout.Context, i int) layout.Dimensions {
 		switch {
 		case i == 0:
-			return ui.Pad(gtx, 72, 24, 32, 24, func(gtx layout.Context) layout.Dimensions {
-				return ui.Label{Text: title, Size: 32, Weight: ui.Bold, MaxLines: 2}.Layout(gtx)
+			return ui.PageInset(gtx, 64, 32, func(gtx layout.Context) layout.Dimensions {
+				return p.head.HeaderRow(gtx, ui.ShelfOpts{Title: s.Title, Label: s.Label})
 			})
 		case i <= rows:
 			return p.grid.Row(gtx, i-1, s.Items, minCard, ui.CardOpts{})

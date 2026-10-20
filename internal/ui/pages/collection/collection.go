@@ -215,12 +215,12 @@ func (p *episodes) Layout(gtx layout.Context) layout.Dimensions {
 		case i == 1:
 			return ui.Gap(0, 24)(gtx)
 		case i < len(eps)+2:
-			return ui.Pad(gtx, 0, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 0, 0, func(gtx layout.Context) layout.Dimensions {
 				return p.rows[i-2].Layout(gtx, eps[i-2], "")
 			})
 		}
 		if len(eps) == 0 {
-			return ui.Pad(gtx, 0, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 0, 0, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, "Episodes you save will appear here.", 16, ui.Regular, ui.ColText2)
 			})
 		}
