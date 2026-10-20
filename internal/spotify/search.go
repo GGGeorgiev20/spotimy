@@ -137,6 +137,7 @@ var searchOps = map[string][2]string{
 	"podcasts":  {"searchPodcasts", "podcasts"},
 	"episodes":  {"searchFullEpisodes", "episodes"},
 	"users":     {"searchUsers", "users"},
+	"genres":    {"searchGenres", "genres"},
 }
 
 // SearchType returns one page of a single search tab.

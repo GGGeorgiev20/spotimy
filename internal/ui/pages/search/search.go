@@ -15,8 +15,8 @@ import (
 
 // tabs in the official order; the id is the SearchType kind ("all" = overview).
 var tabs = []struct{ id, label string }{
-	{"all", "All"}, {"tracks", "Songs"}, {"playlists", "Playlists"}, {"albums", "Albums"},
-	{"artists", "Artists"}, {"users", "Profiles"}, {"podcasts", "Podcasts & Shows"}, {"episodes", "Episodes"},
+	{"all", "All"}, {"tracks", "Songs"}, {"playlists", "Playlists"}, {"artists", "Artists"}, {"genres", "Genres & Moods"},
+	{"albums", "Albums"}, {"users", "Profiles"}, {"podcasts", "Podcasts & Shows"}, {"episodes", "Episodes"},
 }
 
 var tabLabels = func() []string {

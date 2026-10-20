@@ -277,6 +277,14 @@ func CardMenu(c spotify.Card, o CardMenuOpts) []MenuItem {
 			MenuItem{Label: "Delete", Icon: "trash", Danger: true, Action: func() { DeletePlaylist(c.URI, c.Name) }},
 		)
 	}
+	if typ == "playlist" {
+		LoadTasteExcluded(c.URI)
+		label, icon := "Exclude from your taste profile", "x-circle"
+		if TasteExcluded[c.URI] {
+			label, icon = "Include in your taste profile", "check-circle"
+		}
+		items = append(items, MenuItem{Label: label, Icon: icon, Action: func() { ToggleTasteExcluded(c.URI) }})
+	}
 	if typ == "collection" {
 		items = append(items, MenuItem{Label: "Create playlist", Icon: "plus", Action: func() { CreatePlaylist(nil) }})
 	}

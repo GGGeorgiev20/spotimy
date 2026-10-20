@@ -23,6 +23,7 @@ type gqlEntity struct {
 	Description string      `json:"description"`
 	Images      gqlImages   `json:"images"`   // Playlist
 	CoverArt    *gqlSources `json:"coverArt"` // Album, Podcast, Episode, Audiobook
+	Image       *gqlSources `json:"image"`    // Genre
 	Artists     gqlArtists  `json:"artists"`  // Album, Track
 	AlbumType   string      `json:"albumType"`
 	Type        string      `json:"type"`
@@ -120,6 +121,8 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		if e.PodcastV2 != nil {
 			c.Subtitle = e.PodcastV2.Data.Name
 		}
+	case "Genre":
+		c.Images = e.Image.images()
 	case "Track":
 		if e.AlbumOfTrack != nil {
 			c.Images = e.AlbumOfTrack.CoverArt.images()

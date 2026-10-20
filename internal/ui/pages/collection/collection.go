@@ -48,6 +48,9 @@ type liked struct {
 	actions ui.ActionBar
 	headerH int
 
+	ctl  ui.ListControls // search and sort
+	view ui.TrackView
+
 	length  string
 	lengthG int
 	loading bool
@@ -55,6 +58,10 @@ type liked struct {
 
 func newLiked() *liked {
 	p := &liked{lengthG: -1, loading: true}
+	p.ctl = ui.ListControls{Hint: "Search in playlist", Default: ui.SortAdded, Options: []ui.SortOpt{
+		{Key: ui.SortTitle, Label: "Title"}, {Key: ui.SortArtist, Label: "Artist"},
+		{Key: ui.SortAlbum, Label: "Album"}, {Key: ui.SortAdded, Label: "Date added"},
+	}}
 	p.table = ui.TrackTable{Variant: "playlist"}
 	p.tracks = ui.NewPaged(func(off, lim int) (*spotify.TrackPage, error) { return ui.B.LikedSongs(off, lim) }, pageSize)
 	ui.Async(func() (*spotify.TrackPage, error) { return ui.B.LikedSongs(0, pageSize) }, func(tp *spotify.TrackPage, err error) {
@@ -106,7 +113,8 @@ func (p *liked) Layout(gtx layout.Context) layout.Dimensions {
 	p.list.Sticky = func(gtx layout.Context) layout.Dimensions { return p.table.Header(gtx, true) }
 	p.list.StickyIndex, p.list.StickyTop = itemTableHeader, ui.Dp(gtx, 64)
 
-	n := p.tracks.Total
+	reordered := p.view.Update(p.tracks, &p.ctl, &p.table)
+	n := p.view.Len(p.tracks)
 	d := p.list.Layout(gtx, itemRows+n+1, func(gtx layout.Context, i int) layout.Dimensions {
 		switch {
 		case i == itemHeader:
@@ -117,16 +125,24 @@ func (p *liked) Layout(gtx layout.Context) layout.Dimensions {
 			p.headerH = d.Size.Y
 			return d
 		case i == itemActions:
-			return p.actions.Layout(gtx, ui.ActionOpts{ContextURI: c, Shuffle: true})
+			d := p.actions.Layout(gtx, ui.ActionOpts{ContextURI: c, Shuffle: true})
+			if p.tracks.Total > 0 {
+				p.ctl.Layout(gtx, d.Size)
+			}
+			return d
 		case i == itemTableHeader:
 			return p.table.Header(gtx, false)
 		case i < itemRows+n:
-			return p.table.Row(gtx, i-itemRows, p.tracks.Items[i-itemRows])
+			return p.table.Row(gtx, i-itemRows, p.view.At(p.tracks, i-itemRows))
+		case n == 0 && reordered && i == itemRows:
+			return ui.NoMatches(gtx, p.ctl.Query())
 		}
 		return ui.Gap(0, 32)(gtx)
 	})
-	first, last := p.list.Range()
-	p.tracks.Ensure(first-itemRows-5, last-itemRows+5)
+	if !reordered {
+		first, last := p.list.Range()
+		p.tracks.Ensure(first-itemRows-5, last-itemRows+5)
+	}
 	return d
 }
 
