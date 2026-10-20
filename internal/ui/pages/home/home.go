@@ -16,9 +16,12 @@ import (
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
 )
 
+// defaultTint is the page gradient's color until a shortcut is hovered.
+var defaultTint = ui.RGB(0x535353)
+
 func init() {
 	ui.Register("", func([]string) ui.Page {
-		p := &page{tint: ui.RGB(0x535353), target: ui.RGB(0x535353), labels: []string{"All"}}
+		p := &page{tint: defaultTint, target: defaultTint, labels: []string{"All"}}
 		p.load()
 		return p
 	})
@@ -63,19 +66,13 @@ func (p *page) setup(h *spotify.Home) {
 	for _, c := range h.Chips {
 		p.labels = append(p.labels, c.Label)
 	}
-	if len(p.short) > 0 {
-		p.cover(0, true)
-	}
 }
 
 // cover makes shortcut i's cover color the gradient's target.
-func (p *page) cover(i int, jump bool) {
+func (p *page) cover(i int) {
 	c := p.short[i]
 	if col, ok := p.covers[c.URI]; ok {
 		p.target = col
-		if jump {
-			p.tint = col
-		}
 		return
 	}
 	h := p.cur
@@ -84,11 +81,8 @@ func (p *page) cover(i int, jump bool) {
 			return
 		}
 		p.covers[c.URI] = col
-		if i == p.hovered || jump {
+		if i == p.hovered {
 			p.target = col
-			if jump {
-				p.tint = col
-			}
 		}
 	})
 }
@@ -133,6 +127,11 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	})
 }
 
+// gradAt is the page gradient's color y px below the top of the content.
+func (p *page) gradAt(gtx layout.Context, y int) color.NRGBA {
+	return ui.Mix(ui.Scale(p.tint, .4), ui.ColSurface, float32(y)/float32(ui.Dp(gtx, 256)))
+}
+
 // stepTint eases the gradient color toward the hovered cover.
 func (p *page) stepTint(gtx layout.Context) {
 	if p.tint == p.target {
@@ -157,7 +156,7 @@ func (p *page) chipRow(gtx layout.Context) layout.Dimensions {
 	}
 	var clicked int
 	d := ui.Pad(gtx, 20, pagePad, 16, pagePad, func(gtx layout.Context) layout.Dimensions {
-		p.chips.Base = ui.Mix(ui.ColSurface, p.tint, .5)
+		p.chips.Base = p.gradAt(gtx, ui.Dp(gtx, 36))
 		d, c := p.chips.Layout(gtx, p.labels, sel)
 		clicked = c
 		return d
@@ -211,15 +210,19 @@ func (p *page) grid(gtx layout.Context) layout.Dimensions {
 		ui.Offset(gtx, x, y, func() {
 			g := gtx
 			g.Constraints = layout.Exact(image.Pt(cw, h))
-			p.tiles[i].layout(g, p.short[i], ui.Mix(ui.ColSurface, p.tint, .4))
+			p.tiles[i].layout(g, p.short[i], p.gradAt(gtx, ui.Dp(gtx, 68)+(i/cols)*(h+gap)+h/2))
 		})
 		if p.tiles[i].click.Hovered() {
 			hovered = i
 		}
 	}
-	if hovered >= 0 && hovered != p.hovered {
+	switch {
+	case hovered >= 0 && hovered != p.hovered:
 		p.hovered = hovered
-		p.cover(hovered, false)
+		p.cover(hovered)
+	case hovered < 0 && p.hovered >= 0: // back to the default gray
+		p.hovered = -1
+		p.target = defaultTint
 	}
 	rows := (len(p.short) + cols - 1) / cols
 	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, rows*(h+gap)-gap+ui.Dp(gtx, 40))}

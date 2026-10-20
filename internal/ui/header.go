@@ -291,7 +291,7 @@ func ExtractedColor(hex string, images []spotify.Image, done func(color.NRGBA)) 
 
 // CoverColor loads the header color for a cover (darkened with HeaderColor).
 func CoverColor(images []spotify.Image, done func(color.NRGBA)) {
-	url := Pick(images, 64)
+	url, big := Pick(images, 64), Pick(images, 640) // the extractor is asked about the biggest cover
 	if url == "" {
 		done(RGB(0x535353))
 		return
@@ -301,7 +301,7 @@ func CoverColor(images []spotify.Image, done func(color.NRGBA)) {
 		exact bool // Spotify's own dark color, used as is
 	}
 	Async(func() (result, error) {
-		if hex, err := B.CoverColor(url); err == nil {
+		if hex, err := B.CoverColor(big); err == nil {
 			return result{hex, true}, nil
 		}
 		hex, err := B.ImageColor(url)
