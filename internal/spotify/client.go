@@ -111,6 +111,7 @@ type request struct {
 	contentType string
 	accept      string
 	idempotent  bool // safe to retry on 5xx / network errors
+	headers     http.Header
 }
 
 const maxAttempts = 4
@@ -175,6 +176,9 @@ func (c *Client) send(ctx context.Context, req request, forceToken bool) (int, [
 	}
 	if req.accept != "" {
 		hr.Header.Set("Accept", req.accept)
+	}
+	for k, v := range req.headers {
+		hr.Header[k] = v
 	}
 	resp, err := c.http.Do(hr)
 	if err != nil {

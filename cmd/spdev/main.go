@@ -3,6 +3,7 @@
 //
 //	spdev query <operation> '<variables json>'
 //	spdev get <spclient path>
+//	spdev create <name> | rename <uri> <name> | delete <uri>
 package main
 
 import (
@@ -57,6 +58,26 @@ func main() {
 		out, err = client.RawQuery(ctx, os.Args[2], vars)
 	case "get":
 		out, err = client.RawGet(ctx, os.Args[2], "application/json")
+	case "create", "rename", "delete":
+		_, err = client.Me(ctx)
+		check(err)
+		switch os.Args[1] {
+		case "create":
+			var uri string
+			uri, err = client.CreatePlaylist(ctx, os.Args[2])
+			out = []byte(uri + "\n")
+		case "rename":
+			err = client.RenamePlaylist(ctx, os.Args[2], os.Args[3], nil)
+		case "delete":
+			err = client.DeletePlaylist(ctx, os.Args[2])
+		}
+	case "cluster":
+		var cn *spotify.Connect
+		cn, err = client.StartConnect(ctx, deviceID, nil)
+		check(err)
+		time.Sleep(4 * time.Second)
+		out, err = json.MarshalIndent(cn.State(), "", "  ")
+		cn.Close()
 	default:
 		err = fmt.Errorf("unknown command %q", os.Args[1])
 	}

@@ -95,11 +95,7 @@ func (c *Client) Playlist(ctx context.Context, uri string, offset, limit int) (*
 		RevisionID:  p.RevisionID,
 		Tracks:      TrackPage{Total: p.Content.TotalCount, Offset: offset, Items: playlistTracks(p.Content.Items)},
 	}
-	for _, m := range p.Members.Items {
-		if m.IsOwner && m.User.Data.URI == c.UserURI() {
-			out.IsOwner = true
-		}
-	}
+	out.IsOwner = owner.URI != "" && owner.URI == c.UserURI()
 	return out, nil
 }
 
@@ -140,4 +136,39 @@ func (c *Client) RemoveFromPlaylist(ctx context.Context, playlist string, uids [
 func (c *Client) MoveInPlaylist(ctx context.Context, playlist string, uids []string, pos Position) error {
 	defer c.InvalidatePlaylists()
 	return c.mutate(ctx, "moveItemsInPlaylist", map[string]any{"playlistUri": playlist, "uids": uids, "newPosition": pos.gql()})
+}
+
+// EditablePlaylist is a playlist the user can add to; Contains reports
+// whether it already has every item that was asked about.
+type EditablePlaylist struct {
+	Card
+	Contains bool `json:"contains"`
+}
+
+// EditablePlaylists lists the user's writable playlists for "Add to playlist".
+func (c *Client) EditablePlaylists(ctx context.Context, uris []string) ([]EditablePlaylist, error) {
+	if uris == nil {
+		uris = []string{}
+	}
+	var resp struct {
+		Me struct {
+			EditablePlaylists struct {
+				Items []struct {
+					Curates bool       `json:"curates"`
+					Item    gqlWrapper `json:"item"`
+				} `json:"items"`
+			} `json:"editablePlaylists"`
+		} `json:"me"`
+	}
+	vars := map[string]any{"offset": 0, "limit": 100, "textFilter": "", "folderUri": nil, "uris": uris}
+	if err := c.query(ctx, "editablePlaylists", vars, 0, &resp); err != nil {
+		return nil, err
+	}
+	out := []EditablePlaylist{}
+	for _, it := range resp.Me.EditablePlaylists.Items {
+		if card, ok := cardFromWrapper(it.Item); ok {
+			out = append(out, EditablePlaylist{Card: card, Contains: it.Curates})
+		}
+	}
+	return out, nil
 }
