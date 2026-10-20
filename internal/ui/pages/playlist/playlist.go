@@ -80,7 +80,7 @@ func (p *page) setup(pl *spotify.Playlist) {
 	if pl.CanEdit {
 		p.table.OnMove = p.move
 	}
-	ui.CoverColor(pl.Images, func(c color.NRGBA) { p.color = c })
+	ui.ExtractedColor(pl.Color, pl.Images, func(c color.NRGBA) { p.color = c })
 }
 
 // move applies a drag-reorder at once, then syncs with the server (the

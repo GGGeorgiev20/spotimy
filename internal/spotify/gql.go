@@ -11,7 +11,20 @@ type gqlImage struct {
 }
 
 type gqlSources struct {
-	Sources []gqlImage `json:"sources"`
+	Sources         []gqlImage `json:"sources"`
+	ExtractedColors struct {
+		ColorDark struct {
+			Hex string `json:"hex"`
+		} `json:"colorDark"`
+	} `json:"extractedColors"`
+}
+
+// color is the header color Spotify extracted from the cover ("#rrggbb" or "").
+func (s *gqlSources) color() string {
+	if s == nil {
+		return ""
+	}
+	return s.ExtractedColors.ColorDark.Hex
 }
 
 func (s *gqlSources) images() []Image {
@@ -34,6 +47,13 @@ func (s gqlImages) first() []Image {
 		return nil
 	}
 	return s.Items[0].images()
+}
+
+func (s gqlImages) color() string {
+	if len(s.Items) == 0 {
+		return ""
+	}
+	return s.Items[0].color()
 }
 
 type gqlArtist struct {

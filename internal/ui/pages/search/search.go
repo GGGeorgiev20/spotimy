@@ -158,7 +158,7 @@ func (p *page) layoutEmpty(gtx layout.Context) layout.Dimensions {
 		if first {
 			top = 67
 		}
-		return ui.Pad(gtx, top, 24, bottom, 24, func(gtx layout.Context) layout.Dimensions {
+		return ui.PageInset(gtx, top, bottom, func(gtx layout.Context) layout.Dimensions {
 			return ui.Text(gtx, text, 24, ui.Bold, ui.ColText)
 		})
 	}

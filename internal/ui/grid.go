@@ -10,14 +10,14 @@ import (
 
 // CardRows is a grid of cards for pages whose content is one List: Count
 // gives the rows at the current width, Row draws one (CSS grid auto-fill,
-// minmax(minW, 1fr), inside 12dp of page padding).
+// minmax(minW, 1fr), inside the page padding less 12dp).
 type CardRows struct {
 	cards []Card
 }
 
 // Count is the number of rows n cards need at the constraint's width.
 func (g *CardRows) Count(gtx layout.Context, n int, minW float32) int {
-	cols := GridColumns(narrow(gtx, 12), minW)
+	cols := GridColumns(narrow(gtx, ContentPadDp(gtx)-12), minW)
 	return (n + cols - 1) / cols
 }
 
@@ -26,8 +26,8 @@ func (g *CardRows) Row(gtx layout.Context, r int, items []spotify.Card, minW flo
 	if len(g.cards) < len(items) {
 		g.cards = append(g.cards, make([]Card, len(items)-len(g.cards))...)
 	}
-	pad := Dp(gtx, 12)
-	gtx = narrow(gtx, 12)
+	pad := Dp(gtx, ContentPadDp(gtx)-12)
+	gtx = narrow(gtx, ContentPadDp(gtx)-12)
 	cols := GridColumns(gtx, minW)
 	cw := gtx.Constraints.Max.X / cols
 	h := 0

@@ -20,7 +20,7 @@ var rankBlue = ui.RGB(0x0d72ea)
 // aboutSection is the "About" heading and its picture card (opens the modal).
 func (p *page) aboutSection(gtx layout.Context) layout.Dimensions {
 	a := p.res.V
-	return ui.Pad(gtx, 0, 24, 40, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 0, 40, func(gtx layout.Context) layout.Dimensions {
 		return ui.Column(gtx,
 			func(gtx layout.Context) layout.Dimensions {
 				return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {

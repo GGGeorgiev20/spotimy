@@ -55,14 +55,14 @@ func (t *CategoryTile) Layout(gtx layout.Context, c spotify.Category) layout.Dim
 }
 
 // CategoryGrid lays category tiles out as rows of a List (auto-fill columns
-// of at least 232dp, 24dp apart, inside 24dp of padding).
+// of at least 232dp, 24dp apart, inside the page padding).
 type CategoryGrid struct {
 	tiles []CategoryTile
 }
 
 func categoryCols(gtx layout.Context) int {
 	gap := Dp(gtx, 24)
-	return max(1, (gtx.Constraints.Max.X-2*gap+gap)/(Dp(gtx, 232)+gap))
+	return max(1, (gtx.Constraints.Max.X-2*ContentPad(gtx)+gap)/(Dp(gtx, 232)+gap))
 }
 
 // Count is the number of rows n tiles need at the constraint's width.
@@ -75,7 +75,7 @@ func (g *CategoryGrid) Row(gtx layout.Context, r int, cats []spotify.Category) l
 	if len(g.tiles) < len(cats) {
 		g.tiles = append(g.tiles, make([]CategoryTile, len(cats)-len(g.tiles))...)
 	}
-	pad, gap := Dp(gtx, 24), Dp(gtx, 24)
+	pad, gap := ContentPad(gtx), Dp(gtx, 24)
 	cols := categoryCols(gtx)
 	tw := (gtx.Constraints.Max.X - 2*pad - (cols-1)*gap) / cols
 	for c := 0; c < cols && r*cols+c < len(cats); c++ {

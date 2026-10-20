@@ -83,7 +83,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			playing := p.playing()
 			return p.actions.Layout(gtx, ui.ActionOpts{ContextURI: p.uri, OnPlay: p.play, Playing: &playing, SaveURI: p.uri})
 		}
-		return ui.Pad(gtx, 0, 24, 32, 24, func(gtx layout.Context) layout.Dimensions {
+		return ui.PageInset(gtx, 0, 32, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, ui.Dp(gtx, 800))
 			return ui.Column(gtx,
 				func(gtx layout.Context) layout.Dimensions {

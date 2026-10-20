@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"strings"
 	"time"
 
 	"gioui.org/layout"
@@ -19,8 +20,6 @@ type Card struct {
 }
 
 type CardOpts struct {
-	// Bare shows only the image (Recents on Home).
-	Bare bool
 	// OnOpen runs before navigating (search uses it to save a recent search).
 	OnOpen func(spotify.Card)
 	// Menu overrides the right-click menu (nil = CardMenu).
@@ -30,6 +29,15 @@ type CardOpts struct {
 	// Overlay draws on top of the artwork (art, in card coordinates) while
 	// the card is hovered; clickables inside it win over the card.
 	Overlay func(gtx layout.Context, c spotify.Card, art image.Rectangle)
+}
+
+// Gio scales LineHeight by 1.2, hence the divisions in Card.Layout.
+
+// madeForYou is a generated mix (Daily Mix, Discover Weekly, Release Radar):
+// its cover already carries the name, so the web player shows only the blurb.
+func madeForYou(c spotify.Card) bool {
+	id := URIID(c.URI)
+	return c.Type == "playlist" && c.Subtitle != "" && (strings.HasPrefix(id, "37i9dQZF1E") || strings.HasPrefix(id, "37i9dQZEVX"))
 }
 
 func cardRound(c spotify.Card) bool { return c.Type == "artist" || c.Type == "user" }
@@ -80,9 +88,6 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 	k.Click.Label = c.Name
 	w := gtx.Constraints.Max.X
 	pad := Dp(gtx, 12)
-	if o.Bare {
-		pad = Dp(gtx, 8)
-	}
 	art := max(0, w-2*pad)
 	return k.Click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		hov := k.Click.Hovered()
@@ -101,7 +106,7 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 		// Play button: slides up and fades in on hover; stays while playing.
 		if cardPlayable(c) {
 			playing := CtxPlaying(c.URI)
-			v := k.hover.Step(gtx, hov || playing, 300*time.Millisecond)
+			v := k.hover.Step(gtx, hov || playing, 200*time.Millisecond)
 			if v > 0 {
 				bs := Dp(gtx, 48)
 				bx := pad + art - Dp(gtx, 8) - bs
@@ -118,23 +123,25 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 			o.Overlay(gtx, c, r)
 		}
 		y += art
-		if !o.Bare {
-			y += Dp(gtx, 8)
+		y += Dp(gtx, 8)
+		// The text is inset 12dp from the art's right edge.
+		tw := max(0, art-Dp(gtx, 12))
+		if !madeForYou(c) {
 			Offset(gtx, pad, y, func() {
 				g := gtx
-				g.Constraints = layout.Constraints{Max: image.Pt(art, Dp(gtx, 30))}
-				d := Text(g, c.Name, 16, Regular, ColText)
+				g.Constraints = layout.Constraints{Max: image.Pt(tw, 1<<20)}
+				d := Label{Text: c.Name, Size: 16, Color: ColText, MaxLines: 2, LineHeight: 22 / 1.2}.Layout(g)
 				y += d.Size.Y
 			})
-			if c.Subtitle != "" {
-				y += Dp(gtx, 4)
-				Offset(gtx, pad, y, func() {
-					g := gtx
-					g.Constraints = layout.Constraints{Max: image.Pt(art, Dp(gtx, 60))}
-					d := Label{Text: c.Subtitle, Size: 14, Color: ColText2, MaxLines: 2}.Layout(g)
-					y += d.Size.Y
-				})
-			}
+		}
+		if c.Subtitle != "" {
+			y += Dp(gtx, 4)
+			Offset(gtx, pad, y, func() {
+				g := gtx
+				g.Constraints = layout.Constraints{Max: image.Pt(tw, 1<<20)}
+				d := Label{Text: c.Subtitle, Size: 14, Color: ColText2, MaxLines: 2, LineHeight: 20 / 1.2}.Layout(g)
+				y += d.Size.Y
+			})
 		}
 		y += pad
 		call := m.Stop()
@@ -181,6 +188,7 @@ type Shelf struct {
 	Title, ShowAll Link
 	Header         Click
 	Cards          []Card
+	car            carousel
 }
 
 type ShelfOpts struct {
@@ -193,12 +201,15 @@ type ShelfOpts struct {
 	OnShowAll func()
 	// ShowAllText replaces "Show all".
 	ShowAllText string
-	Bare        bool
 	Card        CardOpts
 	// Rows of cards to show (default 1).
 	Rows int
 	// Below is drawn between the header and the cards (the discography chips).
 	Below layout.Widget
+	// Inset is the page's side padding in dp (default 24).
+	Inset float32
+	// Carousel lays the cards out in one horizontally scrolling row (Home).
+	Carousel bool
 }
 
 // Layout draws the shelf: header row, then one row of cards that fit.
@@ -206,7 +217,6 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 	if len(s.Cards) < len(items) {
 		s.Cards = append(s.Cards, make([]Card, len(items)-len(s.Cards))...)
 	}
-	o.Card.Bare = o.Card.Bare || o.Bare
 	if s.ShowAll.Click.Clicked(gtx) && o.OnShowAll != nil {
 		o.OnShowAll()
 	}
@@ -222,28 +232,38 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 		OpenURI(o.Header.URI)
 	}
 	minW := float32(176)
-	if o.Bare {
-		minW = 150
-	}
 	rows := o.Rows
 	if rows == 0 {
 		rows = 1
 	}
-	return Pad(gtx, 0, 12, 24, 12, func(gtx layout.Context) layout.Dimensions {
-		return Column(gtx,
-			func(gtx layout.Context) layout.Dimensions {
-				return Pad(gtx, 0, 12, 4, 12, func(gtx layout.Context) layout.Dimensions {
-					return s.header(gtx, o)
-				})
-			},
-			o.Below,
-			func(gtx layout.Context) layout.Dimensions {
+	pad := o.Inset
+	if pad == 0 {
+		pad = ContentPadDp(gtx)
+	}
+	return Column(gtx,
+		func(gtx layout.Context) layout.Dimensions {
+			return Pad(gtx, 0, pad, 8, pad, func(gtx layout.Context) layout.Dimensions {
+				return s.header(gtx, o)
+			})
+		},
+		func(gtx layout.Context) layout.Dimensions {
+			if o.Below == nil {
+				return layout.Dimensions{}
+			}
+			return Pad(gtx, 0, pad-12, 0, pad-12, o.Below)
+		},
+		func(gtx layout.Context) layout.Dimensions {
+			if o.Carousel {
+				return s.carousel(gtx, items, o, pad-12)
+			}
+			return Pad(gtx, 0, pad-12, 0, pad-12, func(gtx layout.Context) layout.Dimensions {
 				return CardGrid(gtx, len(items), minW, rows, func(gtx layout.Context, i int) layout.Dimensions {
 					return s.Cards[i].Layout(gtx, items[i], o.Card)
 				})
-			},
-		)
-	})
+			})
+		},
+		Gap(0, 24),
+	)
 }
 
 func (s *Shelf) header(gtx layout.Context, o ShelfOpts) layout.Dimensions {
@@ -295,10 +315,10 @@ func (s *Shelf) header(gtx layout.Context, o ShelfOpts) layout.Dimensions {
 		},
 	)
 	call := m.Stop()
-	h = max(h, d.Size.Y)
+	h = max(h, d.Size.Y, Dp(gtx, 48))
 	Offset(gtx, x, h-d.Size.Y, func() { call.Add(gtx.Ops) })
 	if o.OnShowAll != nil {
-		Offset(gtx, w-allW+Dp(gtx, 12), h-Dp(gtx, 6)-Dp(gtx, 18), func() {
+		Offset(gtx, w-allW+Dp(gtx, 4), h-Dp(gtx, 20), func() {
 			s.ShowAll.Click.Label = all
 			s.ShowAll.Layout(gtx, all, 14, Bold, ColText2, ColText)
 		})

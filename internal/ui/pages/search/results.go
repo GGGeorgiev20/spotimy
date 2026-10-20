@@ -24,7 +24,7 @@ func (p *page) tabBar(gtx layout.Context, solid bool) layout.Dimensions {
 		}
 	}
 	m := op.Record(gtx.Ops)
-	d := ui.Pad(gtx, 16, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+	d := ui.PageInset(gtx, 16, 16, func(gtx layout.Context) layout.Dimensions {
 		d, clicked := p.chips.Layout(gtx, tabLabels, sel)
 		if clicked >= 0 && clicked != sel {
 			ui.Navigate(p.tabPath(tabs[clicked].id))
@@ -70,7 +70,7 @@ func (p *page) single(gtx layout.Context, bar, content layout.Widget) layout.Dim
 }
 
 func hint(gtx layout.Context, q string) layout.Dimensions {
-	return ui.Pad(gtx, 64, 24, 64, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 64, 64, func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return ui.Label{Text: `No results found for "` + q + `"`, Size: 24, Weight: ui.Bold, Align: text.Middle, MaxLines: 2}.Layout(gtx)
@@ -127,7 +127,7 @@ func (p *page) layoutAll(gtx layout.Context, bar layout.Widget) layout.Dimension
 func (p *page) topRow(gtx layout.Context, top *spotify.Card) layout.Dimensions {
 	w := gtx.Constraints.Max.X
 	px := func(v float32) int { return ui.Dp(gtx, v) }
-	pad, gap := px(24), px(24)
+	pad, gap := ui.ContentPad(gtx), px(24)
 	inner := w - 2*pad
 	songs := 0
 	if p.topRows != nil {

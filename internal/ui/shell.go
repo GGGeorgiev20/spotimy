@@ -282,6 +282,7 @@ var stickyPlay PlayButton
 
 func layoutMain(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
+	mainWidth = size.X
 	page := Current().Page()
 	d := page.Layout(gtx)
 

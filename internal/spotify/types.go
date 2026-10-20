@@ -60,6 +60,7 @@ type Playlist struct {
 	Description string    `json:"description"`
 	Owner       User      `json:"owner"`
 	Images      []Image   `json:"images"`
+	Color       string    `json:"color,omitempty"` // header color extracted from the cover
 	Followers   int       `json:"followers"`
 	Following   bool      `json:"following"`
 	CanEdit     bool      `json:"canEdit"`
@@ -76,7 +77,8 @@ type Album struct {
 	Type      string   `json:"type"` // ALBUM, SINGLE, EP, COMPILATION
 	Artists   []Artist `json:"artists"`
 	Images    []Image  `json:"images"`
-	Date      string   `json:"date"` // ISO; precision may be year only
+	Color     string   `json:"color,omitempty"` // header color extracted from the cover
+	Date      string   `json:"date"`            // ISO; precision may be year only
 	Label     string   `json:"label"`
 	Copyright []string `json:"copyright"`
 	Saved     bool     `json:"saved"`

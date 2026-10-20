@@ -88,6 +88,7 @@ func (c *Client) Playlist(ctx context.Context, uri string, offset, limit int) (*
 		Description: p.Description,
 		Owner:       owner,
 		Images:      p.Images.first(),
+		Color:       p.Images.color(),
 		Followers:   p.Followers,
 		Following:   p.Following,
 		CanEdit:     p.CurrentUserCapabilities.CanEditItems,

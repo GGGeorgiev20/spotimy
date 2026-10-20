@@ -85,7 +85,7 @@ func (d *disco) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (d *disco) toolbar(gtx layout.Context) layout.Dimensions {
-	return ui.Pad(gtx, 64, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 64, 16, func(gtx layout.Context) layout.Dimensions {
 		w := gtx.Constraints.Max.X
 		h := ui.Dp(gtx, 40)
 		name := ""

@@ -71,7 +71,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			}
 			return d
 		case browse == 1 && i == ns+1:
-			return ui.Pad(gtx, 16, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 16, 16, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, "Browse all", 24, ui.Bold, ui.ColText)
 			})
 		case i < 1+ns+browse+rows:
@@ -90,7 +90,7 @@ func (p *page) hero(gtx layout.Context, title string) layout.Dimensions {
 	ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), p.color, ui.Scale(p.color, .4))
 	// clamp(48px, 10cqi, 96px)
 	size := max(48, min(96, float32(w)/gtx.Metric.PxPerSp*.1))
-	pad := ui.Dp(gtx, 24)
+	pad := ui.ContentPad(gtx)
 	m := op.Record(gtx.Ops)
 	g := gtx
 	g.Constraints = layout.Constraints{Max: image.Pt(w-2*pad, h-2*pad)}

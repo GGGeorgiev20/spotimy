@@ -94,7 +94,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		p.setup(s)
 	}
 	w := gtx.Constraints.Max.X
-	pad, gap := ui.Dp(gtx, 24), ui.Dp(gtx, 32)
+	pad, gap := ui.ContentPad(gtx), ui.Dp(gtx, 32)
 	// Wide: episodes left (2fr), About right (1fr); narrow: About comes first.
 	col := (w - 2*pad - gap) / 3
 	wide := w > ui.Dp(gtx, 900) && col >= ui.Dp(gtx, 220)
@@ -131,11 +131,11 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			p.aboveH = p.headerH + d.Size.Y
 			return d
 		case i == heading:
-			return ui.Pad(gtx, 0, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 0, 16, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, "All Episodes", 24, ui.Bold, ui.ColText)
 			})
 		case i < heading:
-			return ui.Pad(gtx, 0, 24, 24, 24, func(gtx layout.Context) layout.Dimensions { return about(gtx, s) })
+			return ui.PageInset(gtx, 0, 24, func(gtx layout.Context) layout.Dimensions { return about(gtx, s) })
 		case i < rows+n:
 			g := gtx
 			g.Constraints.Max.X, g.Constraints.Min.X = epsW, epsW

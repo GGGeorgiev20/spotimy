@@ -44,7 +44,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	return p.list.Layout(gtx, rows+2, func(gtx layout.Context, i int) layout.Dimensions {
 		switch {
 		case i == 0:
-			return ui.Pad(gtx, 72, 24, 32, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 72, 32, func(gtx layout.Context) layout.Dimensions {
 				return ui.Label{Text: title, Size: 32, Weight: ui.Bold, MaxLines: 2}.Layout(gtx)
 			})
 		case i <= rows:

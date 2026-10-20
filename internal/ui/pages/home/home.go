@@ -105,9 +105,9 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	// Gradient behind the list, scrolling with it.
 	p.stepTint(gtx)
-	h := ui.Dp(gtx, 332)
+	h := ui.Dp(gtx, 256)
 	top := -p.list.ScrollTop()
-	ui.VGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), ui.Alpha(p.tint, .7), ui.ColSurface)
+	ui.VGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), ui.Scale(p.tint, .4), ui.ColSurface)
 
 	n := itemShelves + len(p.shelves) + 1
 	return p.list.Layout(gtx, n, func(gtx layout.Context, i int) layout.Dimensions {
@@ -156,7 +156,7 @@ func (p *page) chipRow(gtx layout.Context) layout.Dimensions {
 		}
 	}
 	var clicked int
-	d := ui.Pad(gtx, 20, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+	d := ui.Pad(gtx, 20, pagePad, 16, pagePad, func(gtx layout.Context) layout.Dimensions {
 		p.chips.Base = ui.Mix(ui.ColSurface, p.tint, .5)
 		d, c := p.chips.Layout(gtx, p.labels, sel)
 		clicked = c
@@ -178,21 +178,30 @@ func (p *page) chipRow(gtx layout.Context) layout.Dimensions {
 func (p *page) layoutShelf(gtx layout.Context, i int) layout.Dimensions {
 	s := p.shelves[i]
 	return p.shelf[i].Layout(gtx, s.Items, ui.ShelfOpts{
-		Title: s.Title, Label: s.Label, Header: s.Header, Bare: s.Kind == "recents",
+		Title: s.Title, Label: s.Label, Header: s.Header, Inset: pagePad, Carousel: true,
 		OnShowAll: func() { ui.Navigate(ui.URIToPath(s.URI)) },
 	})
 }
 
-// grid is the shortcut tiles: 4 columns (2 when narrow), 8dp apart.
+// pagePad is the page's side padding in dp.
+const pagePad = 40
+
+// grid is the shortcut tiles: 4 columns (2 below 800dp wide), 48dp tall and
+// 8dp apart, or 64dp tall and 12dp apart from 1200dp.
 func (p *page) grid(gtx layout.Context) layout.Dimensions {
 	if len(p.short) == 0 {
 		return layout.Dimensions{}
 	}
-	gap, h := ui.Dp(gtx, 8), ui.Dp(gtx, 48)
-	pad := ui.Dp(gtx, 24)
+	wdp := float32(gtx.Constraints.Max.X) / gtx.Metric.PxPerDp
+	th, gp := float32(48), float32(8)
+	if wdp >= 1200 {
+		th, gp = 64, 12
+	}
+	gap, h := ui.Dp(gtx, gp), ui.Dp(gtx, th)
+	pad := ui.Dp(gtx, pagePad)
 	w := gtx.Constraints.Max.X - 2*pad
-	cols := 4 // the web player switches between 2 and 4 columns, never 3
-	if w < ui.Dp(gtx, 700) {
+	cols := 4
+	if wdp < 800 {
 		cols = 2
 	}
 	cw := (w - (cols-1)*gap) / cols
@@ -213,7 +222,7 @@ func (p *page) grid(gtx layout.Context) layout.Dimensions {
 		p.cover(hovered, false)
 	}
 	rows := (len(p.short) + cols - 1) / cols
-	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, rows*(h+gap)-gap+ui.Dp(gtx, 32))}
+	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, rows*(h+gap)-gap+ui.Dp(gtx, 40))}
 }
 
 // tile is one shortcut: cover, name, and a play button on hover.
@@ -244,12 +253,12 @@ func (t *tile) layout(gtx layout.Context, c spotify.Card, base color.NRGBA) {
 		r := image.Rect(0, 0, w, h)
 		defer clip.UniformRRect(r, ui.Dp(gtx, 4)).Push(gtx.Ops).Pop()
 		ui.FillRect(gtx.Ops, r, 0, bg)
-		img := ui.Dp(gtx, 48)
+		img := h
 		ui.Image{URL: ui.Pick(c.Images, img), Icon: "note"}.Layout(gtx, image.Pt(img, img))
 		btn := ui.Dp(gtx, 32)
 		x := img + ui.Dp(gtx, 8)
 		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(max(0, w-x-btn-ui.Dp(gtx, 16)), h)}
+		g.Constraints = layout.Constraints{Max: image.Pt(max(0, w-x-ui.Dp(gtx, 8)), h)}
 		m := op.Record(gtx.Ops)
 		d := ui.Label{Text: c.Name, Size: 14, Weight: ui.Bold, MaxLines: 2}.Layout(g)
 		call := m.Stop()

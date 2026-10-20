@@ -278,7 +278,7 @@ func (p *page) actionBar(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *page) popularTitle(gtx layout.Context) layout.Dimensions {
-	return ui.Pad(gtx, 0, 24, 16, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 0, 16, func(gtx layout.Context) layout.Dimensions {
 		return ui.Text(gtx, "Popular", 24, ui.Bold, ui.ColText)
 	})
 }
