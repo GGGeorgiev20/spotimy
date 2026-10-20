@@ -45,16 +45,18 @@ A missing GraphQL variable comes back as an error that names it, for example ``m
 
 ## Features
 
-- Home with your personalized feed, Search with tabs and recent searches, and artist, album and playlist pages. Playlists include Spotify-made ones such as Discover Weekly and the Daily Mixes.
-- Your Library: filters, sort, search, list/compact/grid views and folders. It can be resized and collapsed.
-- Playlist editing: create, rename, delete, add, remove and drag-reorder.
-- Queue (view, add, remove, reorder, clear), radio for songs, artists, albums and playlists, and autoplay.
+- Home with your personalized feed and filter chips, Search with every result tab (Songs, Playlists, Artists, Genres & Moods, Albums, Profiles, Podcasts & Shows, Episodes), recent searches and Browse all, genre and mood pages, and What's New.
+- Album, playlist, artist (discography in list or grid view, every "Show all" page, On Tour, merch, About with links), profile (followers, following, follow and unfollow) and podcast pages. Playlists include Spotify-made ones such as Discover Weekly and the Daily Mixes.
+- Your Library: filters, sort, search, list/compact/grid views, pins and folders. It can be resized and collapsed to a rail.
+- Playlist editing: create, rename, delete, add, remove, drag-reorder, search and sort within a list, recommended songs, and "Exclude from your taste profile".
+- Queue (view, add, remove, reorder, clear) and Recently played, radio for songs, artists, albums and playlists, and autoplay.
 - Lyrics: time-synced, the current line highlighted, auto-scrolling, click a line to seek.
-- Now Playing view: Canvas video, About the artist, credits, and next in queue.
-- Podcasts: show and episode pages, resume points, and Your Episodes.
+- Now Playing view with the Canvas video, About the artist, credits and next in queue; full-screen mode.
+- Friend Activity.
 - Spotify Connect: list devices, transfer playback, and control whichever device is playing.
 - MPRIS (media keys and desktop widgets), served by go-librespot under the name `go-librespot`.
 - The official keyboard shortcuts. Press Ctrl+/ for the list.
+- Single instance: launching it again, or opening a `spotify:` or open.spotify.com link with it, goes to the running app.
 
 ## Release build and desktop entry
 
