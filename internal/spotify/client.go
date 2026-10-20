@@ -60,7 +60,7 @@ func New(id Identity, token TokenFunc, log *slog.Logger, opsOverride string) *Cl
 		log:   log,
 		token: token,
 		ops:   loadOperations(opsOverride, log),
-		cache: newCache(512),
+		cache: newCache(8 << 20),
 
 		pathfinderURL: pathfinderURL,
 		spclientURL:   spclientBase,

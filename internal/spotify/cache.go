@@ -5,13 +5,14 @@ import (
 	"time"
 )
 
-// cache is a small in-memory TTL cache for read responses. Oldest entries are
-// evicted once it holds max items.
+// cache is a small in-memory TTL cache for read responses, capped in bytes
+// (playlist pages are hundreds of KB). Oldest entries are evicted first.
 // ponytail: O(n) eviction scan; fine at a few hundred entries.
 type cache struct {
-	mu  sync.Mutex
-	max int
-	m   map[string]cacheEntry
+	mu   sync.Mutex
+	max  int // bytes
+	size int
+	m    map[string]cacheEntry
 }
 
 type cacheEntry struct {
@@ -20,7 +21,7 @@ type cacheEntry struct {
 	expires time.Time
 }
 
-func newCache(max int) *cache { return &cache{max: max, m: map[string]cacheEntry{}} }
+func newCache(maxBytes int) *cache { return &cache{max: maxBytes, m: map[string]cacheEntry{}} }
 
 func (c *cache) get(k string) ([]byte, bool) {
 	c.mu.Lock()
@@ -33,9 +34,13 @@ func (c *cache) get(k string) ([]byte, bool) {
 }
 
 func (c *cache) put(k string, v []byte, ttl time.Duration) {
+	if len(v) > c.max/4 {
+		return // one huge response shouldn't flush everything else
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if len(c.m) >= c.max {
+	c.remove(k)
+	for c.size+len(v) > c.max && len(c.m) > 0 {
 		var oldest string
 		var t time.Time
 		for k, e := range c.m {
@@ -43,10 +48,11 @@ func (c *cache) put(k string, v []byte, ttl time.Duration) {
 				oldest, t = k, e.added
 			}
 		}
-		delete(c.m, oldest)
+		c.remove(oldest)
 	}
 	now := time.Now()
 	c.m[k] = cacheEntry{v, now, now.Add(ttl)}
+	c.size += len(v)
 }
 
 // invalidate drops every key with the given prefix (e.g. after a mutation).
@@ -55,7 +61,14 @@ func (c *cache) invalidate(prefix string) {
 	defer c.mu.Unlock()
 	for k := range c.m {
 		if len(k) >= len(prefix) && k[:len(prefix)] == prefix {
-			delete(c.m, k)
+			c.remove(k)
 		}
+	}
+}
+
+func (c *cache) remove(k string) {
+	if e, ok := c.m[k]; ok {
+		c.size -= len(e.val)
+		delete(c.m, k)
 	}
 }

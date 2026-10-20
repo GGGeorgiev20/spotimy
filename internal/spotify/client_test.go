@@ -113,3 +113,25 @@ func TestOperationsRegistry(t *testing.T) {
 		t.Fatal("unknown op should fail")
 	}
 }
+
+func TestCacheByteCap(t *testing.T) {
+	c := newCache(1000)
+	for _, k := range []string{"a", "b", "c", "d", "e"} { // 5 x 240 > 1000: evicts a
+		c.put(k, make([]byte, 240), time.Hour)
+		time.Sleep(time.Millisecond)
+	}
+	if _, ok := c.get("a"); ok {
+		t.Error("oldest entry should be evicted")
+	}
+	if _, ok := c.get("e"); !ok || c.size != 960 {
+		t.Errorf("newest should stay, size=%d", c.size)
+	}
+	c.put("huge", make([]byte, 300), time.Hour) // > max/4 is not cached
+	if _, ok := c.get("huge"); ok || c.size != 960 {
+		t.Errorf("oversized entry cached, size=%d", c.size)
+	}
+	c.invalidate("")
+	if c.size != 0 {
+		t.Errorf("size after invalidate = %d", c.size)
+	}
+}
