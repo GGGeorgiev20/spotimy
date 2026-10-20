@@ -1,36 +1,36 @@
 # personal-spotify
 
-A lightweight Spotify desktop client for Linux, for personal use. It looks like the official client but runs as a Go + Wails app on the system WebKitGTK, with [go-librespot](https://github.com/devgianlu/go-librespot) embedded for login, playback and Spotify Connect. Spotify Premium is required.
+A lightweight Spotify desktop client for Linux, for personal use. It looks like the official client but is a native Go app: the interface is drawn with [Gio](https://gioui.org) on the GPU (no web view), and [go-librespot](https://github.com/devgianlu/go-librespot) is embedded for login, playback and Spotify Connect. Spotify Premium is required.
 
 It talks to Spotify's internal API (pathfinder GraphQL, spclient and the dealer), the same API the official client uses. It does not use the public Web API.
 
 ## System dependencies (openSUSE Tumbleweed)
 
 ```bash
-sudo zypper in go nodejs npm webkitgtk3-devel gtk3-devel alsa-devel libogg-devel libvorbis-devel flac-devel mpg123-devel gstreamer-plugins-bad
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0
+sudo zypper in go wayland-devel libxkbcommon-devel Mesa-libEGL-devel alsa-devel libogg-devel libvorbis-devel flac-devel mpg123-devel ffmpeg
 ```
 
-- `webkitgtk3-devel` provides `webkit2gtk-4.1`. The build uses the `webkit2_41` tag, which is set in `wails.json`.
+- Gio draws through EGL/OpenGL ES on Wayland. The build uses the tags `nox11,novulkan` (no X11 backend, no Vulkan headers needed); the Makefile sets them.
 - go-librespot needs `libogg`, `libvorbis`, `flac`, `mpg123` and `alsa`. Audio goes out through PulseAudio, and PipeWire's pulse server handles it on PipeWire systems.
-- Canvas videos are H.264 MP4s that WebKitGTK plays through GStreamer. You need `qtdemux` (in `gstreamer-plugins-good`) and an H.264 decoder. On this machine the decoder is `openh264dec` from `gstreamer-plugins-bad`, backed by Cisco's `libopenh264`, and `vah264dec` (VA-API) would also work. `gstreamer-plugins-libav` provides `avdec_h264` too, but on a stock Tumbleweed install it conflicts with `ffmpeg-8-mini-libs`, and zypper offers to remove the X11 KWin session to resolve that. Don't accept it. If no decoder is available, the Now Playing view shows the cover art instead.
+- Canvas videos (the looping clips in the Now Playing view) are decoded by the `ffmpeg` binary. Without it the Now Playing view shows the cover art instead.
+- Color emoji come from Noto Color Emoji if it's installed.
 - Login credentials are stored in the Secret Service keyring (KWallet/ksecretd or GNOME Keyring), so one has to be running.
 
 ## Development
 
 ```bash
-wails dev
+make run
 ```
 
 Environment variables:
 
 - `PERSONAL_SPOTIFY_LOG=debug` turns on verbose logging, including every player request and go-librespot's debug output.
-- `PERSONAL_SPOTIFY_GPU=1` turns on WebKit GPU compositing. It's off by default because that saves about 60 MB of RAM.
+- `PERSONAL_SPOTIFY_HARNESS=127.0.0.1:<port>` runs the interface headless for automated UI testing, controlled over HTTP (navigate, click, type, screenshot, read the accessibility tree). It runs in sandbox mode: no player session, and anything that would change the account or playback is recorded instead of sent. See `internal/ui/harness.go`.
 
 Tests:
 
 ```bash
-go test ./internal/...
+make test
 ```
 
 `cmd/spdev` is a development tool. It logs in with the credentials the app stored and calls the internal API directly. Use it to probe variables, capture fixtures, or check a broken operation:
@@ -59,7 +59,7 @@ A missing GraphQL variable comes back as an error that names it, for example ``m
 ## Release build and desktop entry
 
 ```bash
-wails build
+make build
 install -Dm755 build/bin/personal-spotify ~/.local/bin/personal-spotify
 install -Dm644 packaging/personal-spotify.desktop ~/.local/share/applications/personal-spotify.desktop
 install -Dm644 packaging/personal-spotify.svg ~/.local/share/icons/hicolor/scalable/apps/personal-spotify.svg
