@@ -85,7 +85,7 @@
     </EntityHeader>
   {/if}
 
-  <ActionBar {isPlaying} onplay={play} onmore={(e) => openMenu(e, { kind: 'card', card: { uri, type: 'artist', name: ar!.name, subtitle: '', images: ar!.avatar } as spotify.Card })}>
+  <ActionBar {isPlaying} onplay={play} contextUri={uri} onmore={(e) => openMenu(e, { kind: 'card', card: { uri, type: 'artist', name: ar!.name, subtitle: '', images: ar!.avatar } as spotify.Card })}>
     {#snippet extra()}
       <button class="follow" onclick={() => toggleLibrary(uri)}>{saved[uri] ? 'Following' : 'Follow'}</button>
     {/snippet}

@@ -40,7 +40,7 @@
       <span class="owner">{me.user?.name}</span><span class="dot">•</span><span class="sub">{tracks!.total} songs</span>
     {/snippet}
   </EntityHeader>
-  <ActionBar {isPlaying} onplay={play} />
+  <ActionBar {isPlaying} onplay={play} contextUri={uri} />
   <TrackTable {tracks} {scroller} contextUri={uri} />
 {/if}
 

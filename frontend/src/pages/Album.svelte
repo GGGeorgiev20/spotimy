@@ -61,7 +61,7 @@
       <span class="dot">•</span><span class="sub">{al!.total} songs, {fmtTotal(total)}</span>
     {/snippet}
   </EntityHeader>
-  <ActionBar {isPlaying} onplay={play} saved={saved[uri]} onsave={() => toggleLibrary(uri)}
+  <ActionBar {isPlaying} onplay={play} contextUri={uri} saved={saved[uri]} onsave={() => toggleLibrary(uri)}
     onmore={(e) => openMenu(e, { kind: 'card', card: { uri, type: 'album', name: al!.name, subtitle: '', images: al!.images } as spotify.Card })} />
   <TrackTable {tracks} {scroller} contextUri={uri} variant="album" />
   <div class="foot">

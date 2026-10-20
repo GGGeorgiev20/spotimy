@@ -8,8 +8,8 @@ export function fmtDuration(ms: number): string {
 
 // "1 hr 23 min" / "about 5 hr" style totals used in page headers.
 export function fmtTotal(ms: number): string {
-  const min = Math.round(ms / 60000)
-  if (min < 60) return `${min} min ${Math.round((ms / 1000) % 60)} sec`
+  const min = Math.floor(ms / 60000)
+  if (min < 60) return `${min} min ${Math.floor((ms / 1000) % 60)} sec`
   const h = Math.floor(min / 60)
   return h >= 10 ? `about ${h} hr` : `${h} hr ${min % 60} min`
 }

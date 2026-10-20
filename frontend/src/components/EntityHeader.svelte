@@ -36,8 +36,7 @@
     display: flex;
     align-items: flex-end;
     gap: 24px;
-    padding: 88px 24px 24px;
-    min-height: 340px;
+    padding: 32px 24px 24px;
     background: linear-gradient(transparent 0, rgba(0, 0, 0, .5) 100%), var(--c);
   }
   .art {

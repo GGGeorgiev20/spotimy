@@ -1,6 +1,8 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
   import type { Snippet } from 'svelte'
+  import { App } from '../lib/api.svelte'
+  import { controls, isContext, player, playContext } from '../lib/player.svelte'
   let {
     isPlaying,
     onplay,
@@ -9,6 +11,7 @@
     saveKind = 'check',
     extra,
     onmore,
+    contextUri,
   }: {
     isPlaying: boolean
     onplay: () => void
@@ -17,13 +20,28 @@
     saveKind?: 'check' | 'heart'
     extra?: Snippet
     onmore?: (e: MouseEvent) => void
+    contextUri?: string // shows the shuffle toggle for this context
   } = $props()
+
+  const shuffleOn = $derived(!!contextUri && isContext(contextUri) && !!player.status?.shuffle)
+  // Like the official button: turn shuffle on for this context, starting it if needed.
+  async function shuffle() {
+    if (!contextUri) return
+    if (!isContext(contextUri)) {
+      await App.SetShuffle(true)
+      return playContext(contextUri)
+    }
+    controls.toggleShuffle()
+  }
 </script>
 
 <div class="bar">
   <button class="big-play" onclick={onplay} aria-label={isPlaying ? 'Pause' : 'Play'}>
     <Icon name={isPlaying ? 'pause' : 'play'} size={24} />
   </button>
+  {#if contextUri}
+    <button class="act" class:on={shuffleOn} onclick={shuffle} aria-label="Shuffle"><Icon name="shuffle" size={32} /></button>
+  {/if}
   {#if onsave}
     <button class="act" class:on={saved} onclick={onsave} aria-label={saved ? 'Remove from Your Library' : 'Save to Your Library'}>
       <Icon name={saved ? (saveKind === 'heart' ? 'heart-filled' : 'check-circle') : saveKind === 'heart' ? 'heart' : 'plus-circle'} size={32} />

@@ -88,7 +88,7 @@
       </div>
     {/snippet}
   </EntityHeader>
-  <ActionBar {isPlaying} onplay={play} saved={saved[uri]} onsave={pl.isOwner ? undefined : () => toggleLibrary(uri)} onmore={more} />
+  <ActionBar {isPlaying} onplay={play} contextUri={uri} saved={saved[uri]} onsave={pl.isOwner ? undefined : () => toggleLibrary(uri)} onmore={more} />
   <TrackTable {tracks} {scroller} contextUri={uri} playlist={{ uri, canEdit: pl.canEdit }} />
 {/if}
 
