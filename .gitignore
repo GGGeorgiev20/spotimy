@@ -1,0 +1,28 @@
+# Secrets and personal data — never commit
+*.har
+*.har.json
+credentials*.json
+state.json
+*.token
+*.cookie
+cookies*
+.env
+.env.*
+config.local.*
+/data/
+/state/
+/cache/
+.cache/
+
+# Build output
+/build/bin/
+frontend/dist/
+frontend/node_modules/
+frontend/wailsjs/
+node_modules/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
