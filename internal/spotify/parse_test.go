@@ -214,3 +214,11 @@ func TestTrackRelinking(t *testing.T) {
 		t.Errorf("got %+v", tr)
 	}
 }
+
+func TestGroupDigits(t *testing.T) {
+	for n, want := range map[int]string{0: "0", 999: "999", 1000: "1,000", 33696821: "33,696,821", -1234: "-1,234"} {
+		if got := groupDigits(n); got != want {
+			t.Errorf("%d: got %q", n, got)
+		}
+	}
+}

@@ -127,9 +127,9 @@ func (p *page) headerSection(gtx layout.Context) layout.Dimensions {
 
 func plural(n int, word string) string {
 	if n == 1 {
-		return fmt.Sprintf("%d %s", n, word)
+		return "1 " + word
 	}
-	return fmt.Sprintf("%d %ss", n, word)
+	return ui.FmtNumber(n) + " " + word + "s"
 }
 
 // meta is "N Public Playlists • N Followers • N Following"; the last two open the lists.
@@ -143,7 +143,7 @@ func (p *page) meta(gtx layout.Context, pr *spotify.Profile) layout.Dimensions {
 	segs = append(segs,
 		ui.Seg{Text: plural(pr.Followers, "Follower"), Link: &p.followers},
 		ui.Seg{Text: " • ", Color: dim},
-		ui.Seg{Text: fmt.Sprintf("%d Following", pr.Following), Link: &p.following},
+		ui.Seg{Text: ui.FmtNumber(pr.Following) + " Following", Link: &p.following},
 	)
 	return ui.Inline(gtx, 14, ui.Regular, ui.ColText, ui.ColNone, segs...)
 }

@@ -84,7 +84,7 @@ func (c *Client) Profile(ctx context.Context, username string) (*Profile, error)
 	for _, pl := range resp.PublicPlaylists {
 		card := Card{URI: pl.URI, Type: "playlist", Name: pl.Name, Subtitle: "By " + pl.OwnerName, Images: imageFromURL(pl.ImageURL)}
 		if pl.OwnerURI == resp.URI {
-			card.Subtitle = fmt.Sprintf("%d Followers", pl.Followers)
+			card.Subtitle = groupDigits(pl.Followers) + " Followers"
 			if pl.Followers == 1 {
 				card.Subtitle = "1 Follower"
 			}
@@ -157,4 +157,13 @@ func (c *Client) topContent(ctx context.Context, p *Profile) error {
 		p.TopTracks = append(p.TopTracks, t.Data.track())
 	}
 	return nil
+}
+
+// groupDigits formats n with thousands separators: 1234567 -> 1,234,567.
+func groupDigits(n int) string {
+	s := fmt.Sprint(n)
+	for i := len(s) - 3; i > 0 && s[i-1] != '-'; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
 }
