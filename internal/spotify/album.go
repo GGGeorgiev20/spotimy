@@ -1,8 +1,8 @@
 package spotify
 
 import (
-	"strings"
 	"context"
+	"strings"
 	"time"
 )
 
