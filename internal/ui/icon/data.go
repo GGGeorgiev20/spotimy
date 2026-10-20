@@ -1,6 +1,6 @@
 package icon
 
-// Ported from frontend/src/components/Icon.svelte: 16x16 viewBox, "f:" prefix = filled path,
+// The app's own icon set, 16x16 viewBox. "f:" prefix = filled path,
 // otherwise stroked (width 1.5, round caps and joins).
 var sources = map[string][]string{
 	// Brand glyphs of the artist's links: "f24:" = filled in a 24x24 viewBox.
