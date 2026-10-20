@@ -221,7 +221,7 @@ func (a *App) sandboxed(name string, args ...any) bool {
 	if !a.opts.Sandbox {
 		return false
 	}
-	call := name + fmt.Sprint(args...)
+	call := fmt.Sprintf("%s%v", name, args)
 	a.mu.Lock()
 	a.calls = append(a.calls, call)
 	a.mu.Unlock()
