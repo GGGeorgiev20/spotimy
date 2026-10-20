@@ -2,10 +2,10 @@ package ui
 
 import (
 	"embed"
-	"os"
 	"fmt"
 	"image"
 	"image/color"
+	"os"
 	"strconv"
 	"strings"
 
