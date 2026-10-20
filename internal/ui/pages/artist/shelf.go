@@ -38,7 +38,7 @@ func (p *shelfPage) Layout(gtx layout.Context) layout.Dimensions {
 		switch {
 		case i == 0:
 			// A shelf's title row: 48dp high, the title at its bottom.
-			return ui.Pad(gtx, 19, 24, 8, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 19, 8, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, s.Title, 24, ui.Bold, ui.ColText)
 			})
 		case i <= rows:

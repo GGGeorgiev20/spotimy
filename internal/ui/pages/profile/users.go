@@ -38,7 +38,7 @@ func (u *users) Layout(gtx layout.Context) layout.Dimensions {
 			if u.kind == "following" {
 				title = "Following"
 			}
-			return ui.Pad(gtx, 73, 24, 32, 24, func(gtx layout.Context) layout.Dimensions {
+			return ui.PageInset(gtx, 73, 32, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, title, 32, ui.Bold, ui.ColText)
 			})
 		case i <= n:

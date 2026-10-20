@@ -44,7 +44,7 @@ func (p *page) tourSection(gtx layout.Context) layout.Dimensions {
 			backend.OpenURL("https://open.spotify.com/concert/" + ui.URIID(a.Concerts[i].URI))
 		}
 	}
-	return ui.Pad(gtx, 0, 24, 40, 24, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 0, 40, func(gtx layout.Context) layout.Dimensions {
 		return ui.Column(gtx,
 			func(gtx layout.Context) layout.Dimensions { return t.header(gtx, a) },
 			ui.Gap(0, 8),
