@@ -8,6 +8,7 @@
   import Placeholder from '../pages/Placeholder.svelte'
   import Section from '../pages/Section.svelte'
   import Genre from '../pages/Genre.svelte'
+  import Profile from '../pages/Profile.svelte'
   import Search from '../pages/Search.svelte'
   import Artist from '../pages/Artist.svelte'
   import Discography from '../pages/Discography.svelte'
@@ -76,6 +77,8 @@
         <YourEpisodes />
       {:else if page === 'section'}
         <Section {id} />
+      {:else if page === 'user'}
+        <Profile {id} {scroller} />
       {:else if page === 'genre'}
         <Genre {id} />
       {:else if page === 'search'}

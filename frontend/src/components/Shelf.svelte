@@ -12,6 +12,7 @@
     showAll,
     oncard,
     label = '',
+    note = '',
     header,
     bare = false,
   }: {
@@ -20,6 +21,7 @@
     showAll?: () => void
     oncard?: (c: spotify.Card) => void
     label?: string
+    note?: string
     header?: spotify.Card
     bare?: boolean
   } = $props()
@@ -41,6 +43,7 @@
       {:else}
         <h2 class="title">{title}</h2>
       {/if}
+      {#if note}<p class="note">{note}</p>{/if}
     </div>
     {#if showAll}<button class="all" onclick={showAll}>Show all</button>{/if}
   </header>
@@ -54,6 +57,7 @@
   header { display: flex; align-items: flex-end; gap: 12px; padding: 0 12px; margin-bottom: 4px; }
   .titles { flex: 1; min-width: 0; }
   .label { margin: 0 0 2px; font-size: 12px; color: var(--text-2); }
+  .note { margin: 2px 0 0; font-size: 14px; color: var(--text-2); }
   .hdr-img img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; display: block; }
   .hdr-img img.round { border-radius: 50%; }
   .title { font-size: 24px; font-weight: 700; margin: 0; color: var(--text); text-align: left; }

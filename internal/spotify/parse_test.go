@@ -188,3 +188,18 @@ func TestLabelSplit(t *testing.T) {
 		}
 	}
 }
+
+func TestImageFromURL(t *testing.T) {
+	for in, want := range map[string]string{
+		"https://i.scdn.co/image/ab": "https://i.scdn.co/image/ab",
+		"spotify:image:ab":           "https://i.scdn.co/image/ab",
+		"spotify:mosaic:aa:bb:cc:dd": "https://mosaic.scdn.co/300/aabbccdd",
+	} {
+		if got := imageFromURL(in); len(got) != 1 || got[0].URL != want {
+			t.Errorf("%s: got %v", in, got)
+		}
+	}
+	if len(imageFromURL("")) != 0 {
+		t.Error("empty url should give no image")
+	}
+}
