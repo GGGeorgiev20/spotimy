@@ -8,6 +8,7 @@
     onsave,
     saveKind = 'check',
     extra,
+    onmore,
   }: {
     isPlaying: boolean
     onplay: () => void
@@ -15,6 +16,7 @@
     onsave?: () => void
     saveKind?: 'check' | 'heart'
     extra?: Snippet
+    onmore?: (e: MouseEvent) => void
   } = $props()
 </script>
 
@@ -28,7 +30,7 @@
     </button>
   {/if}
   {@render extra?.()}
-  <button class="act" aria-label="More options"><Icon name="more" size={32} /></button>
+  {#if onmore}<button class="act" aria-label="More options" onclick={onmore}><Icon name="more" size={32} /></button>{/if}
 </div>
 
 <style>

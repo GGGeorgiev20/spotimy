@@ -3,18 +3,26 @@
   import { pick } from '../lib/api.svelte'
   import { controls } from '../lib/player.svelte'
   import { openUri } from '../lib/router.svelte'
+  import { openMenu } from '../lib/menu.svelte'
   import type { spotify } from '../../wailsjs/go/models'
 
-  let { card }: { card: spotify.Card } = $props()
+  let { card, onopen }: { card: spotify.Card; onopen?: (c: spotify.Card) => void } = $props()
   const round = $derived(card.type === 'artist' || card.type === 'user')
+  const playable = $derived(card.type !== 'user' && card.type !== 'genre')
+  function open() {
+    onopen?.(card)
+    openUri(card.uri)
+  }
 </script>
 
-<div class="card" role="link" tabindex="0" onclick={() => openUri(card.uri)} onkeydown={(e) => e.key === 'Enter' && openUri(card.uri)}>
+<div class="card" role="link" tabindex="0" onclick={open} onkeydown={(e) => e.key === 'Enter' && open()} oncontextmenu={(e) => openMenu(e, { kind: 'card', card })}>
   <div class="art" class:round>
     {#if card.images?.length}<img src={pick(card.images, 200)} alt="" loading="lazy" />{/if}
-    <button class="play" aria-label="Play {card.name}" onclick={(e) => (e.stopPropagation(), controls.play(card.uri))}>
-      <Icon name="play" size={24} />
-    </button>
+    {#if playable}
+      <button class="play" aria-label="Play {card.name}" onclick={(e) => (e.stopPropagation(), onopen?.(card), controls.play(card.uri))}>
+        <Icon name="play" size={24} />
+      </button>
+    {/if}
   </div>
   <div class="name ellipsis">{card.name}</div>
   <div class="sub">{card.subtitle}</div>

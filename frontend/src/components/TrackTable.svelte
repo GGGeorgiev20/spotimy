@@ -1,10 +1,11 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
   import Virtual from './Virtual.svelte'
-  import { pick, saved, toggleSaved, type Track } from '../lib/api.svelte'
+  import { App, pick, saved, toast, toggleSaved, type Track } from '../lib/api.svelte'
+  import { openMenu } from '../lib/menu.svelte'
   import type { Paged } from '../lib/paged.svelte'
-  import { fmtAdded, fmtDuration } from '../lib/format'
-  import { player, playing, controls } from '../lib/player.svelte'
+  import { fmtAdded, fmtDuration, fmtNumber } from '../lib/format'
+  import { player, playing, controls, isContext } from '../lib/player.svelte'
   import { navigate, uriToPath } from '../lib/router.svelte'
 
   let {
@@ -12,23 +13,66 @@
     scroller,
     contextUri,
     variant = 'playlist',
+    onplayed,
+    playlist,
   }: {
     tracks: Paged
     scroller: HTMLElement | undefined
     contextUri: string
-    variant?: 'playlist' | 'album'
+    variant?: 'playlist' | 'album' | 'artist' | 'search'
+    onplayed?: (t: Track) => void
+    playlist?: { uri: string; canEdit: boolean } // enables remove and drag-reorder
   } = $props()
 
-  const showAlbum = $derived(variant === 'playlist')
+  // Drag-reorder (editable playlists only): drop above or below a row.
+  let dragFrom = $state(-1)
+  let dropAt = $state<{ i: number; after: boolean } | null>(null)
+  const canDrag = $derived(!!playlist?.canEdit)
+
+  function dragStart(e: DragEvent, i: number) {
+    dragFrom = i
+    e.dataTransfer!.effectAllowed = 'move'
+    e.dataTransfer!.setData('text/plain', tracks.items[i]?.uri ?? '')
+  }
+  function dragOver(e: DragEvent, i: number) {
+    if (dragFrom < 0) return
+    e.preventDefault()
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    dropAt = { i, after: e.clientY > r.top + r.height / 2 }
+  }
+  async function drop(e: DragEvent) {
+    e.preventDefault()
+    const from = tracks.items[dragFrom]
+    const to = dropAt && tracks.items[dropAt.i]
+    const after = dropAt?.after
+    dragFrom = -1
+    dropAt = null
+    if (!from?.uid || !to?.uid || from.uid === to.uid || !playlist) return
+    try {
+      await App.MovePlaylistItems(playlist.uri, [from.uid], after ? { after: to.uid } : { before: to.uid })
+      window.dispatchEvent(new CustomEvent('playlist-changed', { detail: playlist.uri }))
+    } catch (err) {
+      toast(`Couldn't move: ${err}`)
+    }
+  }
+
+  // Columns per variant, as in the official client.
+  const showImage = $derived(variant !== 'album')
+  const showAlbum = $derived(variant === 'playlist' || variant === 'search')
+  const showAdded = $derived(variant === 'playlist')
+  const showPlays = $derived(variant === 'artist')
   let selected = $state(-1)
 
   const current = $derived(player.status?.track?.uri)
-  const inContext = $derived(player.status?.context_uri === contextUri)
+  // An empty contextUri plays the track on its own (search results).
+  const inContext = $derived(!contextUri || isContext(contextUri))
 
   function play(t: Track) {
     if (!t.playable) return
+    onplayed?.(t)
     if (inContext && current === t.uri) controls.playPause()
-    else controls.play(contextUri, t.uri)
+    else if (contextUri) controls.play(contextUri, t.uri)
+    else controls.play(t.uri)
   }
 
   function link(e: MouseEvent, uri: string) {
@@ -42,13 +86,16 @@
   }
 </script>
 
-<div class="table" class:album={!showAlbum} role="grid" aria-rowcount={tracks.total}>
-  <div class="head" role="row">
-    <div class="idx">#</div>
-    <div>Title</div>
-    {#if showAlbum}<div class="hide-narrow">Album</div><div class="hide-narrower">Date added</div>{/if}
-    <div class="dur"><Icon name="clock" /></div>
-  </div>
+<div class="table v-{variant}" role="grid" aria-rowcount={tracks.total}>
+  {#if variant !== 'artist'}
+    <div class="head" role="row">
+      <div class="idx">#</div>
+      <div>Title</div>
+      {#if showAlbum}<div class="hide-narrow">Album</div>{/if}
+      {#if showAdded}<div class="hide-narrower">Date added</div>{/if}
+      <div class="dur"><Icon name="clock" /></div>
+    </div>
+  {/if}
 
   <Virtual count={tracks.total} rowHeight={56} {scroller} onrange={(s, e) => tracks.ensure(s, e + 20)}>
     {#snippet row(i)}
@@ -59,8 +106,16 @@
         class:selected={selected === i}
         class:current={isCurrent}
         class:disabled={t && !t.playable}
+        class:drop-before={dropAt?.i === i && !dropAt.after}
+        class:drop-after={dropAt?.i === i && dropAt.after}
         role="row"
         tabindex="-1"
+        draggable={canDrag && !!t}
+        ondragstart={(e) => dragStart(e, i)}
+        ondragover={(e) => dragOver(e, i)}
+        ondrop={drop}
+        ondragend={() => ((dragFrom = -1), (dropAt = null))}
+        oncontextmenu={(e) => t && ((selected = i), openMenu(e, { kind: 'track', track: t, playlist }))}
         onclick={() => (selected = i)}
         ondblclick={() => t && play(t)}
         onkeydown={(e) => key(e, t)}
@@ -77,7 +132,7 @@
             </button>
           </div>
           <div class="title">
-            {#if showAlbum}
+            {#if showImage}
               <img src={pick(t.album?.images, 40)} alt="" loading="lazy" />
             {/if}
             <div class="names">
@@ -92,8 +147,9 @@
             <div class="ellipsis sub hide-narrow">
               {#if t.album}<a href="/" onclick={(e) => link(e, t.album!.uri)}>{t.album.name}</a>{/if}
             </div>
-            <div class="sub hide-narrower">{fmtAdded(t.addedAt ?? '')}</div>
           {/if}
+          {#if showAdded}<div class="sub hide-narrower">{fmtAdded(t.addedAt ?? '')}</div>{/if}
+          {#if showPlays}<div class="sub plays">{t.playcount ? fmtNumber(t.playcount) : ''}</div>{/if}
           <div class="dur sub">
             <button
               class="save"
@@ -104,7 +160,7 @@
               <Icon name={saved[t.uri] ? 'check-circle' : 'plus-circle'} />
             </button>
             <span>{fmtDuration(t.durationMs)}</span>
-            <span class="more"><Icon name="more" /></span>
+            <button class="more" aria-label="More options for {t.name}" onclick={(e) => ((selected = i), openMenu(e, { kind: 'track', track: t, playlist }))}><Icon name="more" /></button>
           </div>
         {:else}
           <div class="idx"><span class="num">{i + 1}</span></div>
@@ -117,7 +173,10 @@
 
 <style>
   .table { padding: 0 24px; --cols: [index] 16px [first] 6fr [var1] 4fr [var2] 3fr [last] minmax(120px, 1fr); }
-  .table.album { --cols: [index] 16px [first] 4fr [last] minmax(120px, 1fr); }
+  .table.v-album { --cols: [index] 16px [first] 4fr [last] minmax(120px, 1fr); }
+  .table.v-search { --cols: [index] 16px [first] 4fr [var1] 2fr [last] minmax(120px, 1fr); }
+  .table.v-artist { --cols: [index] 16px [first] 4fr [var1] 2fr [last] minmax(120px, 1fr); }
+  .plays { font-variant-numeric: tabular-nums; }
   .head, .row {
     display: grid;
     grid-template-columns: var(--cols);
@@ -139,6 +198,8 @@
     padding: 0 40px;
   }
   :global(.scroll[data-stuck]) .head { background: var(--surface-2); border-bottom-color: transparent; }
+  .row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+  .row.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
   .row { height: 56px; border-radius: 4px; color: var(--text-2); }
   .row:hover { background: hsla(0, 0%, 100%, .1); }
   .row.selected { background: hsla(0, 0%, 100%, .3); }
@@ -175,6 +236,6 @@
   .eq i:nth-child(3) { animation-delay: -.6s; }
   .eq i:nth-child(4) { animation-delay: -.45s; }
   @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 14px; } }
-  @container main (max-width: 900px) { .hide-narrower { display: none; } .table { --cols: [index] 16px [first] 6fr [var1] 4fr [last] minmax(120px, 1fr); } }
-  @container main (max-width: 640px) { .hide-narrow { display: none; } .table { --cols: [index] 16px [first] 6fr [last] minmax(120px, 1fr); } }
+  @container main (max-width: 900px) { .hide-narrower { display: none; } .table.v-playlist { --cols: [index] 16px [first] 6fr [var1] 4fr [last] minmax(120px, 1fr); } }
+  @container main (max-width: 640px) { .hide-narrow { display: none; } .table.v-playlist, .table.v-search { --cols: [index] 16px [first] 6fr [last] minmax(120px, 1fr); } }
 </style>

@@ -8,6 +8,10 @@
   import LibraryPanel from './components/LibraryPanel.svelte'
   import Main from './components/Main.svelte'
   import PlayerBar from './components/PlayerBar.svelte'
+  import ContextMenu from './components/ContextMenu.svelte'
+  import Dialog from './components/Dialog.svelte'
+  import QueuePanel from './components/QueuePanel.svelte'
+  import Boundary from './components/Boundary.svelte'
   import { initPlayer, refresh } from './lib/player.svelte'
   import { loadMe } from './lib/me.svelte'
   import { prefs } from './lib/prefs.svelte'
@@ -61,13 +65,18 @@
     <TopBar />
     <div class="middle" style:--lib="{libWidth}px">
       <div class="left">
-        <LibraryPanel collapsed={prefs.libCollapsed} ontoggle={() => (prefs.libCollapsed = !prefs.libCollapsed)} />
+        <Boundary label="Your Library"><LibraryPanel collapsed={prefs.libCollapsed} ontoggle={() => (prefs.libCollapsed = !prefs.libCollapsed)} /></Boundary>
       </div>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="resizer" onpointerdown={startDrag}></div>
       <div class="center"><Main /></div>
+      {#if prefs.rightPanel === 'queue'}
+        <div class="right"><Boundary label="The queue"><QueuePanel onclose={() => (prefs.rightPanel = '')} /></Boundary></div>
+      {/if}
     </div>
-    <PlayerBar />
+    <Boundary label="The player"><PlayerBar /></Boundary>
+    <ContextMenu />
+    <Dialog />
     <div class="toasts">
       {#each toasts as t (t.id)}<div class="toast">{t.text}</div>{/each}
     </div>
@@ -78,9 +87,12 @@
 
 <style>
   .app { height: 100%; display: grid; grid-template-rows: 64px minmax(0, 1fr) auto; }
+  .app > :global(.remote) { grid-row: 4; }
   .app.dragging { cursor: col-resize; }
   .app.dragging * { user-select: none; }
   .middle { display: grid; grid-template-columns: var(--lib) 8px minmax(0, 1fr); padding: 0 8px; min-height: 0; }
+  .middle:has(.right) { grid-template-columns: var(--lib) 8px minmax(0, 1fr) 8px clamp(280px, 25vw, 420px); }
+  .right { grid-column: 5; min-height: 0; }
   .left, .center { min-height: 0; min-width: 0; }
   .resizer { cursor: col-resize; position: relative; }
   .resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; border-radius: 1px; }

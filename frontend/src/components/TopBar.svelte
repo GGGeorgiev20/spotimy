@@ -2,6 +2,7 @@
   import Icon from './Icon.svelte'
   import { back, forward, canBack, canForward, navigate, current } from '../lib/router.svelte'
   import { me } from '../lib/me.svelte'
+  import { search, setQuery } from '../lib/search.svelte'
   import { pick, App } from '../lib/api.svelte'
 
   let menu = $state(false)
@@ -21,7 +22,14 @@
     </button>
     <div class="search">
       <Icon name="search" size={24} />
-      <input placeholder="What do you want to play?" onfocus={() => navigate('/search')} />
+      <input
+        placeholder="What do you want to play?"
+        value={search.q}
+        oninput={(e) => setQuery(e.currentTarget.value)}
+        onfocus={() => !current().path.startsWith('/search') && navigate(search.q.trim() ? `/search/${encodeURIComponent(search.q.trim())}` : '/search')}
+        onkeydown={(e) => e.key === 'Escape' && e.currentTarget.blur()}
+      />
+      {#if search.q}<button class="clear" aria-label="Clear search" onclick={() => setQuery('')}><Icon name="close" /></button>{/if}
     </div>
   </div>
 
@@ -56,6 +64,8 @@
   .search:hover { background: var(--surface-3); border-color: hsla(0,0%,100%,.1); }
   .search:focus-within { border-color: var(--text); color: var(--text); }
   .search input { flex: 1; background: none; border: 0; outline: 0; font-size: 16px; }
+  .clear { color: var(--text-2); display: grid; }
+  .clear:hover { color: var(--text); }
   .search input::placeholder { color: var(--text-2); }
   .right { display: flex; justify-content: flex-end; position: relative; --wails-draggable: no-drag; }
   .avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); padding: 8px; }

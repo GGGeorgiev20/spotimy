@@ -8,7 +8,8 @@
     color,
     round = false,
     meta,
-  }: { image: string; type: string; title: string; color: string; round?: boolean; meta?: Snippet } = $props()
+    onedit,
+  }: { image: string; type: string; title: string; color: string; round?: boolean; meta?: Snippet; onedit?: () => void } = $props()
 
   // Long titles get a smaller ceiling, as in the official client.
   const size = $derived(title.length > 40 ? 'small' : title.length > 18 ? 'medium' : 'large')
@@ -20,7 +21,11 @@
   </div>
   <div class="info">
     <span class="type">{type}</span>
-    <h1 class={size}>{title}</h1>
+    {#if onedit}
+      <button class="title-btn" onclick={onedit} title="Edit details"><h1 class={size}>{title}</h1></button>
+    {:else}
+      <h1 class={size}>{title}</h1>
+    {/if}
     <div class="meta">{@render meta?.()}</div>
   </div>
 </header>
@@ -62,6 +67,7 @@
   h1.large { font-size: clamp(32px, 8cqw, 96px); }
   h1.medium { font-size: clamp(32px, 6cqw, 72px); }
   h1.small { font-size: clamp(24px, 4cqw, 48px); }
+  .title-btn { text-align: left; padding: 0; }
   .meta { font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
   .fade {
     height: 232px;

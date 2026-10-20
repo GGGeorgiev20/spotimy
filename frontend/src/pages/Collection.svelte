@@ -7,7 +7,7 @@
   import { Paged } from '../lib/paged.svelte'
   import { setChrome } from '../lib/chrome.svelte'
   import { me } from '../lib/me.svelte'
-  import { player, playing, controls } from '../lib/player.svelte'
+  import { ctxPlaying, playContext } from '../lib/player.svelte'
 
   let { scroller }: { scroller: HTMLElement | undefined } = $props()
 
@@ -16,11 +16,8 @@
   let error = $state('')
   let tracks = $state<Paged | null>(null)
 
-  const isPlaying = $derived(player.status?.context_uri === uri && playing())
-  function play() {
-    if (player.status?.context_uri === uri) controls.playPause()
-    else controls.play(uri)
-  }
+  const isPlaying = $derived(ctxPlaying(uri))
+  const play = () => playContext(uri)
 
   $effect(() => {
     const t = new Paged((off, lim) => App.LikedSongs(off, lim))

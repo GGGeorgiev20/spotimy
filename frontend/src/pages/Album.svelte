@@ -4,11 +4,13 @@
   import TrackTable from '../components/TrackTable.svelte'
   import Card from '../components/Card.svelte'
   import Unavailable from '../components/Unavailable.svelte'
-  import { App, coverColor, pick, saved, toggleSaved } from '../lib/api.svelte'
+  import { App, coverColor, pick, saved } from '../lib/api.svelte'
+  import { openMenu } from '../lib/menu.svelte'
+  import { toggleLibrary } from '../lib/actions'
   import { Paged } from '../lib/paged.svelte'
   import { setChrome } from '../lib/chrome.svelte'
   import { fmtTotal, headerColor } from '../lib/format'
-  import { player, playing, controls } from '../lib/player.svelte'
+  import { ctxPlaying, playContext } from '../lib/player.svelte'
   import { openUri } from '../lib/router.svelte'
   import type { spotify } from '../../wailsjs/go/models'
 
@@ -20,11 +22,8 @@
   let color = $state('rgb(83, 83, 83)')
   let tracks = $state<Paged | null>(null)
 
-  const isPlaying = $derived(player.status?.context_uri === uri && playing())
-  function play() {
-    if (player.status?.context_uri === uri) controls.playPause()
-    else controls.play(uri)
-  }
+  const isPlaying = $derived(ctxPlaying(uri))
+  const play = () => playContext(uri)
 
   $effect(() => {
     const u = uri
@@ -62,7 +61,8 @@
       <span class="dot">•</span><span class="sub">{al!.total} songs, {fmtTotal(total)}</span>
     {/snippet}
   </EntityHeader>
-  <ActionBar {isPlaying} onplay={play} saved={saved[uri]} onsave={() => toggleSaved(uri)} />
+  <ActionBar {isPlaying} onplay={play} saved={saved[uri]} onsave={() => toggleLibrary(uri)}
+    onmore={(e) => openMenu(e, { kind: 'card', card: { uri, type: 'album', name: al!.name, subtitle: '', images: al!.images } as spotify.Card })} />
   <TrackTable {tracks} {scroller} contextUri={uri} variant="album" />
   <div class="foot">
     <div class="date">{released}</div>

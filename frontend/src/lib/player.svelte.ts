@@ -1,31 +1,48 @@
 import * as App from '../../wailsjs/go/main/App'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
-import type { daemon } from '../../wailsjs/go/models'
+import type { main } from '../../wailsjs/go/models'
 
-export type Status = daemon.ApiStatus
+export type Status = main.PlayerStatus
 export type RepeatMode = 'off' | 'context' | 'track'
 
 export const player = $state({
   status: null as Status | null,
   fetchedAt: 0,
   now: Date.now(),
+  version: 0, // bumped on every refresh (queue/devices views listen to it)
 })
 
 export function playing() {
-  const s = player.status
-  return !!s?.track && !s.stopped && !s.paused
+  return !!player.status?.track && player.status.playing
 }
 
 export function position(): number {
   const s = player.status
   if (!s?.track) return 0
-  const p = s.track.position + (playing() && !s.buffering ? player.now - player.fetchedAt : 0)
-  return Math.min(p, s.track.duration)
+  const p = s.positionMs + (s.playing && !s.buffering ? player.now - player.fetchedAt : 0)
+  return Math.min(p, s.track.durationMs)
 }
 
 export function repeatMode(): RepeatMode {
   const s = player.status
-  return s?.repeat_track ? 'track' : s?.repeat_context ? 'context' : 'off'
+  return s?.repeatTrack ? 'track' : s?.repeatContext ? 'context' : 'off'
+}
+
+// Liked Songs plays as spotify:user:<name>:collection; the library lists it as
+// spotify:collection:tracks.
+export function isContext(uri: string): boolean {
+  const ctx = player.status?.contextUri ?? ''
+  if (!uri || !ctx) return false
+  if (uri === 'spotify:collection:tracks') return ctx.endsWith(':collection')
+  return ctx === uri
+}
+
+export const ctxPlaying = (uri: string) => isContext(uri) && playing()
+
+// Play a context, or toggle pause if it's already the one playing.
+export function playContext(uri: string) {
+  if (isContext(uri)) return controls.playPause()
+  return controls.play(uri)
 }
 
 let pending = 0
@@ -35,6 +52,7 @@ export function refresh() {
     try {
       player.status = await App.Status()
       player.fetchedAt = player.now = Date.now()
+      player.version++
     } catch {
       /* no session yet */
     }
@@ -57,12 +75,19 @@ let volSent = 0
 
 // Optimistic helpers: update local state immediately, the event refresh confirms.
 export const controls = {
-  playPause: () => App.PlayPause(),
+  playPause() {
+    if (player.status) {
+      player.status.positionMs = position()
+      player.fetchedAt = player.now = Date.now()
+      player.status.playing = !player.status.playing
+    }
+    return App.PlayPause()
+  },
   next: () => App.Next(),
   prev: () => App.Prev(),
   seek(ms: number) {
     if (player.status?.track) {
-      player.status.track.position = ms
+      player.status.positionMs = ms
       player.fetchedAt = player.now = Date.now()
     }
     return App.SeekTo(Math.round(ms))
@@ -75,12 +100,12 @@ export const controls = {
     if (volTimer) return
     App.SetVolume(volPending)
     volSent = volPending
-    volTimer = setTimeout(function flush() {
+    volTimer = setTimeout(() => {
       volTimer = 0
       if (volPending !== volSent) controls.setVolume(volPending)
     }, 150)
   },
-  toggleShuffle: () => App.SetShuffle(!player.status?.shuffle_context),
+  toggleShuffle: () => App.SetShuffle(!player.status?.shuffle),
   cycleRepeat() {
     const next: Record<RepeatMode, RepeatMode> = { off: 'context', context: 'track', track: 'off' }
     return App.SetRepeat(next[repeatMode()])

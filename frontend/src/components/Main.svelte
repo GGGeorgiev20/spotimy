@@ -1,13 +1,18 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
+  import Boundary from './Boundary.svelte'
   import Playlist from '../pages/Playlist.svelte'
   import Album from '../pages/Album.svelte'
   import Collection from '../pages/Collection.svelte'
   import Home from '../pages/Home.svelte'
   import Placeholder from '../pages/Placeholder.svelte'
+  import Section from '../pages/Section.svelte'
+  import Search from '../pages/Search.svelte'
+  import Artist from '../pages/Artist.svelte'
+  import Discography from '../pages/Discography.svelte'
   import { current, saveScroll } from '../lib/router.svelte'
   import { chrome, setChrome } from '../lib/chrome.svelte'
-  import { player, playing } from '../lib/player.svelte'
+  import { ctxPlaying } from '../lib/player.svelte'
 
   let scroller: HTMLDivElement | undefined = $state()
   let scrollTop = $state(0)
@@ -26,7 +31,7 @@
   })
 
   const opacity = $derived(Math.max(0, Math.min(1, (scrollTop - chrome.threshold + 64) / 64)))
-  const ctxPlaying = $derived(!!chrome.contextUri && player.status?.context_uri === chrome.contextUri && playing())
+  const ctxPlay = $derived(ctxPlaying(chrome.contextUri))
 
   function onscroll() {
     scrollTop = scroller!.scrollTop
@@ -38,8 +43,8 @@
   <div class="sticky" style:--c={chrome.color} style:--o={opacity}>
     {#if chrome.onplay}
       <div class="sticky-content" style:opacity={opacity}>
-        <button class="play" onclick={() => chrome.onplay?.()} aria-label={ctxPlaying ? 'Pause' : 'Play'} tabindex={opacity < 1 ? -1 : 0}>
-          <Icon name={ctxPlaying ? 'pause' : 'play'} size={20} />
+        <button class="play" onclick={() => chrome.onplay?.()} aria-label={ctxPlay ? 'Pause' : 'Play'} tabindex={opacity < 1 ? -1 : 0}>
+          <Icon name={ctxPlay ? 'pause' : 'play'} size={20} />
         </button>
         <span class="t ellipsis">{chrome.title}</span>
       </div>
@@ -47,6 +52,7 @@
   </div>
   <div class="scroll" bind:this={scroller} {onscroll} data-stuck={opacity >= 1 || undefined}>
     {#key entry}
+      <Boundary label="This page">
       {#if page === ''}
         <Home />
       {:else if page === 'playlist'}
@@ -55,9 +61,18 @@
         <Album {id} {scroller} />
       {:else if page === 'collection' && id === 'tracks'}
         <Collection {scroller} />
+      {:else if page === 'section'}
+        <Section {id} />
+      {:else if page === 'search'}
+        <Search query={id ? decodeURIComponent(id) : ''} tab={parts[2] ?? 'all'} {scroller} />
+      {:else if page === 'artist' && parts[2] === 'discography'}
+        <Discography {id} kind={parts[3] ?? 'all'} {scroller} />
+      {:else if page === 'artist'}
+        <Artist {id} {scroller} />
       {:else}
         <Placeholder path={entry.path} />
       {/if}
+      </Boundary>
     {/key}
   </div>
 </main>

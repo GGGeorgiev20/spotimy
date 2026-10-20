@@ -1,13 +1,16 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import EntityHeader from '../components/EntityHeader.svelte'
   import ActionBar from '../components/ActionBar.svelte'
   import TrackTable from '../components/TrackTable.svelte'
   import Unavailable from '../components/Unavailable.svelte'
-  import { App, coverColor, pick, saved, toggleSaved } from '../lib/api.svelte'
+  import { App, coverColor, pick, saved } from '../lib/api.svelte'
+  import { openMenu } from '../lib/menu.svelte'
+  import { editPlaylist, toggleLibrary } from '../lib/actions'
   import { Paged } from '../lib/paged.svelte'
   import { setChrome } from '../lib/chrome.svelte'
   import { fmtNumber, fmtTotal, headerColor } from '../lib/format'
-  import { player, playing, controls } from '../lib/player.svelte'
+  import { ctxPlaying, playContext } from '../lib/player.svelte'
   import { navigate } from '../lib/router.svelte'
   import type { spotify } from '../../wailsjs/go/models'
 
@@ -19,18 +22,26 @@
   let color = $state('rgb(83, 83, 83)')
   let tracks = $state<Paged | null>(null)
 
-  const isPlaying = $derived(player.status?.context_uri === uri && playing())
+  const isPlaying = $derived(ctxPlaying(uri))
+  const play = () => playContext(uri)
 
-  function play() {
-    if (player.status?.context_uri === uri) controls.playPause()
-    else controls.play(uri)
-  }
+  // Bumped after edits (remove, reorder, rename) to refetch.
+  let version = $state(0)
+  $effect(() => {
+    const on = (e: Event) => (e as CustomEvent).detail === uri && version++
+    window.addEventListener('playlist-changed', on)
+    return () => window.removeEventListener('playlist-changed', on)
+  })
 
   $effect(() => {
     const u = uri
-    pl = null
-    error = ''
-    tracks = null
+    version
+    // Only blank the page when switching playlists; a reload after an edit
+    // keeps the old content until the new one arrives.
+    untrack(() => {
+      if (pl?.uri !== u) (pl = null), (tracks = null)
+      error = ''
+    })
     App.Playlist(u, 0, 100)
       .then(async (p) => {
         pl = p
@@ -44,6 +55,18 @@
       .catch((e) => (error = String(e)))
   })
 
+  function more(e: MouseEvent) {
+    const p = pl!
+    openMenu(e, {
+      kind: 'card',
+      card: { uri: p.uri, type: 'playlist', name: p.name, subtitle: '', images: p.images } as spotify.Card,
+      own: p.isOwner, description: text(p.description), onedit: () => version++,
+    })
+  }
+  function edit() {
+    if (pl?.isOwner) editPlaylist(pl.uri, pl.name, text(pl.description), () => version++)
+  }
+
   // Strip the HTML links Spotify puts in descriptions; show text only.
   function text(html: string) {
     return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
@@ -54,7 +77,7 @@
 {#if error}
   <Unavailable what="This playlist" {error} />
 {:else if pl && tracks}
-  <EntityHeader image={pick(pl.images, 300)} type={pl.collaborative ? 'Collaborative playlist' : 'Playlist'} title={pl.name} {color}>
+  <EntityHeader image={pick(pl.images, 300)} type={pl.collaborative ? 'Collaborative playlist' : 'Playlist'} title={pl.name} {color} onedit={pl.isOwner ? edit : undefined}>
     {#snippet meta()}
       {#if pl!.description}<div class="desc">{text(pl!.description)}</div>{/if}
       <div class="line">
@@ -65,8 +88,8 @@
       </div>
     {/snippet}
   </EntityHeader>
-  <ActionBar {isPlaying} onplay={play} saved={saved[uri]} onsave={pl.isOwner ? undefined : () => toggleSaved(uri)} />
-  <TrackTable {tracks} {scroller} contextUri={uri} />
+  <ActionBar {isPlaying} onplay={play} saved={saved[uri]} onsave={pl.isOwner ? undefined : () => toggleLibrary(uri)} onmore={more} />
+  <TrackTable {tracks} {scroller} contextUri={uri} playlist={{ uri, canEdit: pl.canEdit }} />
 {/if}
 
 <style>

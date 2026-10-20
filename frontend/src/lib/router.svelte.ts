@@ -18,6 +18,11 @@ export function navigate(path: string) {
   route.index = route.stack.length - 1
 }
 
+// Replace the current entry (search-as-you-type shouldn't flood history).
+export function replace(path: string) {
+  route.stack[route.index] = { path, scroll: 0 }
+}
+
 export const canBack = () => route.index > 0
 export const canForward = () => route.index < route.stack.length - 1
 export function back() {

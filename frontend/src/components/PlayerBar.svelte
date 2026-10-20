@@ -3,13 +3,16 @@
   import Slider from './Slider.svelte'
   import { player, playing, position, repeatMode, controls } from '../lib/player.svelte'
   import { fmtDuration as fmtTime } from '../lib/format'
-  import { img, saved, loadSaved, toggleSaved } from '../lib/api.svelte'
+  import { pick, saved, loadSaved, toggleSaved } from '../lib/api.svelte'
   import { openUri } from '../lib/router.svelte'
+  import { prefs } from '../lib/prefs.svelte'
+  import DevicePicker from './DevicePicker.svelte'
 
   const s = $derived(player.status)
   const track = $derived(s?.track)
-  const max = $derived(s?.volume_steps || 1)
+  const max = $derived(s?.volumeMax || 1)
   let lastVolume = 0
+  let devicesOpen = $state(false)
   let seekPreview: number | null = $state(null)
 
   function toggleMute() {
@@ -29,13 +32,13 @@
 <footer class="bar">
   <div class="left">
     {#if track}
-      <button class="cover-btn" onclick={() => track.album_uri && openUri(track.album_uri)} aria-label="Open album">
-        {#if track.album_cover_url}<img class="cover" src={img(track.album_cover_url)} alt="" />{:else}<div class="cover"></div>{/if}
+      <button class="cover-btn" onclick={() => track.albumUri && openUri(track.albumUri)} aria-label="Open album">
+        {#if track.images?.length}<img class="cover" src={pick(track.images, 64)} alt="" />{:else}<div class="cover"></div>{/if}
       </button>
       <div class="meta">
-        <a class="title ellipsis" href="/" onclick={(e) => (e.preventDefault(), track.album_uri && openUri(track.album_uri))}>{track.name}</a>
+        <a class="title ellipsis" href="/" onclick={(e) => (e.preventDefault(), track.albumUri && openUri(track.albumUri))}>{track.name}</a>
         <div class="artists ellipsis">
-          {#each track.artist_names as name, i}{#if i > 0}, {/if}<a href="/" onclick={(e) => (e.preventDefault(), track.artist_uris?.[i] && openUri(track.artist_uris[i]))}>{name}</a>{/each}
+          {#each track.artists ?? [] as a, i}{#if i > 0}, {/if}<a href="/" onclick={(e) => (e.preventDefault(), a.uri && openUri(a.uri))}>{a.name}</a>{/each}
         </div>
       </div>
       <button class="icon-btn save" class:on={saved[track.uri]} onclick={() => toggleSaved(track.uri)} title={saved[track.uri] ? 'Remove from Liked Songs' : 'Save to Liked Songs'}>
@@ -46,7 +49,7 @@
 
   <div class="center">
     <div class="buttons">
-      <button class="icon-btn" class:active={s?.shuffle_context} disabled={!track} onclick={controls.toggleShuffle} title="Enable shuffle">
+      <button class="icon-btn" class:active={s?.shuffle} disabled={!track} onclick={controls.toggleShuffle} title="Enable shuffle">
         <Icon name="shuffle" />
       </button>
       <button class="icon-btn" disabled={!track} onclick={controls.prev} title="Previous"><Icon name="prev" /></button>
@@ -63,28 +66,34 @@
       <Slider
         label="Change progress"
         value={position()}
-        max={track?.duration ?? 0}
+        max={track?.durationMs ?? 0}
         oninput={(v) => (seekPreview = v)}
         onchange={(v) => {
           seekPreview = null
           controls.seek(v)
         }}
       />
-      <span class="time">{fmtTime(track?.duration ?? 0)}</span>
+      <span class="time">{fmtTime(track?.durationMs ?? 0)}</span>
     </div>
   </div>
 
   <div class="right">
     <button class="icon-btn" disabled title="Now playing view"><Icon name="now-playing" /></button>
     <button class="icon-btn" disabled title="Lyrics"><Icon name="lyrics" /></button>
-    <button class="icon-btn" disabled title="Queue"><Icon name="queue" /></button>
-    <button class="icon-btn" disabled title="Connect to a device"><Icon name="devices" /></button>
+    <button class="icon-btn" class:active={prefs.rightPanel === 'queue'} onclick={() => (prefs.rightPanel = prefs.rightPanel === 'queue' ? '' : 'queue')} title="Queue"><Icon name="queue" /></button>
+    <div class="dev-wrap">
+      <button class="icon-btn" class:active={s?.remote} onclick={() => (devicesOpen = !devicesOpen)} title="Connect to a device"><Icon name="devices" /></button>
+      {#if devicesOpen}<DevicePicker onclose={() => (devicesOpen = false)} />{/if}
+    </div>
     <button class="icon-btn" onclick={toggleMute} title={s?.volume === 0 ? 'Unmute' : 'Mute'}><Icon name={volIcon} /></button>
     <div class="volume">
       <Slider label="Volume" value={s?.volume ?? 0} {max} oninput={controls.setVolume} onchange={controls.setVolume} />
     </div>
   </div>
 </footer>
+{#if s?.remote}
+  <div class="remote"><Icon name="volume" size={14} /> Playing on {s.deviceName}</div>
+{/if}
 
 <style>
   .bar {
@@ -120,5 +129,7 @@
   .time.right { text-align: right; }
 
   .right { display: flex; align-items: center; justify-content: flex-end; gap: 0; padding-right: 8px; }
+  .dev-wrap { position: relative; }
+  .remote { background: var(--accent); color: #000; font-size: 14px; font-weight: 600; height: 24px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 32px; border-radius: 0 0 4px 4px; margin: 0 8px 4px; }
   .volume { width: 93px; display: flex; margin-left: 4px; }
 </style>

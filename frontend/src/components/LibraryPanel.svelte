@@ -3,9 +3,12 @@
   import Virtual from './Virtual.svelte'
   import { App, libraryVersion, pick } from '../lib/api.svelte'
   import { Paged } from '../lib/paged.svelte'
-  import { player, playing } from '../lib/player.svelte'
+  import { isContext, playing } from '../lib/player.svelte'
   import { current, openUri, uriToPath } from '../lib/router.svelte'
   import { prefs } from '../lib/prefs.svelte'
+  import { openMenu } from '../lib/menu.svelte'
+  import { me } from '../lib/me.svelte'
+  import { createPlaylist } from '../lib/actions'
   import type { spotify } from '../../wailsjs/go/models'
 
   let { collapsed, ontoggle }: { collapsed: boolean; ontoggle: () => void } = $props()
@@ -46,7 +49,6 @@
     return () => clearTimeout(t)
   })
 
-  const ctx = $derived(player.status?.context_uri ?? '')
   const here = $derived(current().path)
   const views = [
     { id: 'compact', label: 'Compact', icon: 'compact' },
@@ -65,10 +67,9 @@
     openUri(it.uri)
   }
 
-  function isCtx(it: Item) {
-    if (it.type === 'collection') return ctx.endsWith(':collection') && it.uri === 'spotify:collection:tracks'
-    return ctx === it.uri
-  }
+  const isCtx = (it: Item) => isContext(it.uri)
+  const libMenu = (e: MouseEvent, it: Item) =>
+    openMenu(e, { kind: 'card', card: it, library: true, pinned: it.pinned, own: it.type === 'playlist' && it.owner === me.user?.name })
   const sub = (it: Item) => it.subtitle
 </script>
 
@@ -79,7 +80,7 @@
       {#if !collapsed}<span>Your Library</span>{/if}
     </button>
     {#if !collapsed}
-      <button class="create" title="Create" disabled><Icon name="plus" /><span>Create</span></button>
+      <button class="create" title="Create playlist" onclick={() => createPlaylist()}><Icon name="plus" /><span>Create</span></button>
     {/if}
   </header>
 
@@ -150,7 +151,7 @@
               {#each { length: cols } as _, c}
                 {@const it = list!.items[r * cols + c]}
                 {#if it}
-                  <button class="gcard" class:here={here === uriToPath(it.uri)} onclick={() => open(it)}>
+                  <button class="gcard" class:here={here === uriToPath(it.uri)} onclick={() => open(it)} oncontextmenu={(e) => libMenu(e, it)}>
                     <img class:round={it.type === 'artist'} src={pick(it.images, 160)} alt="" loading="lazy" />
                     <span class="name ellipsis" class:playing={isCtx(it)}>{it.name}</span>
                     <span class="sub ellipsis">{sub(it)}</span>
@@ -162,6 +163,7 @@
             {@const it = list!.items[r]}
             {#if it}
               <button
+                oncontextmenu={(e) => libMenu(e, it)}
                 class="item"
                 class:compact={prefs.libView === 'compact' && !collapsed}
                 class:here={here === uriToPath(it.uri)}

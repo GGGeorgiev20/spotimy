@@ -1,3 +1,4 @@
+import { untrack } from 'svelte'
 import * as App from '../../wailsjs/go/main/App'
 import type { spotify } from '../../wailsjs/go/models'
 
@@ -35,7 +36,9 @@ export async function coverColor(images: Image[] | undefined | null): Promise<st
 export const saved = $state<Record<string, boolean>>({})
 
 export async function loadSaved(uris: string[]) {
-  const missing = uris.filter((u) => u && !(u in saved))
+  // untrack: callers run this inside effects, which must not re-run when the
+  // saved map fills in.
+  const missing = untrack(() => uris.filter((u) => u && !(u in saved)))
   for (let i = 0; i < missing.length; i += 50) {
     const chunk = missing.slice(i, i + 50)
     try {
