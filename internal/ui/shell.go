@@ -710,7 +710,6 @@ func Spinner(gtx layout.Context, size float32) layout.Dimensions {
 
 var (
 	inputFocused bool
-	shortcutsTag = new(int)
 )
 
 func shortcuts(gtx layout.Context) {

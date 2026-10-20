@@ -466,7 +466,6 @@ type creditsModal struct {
 	track string
 	res   Res[*spotify.NowPlayingInfo]
 	links []Link
-	list  List
 }
 
 func (m *creditsModal) Layout(gtx layout.Context) layout.Dimensions {

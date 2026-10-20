@@ -47,9 +47,8 @@ type menuLevel struct {
 }
 
 var (
-	menus    []*menuLevel
-	menuTag  = new(int)
-	menuOpen time.Time
+	menus   []*menuLevel
+	menuTag = new(int)
 )
 
 // OpenMenu shows a context menu at the pointer, like a right click: 8dp below
@@ -63,7 +62,6 @@ func OpenMenu(items []MenuItem) {
 // moved as needed to stay inside the window.
 func OpenMenuAt(pos image.Point, items []MenuItem) {
 	menus = []*menuLevel{{items: items, at: pos, open: -1}}
-	menuOpen = time.Now()
 	Invalidate()
 }
 

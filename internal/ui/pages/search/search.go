@@ -70,7 +70,6 @@ type page struct {
 	top     topCard
 	topRows *ui.Paged
 	topTab  ui.TrackTable
-	songs   ui.Link
 	shelves []ui.Shelf
 	built   bool
 

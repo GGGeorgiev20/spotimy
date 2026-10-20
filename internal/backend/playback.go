@@ -94,7 +94,7 @@ func (a *App) remote() (*spotify.Connect, *spotify.ConnectState) {
 	return cn, st
 }
 
-var errNoConnect = errors.New("Spotify Connect isn't available yet")
+var errNoConnect = errors.New("spotify connect isn't available yet")
 
 func (a *App) Status() (*PlayerStatus, error) {
 	if a.opts.Sandbox {
