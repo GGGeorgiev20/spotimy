@@ -30,9 +30,9 @@ import (
 //	/shot?out=/tmp/x.png           wait until loads settle, save a screenshot
 //	/wait                          wait until loads settle
 //	/click?x=&y=[&button=right][&double=1]
+//	/drag?x=&y=&x2=&y2=[&hold=1]  press at (x,y), move to (x2,y2), release (unless hold)
 //	/clicktext?text=Show all[&n=0][&button=right]   click the n-th element whose label contains text
 //	/move?x=&y=                    hover
-//	/drag?x=&y=&x2=&y2=[&hold=1]   press at (x,y), drag to (x2,y2), release (unless hold=1)
 //	/scroll?x=&y=&dy=              wheel scroll (px, positive = down)
 //	/key?name=Space[&mods=ctrl,shift,alt]
 //	/type?text=hello               type into the focused field
