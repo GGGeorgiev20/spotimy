@@ -288,11 +288,24 @@ func CoverColor(images []spotify.Image, done func(color.NRGBA)) {
 		done(RGB(0x535353))
 		return
 	}
-	Async(func() (string, error) { return B.ImageColor(url) }, func(hex string, err error) {
-		if err != nil {
-			done(RGB(0x535353))
-			return
+	type result struct {
+		hex   string
+		exact bool // Spotify's own dark color, used as is
+	}
+	Async(func() (result, error) {
+		if hex, err := B.CoverColor(url); err == nil {
+			return result{hex, true}, nil
 		}
-		done(HeaderColor(Hex(hex)))
+		hex, err := B.ImageColor(url)
+		return result{hex, false}, err
+	}, func(r result, err error) {
+		switch {
+		case err != nil:
+			done(RGB(0x535353))
+		case r.exact:
+			done(Hex(r.hex))
+		default:
+			done(HeaderColor(Hex(r.hex)))
+		}
 	})
 }

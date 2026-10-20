@@ -221,9 +221,13 @@ func meta(gtx layout.Context, a *spotify.ArtistPage) layout.Dimensions {
 			return verified(gtx)
 		},
 		func(gtx layout.Context) layout.Dimensions {
-			return ui.Pad(gtx, 4, 0, 4, 0, func(gtx layout.Context) layout.Dimensions {
-				return ui.Text(gtx, compact(a.MonthlyListeners)+" monthly listeners", 16, ui.Regular, ui.ColText)
-			})
+			// A 32dp row, 4dp below the badge.
+			m := op.Record(gtx.Ops)
+			d := ui.Text(gtx, compact(a.MonthlyListeners)+" monthly listeners", 16, ui.Regular, ui.ColText)
+			call := m.Stop()
+			row := ui.Dp(gtx, 32)
+			ui.Offset(gtx, 0, ui.Dp(gtx, 4)+(row-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
+			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, ui.Dp(gtx, 4)+row)}
 		},
 	)
 }
@@ -233,17 +237,18 @@ func banner(gtx layout.Context, a *spotify.ArtistPage) layout.Dimensions {
 	w, h := gtx.Constraints.Max.X, ui.Dp(gtx, 320)
 	ui.Image{URL: ui.Pick(a.Header, w), FocusY: .15, Placeholder: ui.RGB(0x535353)}.Layout(gtx, image.Pt(w, h))
 	ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), ui.Alpha(ui.ColBg, 0), veil(.6))
-	gtx.Constraints.Max.X = w - ui.Dp(gtx, 48)
+	pad := ui.ContentPad(gtx)
+	gtx.Constraints.Max.X = w - 2*pad
 	m := op.Record(gtx.Ops)
 	info := ui.Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			size := ui.HeaderTitleSize(gtx, w, a.Name)
-			return ui.Label{Text: a.Name, Size: size, Weight: ui.Black, MaxLines: 2}.Layout(gtx)
+			size := ui.HeaderTitleSize(gtx, gtx.Constraints.Max.X, a.Name)
+			return ui.Label{Text: a.Name, Size: size, Weight: ui.ExtraBold, MaxLines: 2, LineHeight: size}.Layout(gtx)
 		},
 		func(gtx layout.Context) layout.Dimensions { return meta(gtx, a) },
 	)
 	call := m.Stop()
-	ui.Offset(gtx, ui.Dp(gtx, 24), h-ui.Dp(gtx, 22)-info.Size.Y, func() { call.Add(gtx.Ops) })
+	ui.Offset(gtx, pad, h-ui.Dp(gtx, 24)-info.Size.Y, func() { call.Add(gtx.Ops) })
 	return layout.Dimensions{Size: image.Pt(w, h)}
 }
 
@@ -278,7 +283,7 @@ func (p *page) actionBar(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *page) popularTitle(gtx layout.Context) layout.Dimensions {
-	return ui.PageInset(gtx, 0, 16, func(gtx layout.Context) layout.Dimensions {
+	return ui.PageInset(gtx, 8, 16, func(gtx layout.Context) layout.Dimensions {
 		return ui.Text(gtx, "Popular", 24, ui.Bold, ui.ColText)
 	})
 }
@@ -293,7 +298,7 @@ func (p *page) seeMoreBtn(gtx layout.Context) layout.Dimensions {
 		txt = "Show less"
 	}
 	p.seeMore.Click.Label = txt
-	return ui.Pad(gtx, 16, 0, 56, 40, func(gtx layout.Context) layout.Dimensions {
+	return ui.Pad(gtx, 16, 0, 56, ui.ContentPadDp(gtx)+16, func(gtx layout.Context) layout.Dimensions {
 		return p.seeMore.Layout(gtx, txt, 14, ui.Bold, ui.Alpha(ui.ColText, .7), ui.ColText)
 	})
 }

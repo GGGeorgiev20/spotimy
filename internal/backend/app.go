@@ -68,6 +68,8 @@ type App struct {
 	player *player.Player
 	sp     *spotify.Client
 	img    *imgcache.Cache
+	// coverColors caches CoverColor by image URL.
+	coverColors sync.Map
 
 	mu       sync.Mutex
 	connect  *spotify.Connect
