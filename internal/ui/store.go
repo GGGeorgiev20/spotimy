@@ -170,6 +170,23 @@ func SetVolume(v int) {
 	})
 }
 
+var lastVolume int
+
+// ToggleMute mutes, or restores the volume from before the mute.
+func ToggleMute() {
+	s := Player.Status
+	switch {
+	case s == nil:
+	case s.Volume > 0:
+		lastVolume = s.Volume
+		SetVolume(0)
+	case lastVolume > 0:
+		SetVolume(lastVolume)
+	default:
+		SetVolume(s.VolumeMax / 2)
+	}
+}
+
 func ToggleShuffle() {
 	on := Player.Status == nil || !Player.Status.Shuffle
 	if Player.Status != nil {
