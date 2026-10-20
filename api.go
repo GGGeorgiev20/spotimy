@@ -89,6 +89,12 @@ func (a *App) Profile(username string) (*spotify.Profile, error) {
 	return a.sp.Profile(ctx, username)
 }
 
+func (a *App) Friends() ([]spotify.Friend, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Friends(ctx, time.Now().UnixMilli())
+}
+
 func (a *App) BrowseAll() ([]spotify.Category, error) {
 	ctx, cancel := a.call()
 	defer cancel()

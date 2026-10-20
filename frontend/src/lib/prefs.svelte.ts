@@ -4,7 +4,7 @@ const defaults = {
   libView: 'list' as 'list' | 'compact' | 'grid',
   libWidth: 340,
   libCollapsed: false,
-  rightPanel: '' as '' | 'queue' | 'lyrics' | 'npv' | 'devices',
+  rightPanel: '' as '' | 'queue' | 'lyrics' | 'npv' | 'devices' | 'friends',
 }
 
 function load(): typeof defaults {

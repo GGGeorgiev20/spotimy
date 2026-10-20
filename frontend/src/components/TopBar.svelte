@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { prefs } from '../lib/prefs.svelte'
   import Icon from './Icon.svelte'
   import { back, forward, canBack, canForward, navigate, current } from '../lib/router.svelte'
   import { me } from '../lib/me.svelte'
@@ -34,6 +35,7 @@
   </div>
 
   <div class="right">
+    <button class="icon-btn friends" class:active={prefs.rightPanel === 'friends'} onclick={() => (prefs.rightPanel = prefs.rightPanel === 'friends' ? '' : 'friends')} aria-label="Friend Activity" title="Friend Activity"><Icon name="friends" /></button>
     <button class="avatar" onclick={() => (menu = !menu)} aria-label="Profile">
       {#if me.user?.images?.length}<img src={pick(me.user.images, 32)} alt="" />{:else}<span class="initial" style:background={me.user?.color}>{initial}</span>{/if}
     </button>
@@ -67,7 +69,7 @@
   .clear { color: var(--text-2); display: grid; }
   .clear:hover { color: var(--text); }
   .search input::placeholder { color: var(--text-2); }
-  .right { display: flex; justify-content: flex-end; position: relative; --wails-draggable: no-drag; }
+  .right { display: flex; justify-content: flex-end; align-items: center; gap: 8px; position: relative; --wails-draggable: no-drag; }
   .avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); padding: 8px; }
   .avatar:hover { transform: scale(1.04); }
   .avatar img, .initial { width: 32px; height: 32px; border-radius: 50%; }

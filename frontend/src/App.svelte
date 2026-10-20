@@ -11,6 +11,7 @@
   import ContextMenu from './components/ContextMenu.svelte'
   import Dialog from './components/Dialog.svelte'
   import QueuePanel from './components/QueuePanel.svelte'
+  import FriendsPanel from './components/FriendsPanel.svelte'
   import NowPlayingPanel from './components/NowPlayingPanel.svelte'
   import Shortcuts from './components/Shortcuts.svelte'
   import Boundary from './components/Boundary.svelte'
@@ -74,6 +75,8 @@
       <div class="center"><Main /></div>
       {#if prefs.rightPanel === 'queue'}
         <div class="right"><Boundary label="The queue"><QueuePanel onclose={() => (prefs.rightPanel = '')} /></Boundary></div>
+      {:else if prefs.rightPanel === 'friends'}
+        <div class="right"><Boundary label="Friend Activity"><FriendsPanel onclose={() => (prefs.rightPanel = '')} /></Boundary></div>
       {:else if prefs.rightPanel === 'npv'}
         <div class="right"><Boundary label="Now Playing"><NowPlayingPanel onclose={() => (prefs.rightPanel = '')} /></Boundary></div>
       {/if}
