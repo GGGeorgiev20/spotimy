@@ -68,6 +68,7 @@ var st struct {
 	titleHover     ui.Hover
 	create, expand ui.Click
 	createPill     ui.Pill
+	viewBtns       [3]ui.Click
 	restoreW       int
 
 	listTop  int
@@ -446,25 +447,58 @@ func view() (id, icon string) {
 	return "list", "list"
 }
 
+// menuLabel is a section heading of the sort menu.
 func menuLabel(text string) ui.MenuItem {
 	return ui.MenuItem{Widget: func(gtx layout.Context) layout.Dimensions {
-		return ui.Pad(gtx, 12, 12, 8, 12, func(gtx layout.Context) layout.Dimensions {
-			return ui.Text(gtx, text, 14, ui.SemiBold, ui.ColText2)
+		return ui.Pad(gtx, 12, 8, 12, 12, func(gtx layout.Context) layout.Dimensions {
+			return ui.Label{Text: text, Size: 12, Weight: ui.Bold, Color: ui.Alpha(ui.ColText, .7), LineHeight: 17}.Layout(gtx)
 		})
 	}}
 }
 
+// viewSwitch is the segmented control that picks the list view.
+func viewSwitch(gtx layout.Context) layout.Dimensions {
+	dp := func(v float32) int { return ui.Dp(gtx, v) }
+	w, h := gtx.Constraints.Max.X, dp(40)
+	ui.FillRect(gtx.Ops, image.Rect(0, 0, w, h), dp(8), ui.ColSurface2)
+	cur, _ := view()
+	for i, v := range views {
+		c := &st.viewBtns[i]
+		if c.Clicked(gtx) {
+			ui.Prefs.LibView = v.id
+			ui.CloseMenu()
+		}
+		ui.Offset(gtx, dp(4)+i*dp(48), dp(4), func() {
+			c.Label = v.label
+			c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				col := ui.ColText2
+				switch {
+				case v.id == cur:
+					col = ui.ColAccent
+				case c.Hovered():
+					col = ui.ColText
+				}
+				ui.Offset(gtx, dp(16), dp(8), func() { ui.IconPx(gtx, v.icon, dp(16), col) })
+				return layout.Dimensions{Size: image.Pt(dp(48), dp(32))}
+			})
+		})
+	}
+	return layout.Dimensions{Size: image.Pt(w, h)}
+}
+
 func sortMenu() []ui.MenuItem {
 	items := []ui.MenuItem{menuLabel("Sort by")}
-	for _, s := range st.sorts {
+	sorts := st.sorts
+	if len(sorts) == 0 {
+		sorts = []string{"Recents", "Recently Added", "Alphabetical", "Creator"}
+	}
+	for _, s := range sorts {
 		items = append(items, ui.MenuItem{Label: s, Check: s == ui.Prefs.LibSort, Accent: s == ui.Prefs.LibSort, Action: func() { ui.Prefs.LibSort = s }})
 	}
-	items = append(items, menuLabel("View as"))
-	cur, _ := view()
-	for _, v := range views {
-		items = append(items, ui.MenuItem{Label: v.label, Icon: v.icon, Check: v.id == cur, Accent: v.id == cur, Action: func() { ui.Prefs.LibView = v.id }})
-	}
-	return items
+	return append(items,
+		ui.MenuItem{Widget: func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{Size: image.Pt(0, ui.Dp(gtx, 8))} }},
+		menuLabel("View as"),
+		ui.MenuItem{Widget: viewSwitch})
 }
 
 func tools(gtx layout.Context, w, y int) layout.Dimensions {
@@ -475,7 +509,7 @@ func tools(gtx layout.Context, w, y int) layout.Dimensions {
 	bw := ui.Measure(gtx, sort, 14, ui.Regular) + ui.Dp(gtx, 8+16)
 	bx := w - ui.Dp(gtx, 24) - bw
 	if st.sortBtn.Clicked(gtx) {
-		ui.OpenMenuAt(origin(gtx, bx+bw-ui.Dp(gtx, 220), y+h+ui.Dp(gtx, 8)), sortMenu())
+		ui.OpenMenuWide(origin(gtx, bx+bw-ui.Dp(gtx, 208), y+h+ui.Dp(gtx, 8)), 208, sortMenu())
 	}
 	place(gtx, bx, 0, bw, h, func(gtx layout.Context) layout.Dimensions {
 		st.sortBtn.Label = sort + ", " + icon + " view"

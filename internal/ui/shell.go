@@ -269,9 +269,12 @@ func layoutResizer(gtx layout.Context, x, y, w, h int) {
 		pointer.CursorColResize.Add(gtx.Ops)
 		hover := resizeOn || r.Add(image.Pt(x, y)).Overlaps(image.Rectangle{Min: PointerPos(), Max: PointerPos().Add(image.Pt(1, 1))})
 		st.Pop()
-		if hover {
-			lw := max(1, Dp(gtx, 2))
-			FillRect(gtx.Ops, image.Rect((w-lw)/2, 0, (w+lw)/2, h), lw/2, Alpha(ColText, .3))
+		if hover { // a 1dp line, 8dp short of both ends; white while dragging
+			lw, c := max(1, Dp(gtx, 1)), ColText3
+			if resizeOn {
+				c = ColText
+			}
+			FillRect(gtx.Ops, image.Rect((w-lw)/2, Dp(gtx, 8), (w+lw)/2, h-Dp(gtx, 8)), lw/2, c)
 		}
 	})
 }
@@ -344,6 +347,16 @@ var (
 	searchFocused                        bool
 )
 
+// centerBlock places a w-wide block centered in a win-wide bar, or, when that
+// would overlap what is left of left or right of right, against left with
+// whatever width remains.
+func centerBlock(win, w, left, right int) (x, bw int) {
+	if x = (win - w) / 2; x < left || x+w > right {
+		return left, min(w, right-left)
+	}
+	return x, w
+}
+
 func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
 	h := size.Y
@@ -395,11 +408,7 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	// Center: home + search, a 546dp block (8 + 48 + 8 + 474 + 8) that stays
 	// centered while it fits between the nav buttons and the right group, and
 	// otherwise sits next to the nav buttons and shrinks.
-	blockW := Dp(gtx, 546)
-	bx := (size.X - blockW) / 2
-	if left, right := Dp(gtx, 96), size.X-Dp(gtx, 104); bx < left || bx+blockW > right {
-		bx, blockW = left, min(blockW, right-left)
-	}
+	bx, blockW := centerBlock(size.X, Dp(gtx, 546), Dp(gtx, 96), size.X-Dp(gtx, 104))
 	searchW := blockW - Dp(gtx, 72)
 	cx := bx + Dp(gtx, 8)
 	home := Current().Path == "/"
@@ -569,7 +578,7 @@ func layoutSearchBox(gtx layout.Context, w int) {
 		})
 	}
 	if SearchQuery.Len() > 0 {
-		icon(&clearSearch, "Clear search field", "close", w-Dp(gtx, 89), Dp(gtx, 28))
+		icon(&clearSearch, "Clear search field", "close", w-Dp(gtx, 89), Dp(gtx, 26))
 	}
 	dh := Dp(gtx, 25)
 	FillRect(gtx.Ops, image.Rect(w-Dp(gtx, 53), (h-dh)/2, w-Dp(gtx, 53)+max(1, Dp(gtx, 1)), (h+dh)/2), 0, ColText3)

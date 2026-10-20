@@ -42,7 +42,8 @@ type menuLevel struct {
 	open   int // index of the item whose flyout is open, -1 none
 	rect   image.Rectangle
 	rows   []image.Rectangle
-	ptr    bool // opened at the pointer: 8dp off it, flipping to its other side
+	ptr    bool    // opened at the pointer: 8dp off it, flipping to its other side
+	minW   float32 // dp
 }
 
 var (
@@ -64,6 +65,12 @@ func OpenMenuAt(pos image.Point, items []MenuItem) {
 	menus = []*menuLevel{{items: items, at: pos, open: -1}}
 	menuOpen = time.Now()
 	Invalidate()
+}
+
+// OpenMenuWide is OpenMenuAt for a menu at least minW dp wide.
+func OpenMenuWide(pos image.Point, minW float32, items []MenuItem) {
+	OpenMenuAt(pos, items)
+	menus[0].minW = minW
 }
 
 func CloseMenu() {
@@ -142,7 +149,7 @@ func layoutMenus(gtx layout.Context) {
 
 func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) layout.Dimensions {
 	pad := Dp(gtx, 4)
-	minW, maxW := Dp(gtx, 160), Dp(gtx, 350)
+	minW, maxW := Dp(gtx, max(160, lv.minW)), Dp(gtx, 350)
 	rowH := Dp(gtx, 40)
 	// Width: widest label plus the 4dp frame, 12dp before and 8dp after the
 	// row's content, its 16dp icon and 12dp gap, and the 16dp right icon.
