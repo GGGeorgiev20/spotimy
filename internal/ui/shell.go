@@ -38,7 +38,43 @@ var (
 	SearchQuery Input
 )
 
-const PlayerBarHeight = 72
+const (
+	PlayerBarHeight = 72
+	// RemoteBarHeight is the green "Listening on <device>" strip under the
+	// player bar while another device plays; the player bar draws it itself.
+	RemoteBarHeight = 28
+)
+
+// window is the native window (nil in the harness).
+var (
+	window     *app.Window
+	fullscreen bool
+)
+
+// IsFullscreen reports full screen mode (the FullScreen slot draws the window).
+func IsFullscreen() bool { return fullscreen }
+
+// SetFullscreen enters or leaves full screen mode, also making the native
+// window full screen (a no-op in the harness).
+func SetFullscreen(on bool) {
+	fullscreen = on
+	if w := window; w != nil {
+		opt := app.Windowed.Option()
+		if on {
+			opt = app.Fullscreen.Option()
+		}
+		go w.Option(opt)
+	}
+}
+
+// playerBarHeight is the player bar's height in px, with the remote strip.
+func playerBarHeight(gtx layout.Context) int {
+	h := Dp(gtx, PlayerBarHeight)
+	if s := Player.Status; s != nil && s.Remote {
+		h += Dp(gtx, RemoteBarHeight)
+	}
+	return h
+}
 
 var appState = backend.AppState{State: player.StateConnecting}
 
@@ -66,6 +102,7 @@ func OnPlayer() { RefreshPlayer() }
 // goroutine other than main (app.Main owns the main thread).
 func Run() {
 	w := new(app.Window)
+	window = w
 	w.Option(
 		app.Title("Spotify"),
 		app.Size(unit.Dp(1280), unit.Dp(800)),
@@ -131,7 +168,7 @@ var (
 
 func layoutApp(gtx layout.Context) {
 	win := gtx.Constraints.Max
-	top, bar := Dp(gtx, 64), Dp(gtx, PlayerBarHeight)
+	top, bar := Dp(gtx, 64), playerBarHeight(gtx)
 	midH := win.Y - top - bar
 
 	// Top bar.
@@ -608,7 +645,6 @@ func Spinner(gtx layout.Context, size float32) layout.Dimensions {
 
 var (
 	inputFocused bool
-	lastVolume   int
 	shortcutsTag = new(int)
 )
 
@@ -659,6 +695,8 @@ func handleShortcut(gtx layout.Context, e key.Event) {
 			CloseMenu()
 		case ModalIsOpen():
 			CloseModal()
+		case fullscreen:
+			SetFullscreen(false)
 		}
 		return
 	}
@@ -696,15 +734,8 @@ func handleShortcut(gtx layout.Context, e key.Event) {
 			d = -d
 		}
 		Seek(max(0, min(s.Track.DurationMs, Position(time.Now()).Milliseconds()+d)))
-	case e.Name == "M" && m == 0 && s != nil:
-		if s.Volume > 0 {
-			lastVolume = s.Volume
-			SetVolume(0)
-		} else if lastVolume > 0 {
-			SetVolume(lastVolume)
-		} else {
-			SetVolume(s.VolumeMax / 2)
-		}
+	case e.Name == "M" && m == 0:
+		ToggleMute()
 	case ctrl && e.Name == "S":
 		ToggleShuffle()
 	case ctrl && e.Name == "R":
