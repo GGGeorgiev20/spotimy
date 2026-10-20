@@ -27,6 +27,7 @@ type MenuItem struct {
 	Divider  bool // a separator line instead of a row
 	Check    bool // check mark on the right (selected sort, playlist has it)
 	External bool // external-link icon on the right
+	Accent   bool // green label (the selected sort)
 	Muted    bool // greyed, not clickable (Loading…)
 	// Widget replaces the row (e.g. the "Find a playlist" field).
 	Widget layout.Widget
@@ -164,6 +165,7 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 				act := it.Action
 				CloseMenu()
 				act()
+				m.Stop()
 				return layout.Dimensions{}
 			}
 		}
@@ -185,6 +187,8 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 				switch {
 				case it.Danger:
 					fg = RGB(0xf3727f)
+				case it.Accent:
+					fg = ColAccent
 				case it.Muted:
 					fg = ColText2
 				}

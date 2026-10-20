@@ -27,6 +27,8 @@ type List struct {
 	Sticky      layout.Widget
 	StickyIndex int
 	StickyTop   int
+	// NoBar hides the overlay scrollbar (the library's icon rail).
+	NoBar bool
 }
 
 func (l *List) height(i, avg int) int {
@@ -123,7 +125,7 @@ func (l *List) Layout(gtx layout.Context, n int, item layout.ListElement) layout
 	for i := 0; i < n; i++ {
 		total += l.height(i, avg)
 	}
-	if total > size.Y && size.Y > 0 {
+	if total > size.Y && size.Y > 0 && !l.NoBar {
 		top := float32(l.ScrollTop())
 		start, end := top/float32(total), (top+float32(size.Y))/float32(total)
 		start, end = clamp01(start), clamp01(end)
