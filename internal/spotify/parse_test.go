@@ -222,3 +222,15 @@ func TestGroupDigits(t *testing.T) {
 		}
 	}
 }
+
+func TestRecentLastTracks(t *testing.T) {
+	var r recentContexts
+	json.Unmarshal([]byte(`{"playContexts":[
+		{"uri":"spotify:album:a","lastPlayedTrackUri":"spotify:track:1"},
+		{"uri":"spotify:show:s","lastPlayedTrackUri":"spotify:episode:e"},
+		{"uri":"spotify:playlist:p","lastPlayedTrackUri":"spotify:track:1"},
+		{"uri":"spotify:artist:x","lastPlayedTrackUri":"spotify:track:2"}]}`), &r)
+	if got := r.lastTracks(); len(got) != 2 || got[0] != "spotify:track:1" || got[1] != "spotify:track:2" {
+		t.Errorf("got %v", got)
+	}
+}

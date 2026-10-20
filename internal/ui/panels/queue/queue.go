@@ -34,6 +34,13 @@ type panel struct {
 	// Reordering the user queue: queue index `from` is dragged dy px.
 	dragging bool
 	from, dy int
+
+	// The "Recently played" tab.
+	recent           bool
+	tabQueue, tabRec ui.Click
+	recentRes        ui.Res[[]spotify.Track]
+	recentRows       []row
+	recentList       ui.List
 }
 
 const rowDp = 56
@@ -56,14 +63,40 @@ func (p *panel) layout(gtx layout.Context) layout.Dimensions {
 		p.version = ui.Player.Version + 1
 		p.res.Load(ui.B.Queue)
 	}
+	if p.tabQueue.Clicked(gtx) {
+		p.recent = false
+	}
+	if p.tabRec.Clicked(gtx) {
+		p.recent = true
+		p.recentRes.Load(ui.B.RecentlyPlayed)
+	}
+	tab := func(c *ui.Click, label string, on bool) layout.Widget {
+		return func(gtx layout.Context) layout.Dimensions {
+			c.Label = label
+			return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				col := ui.ColText2
+				if on || c.Hovered() {
+					col = ui.ColText
+				}
+				return ui.Text(gtx, label, 16, ui.Bold, col)
+			})
+		}
+	}
 	return ui.Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
 			return p.header.Layout(gtx, "Close", func(gtx layout.Context) layout.Dimensions {
-				return ui.Text(gtx, "Queue", 16, ui.Bold, ui.ColText)
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Rigid(tab(&p.tabQueue, "Queue", !p.recent)),
+					layout.Rigid(ui.Gap(24, 0)),
+					layout.Rigid(tab(&p.tabRec, "Recently played", p.recent)),
+				)
 			}, nil)
 		},
 		func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = gtx.Constraints.Max.Y
+			if p.recent {
+				return p.recentBody(gtx)
+			}
 			return p.body(gtx)
 		},
 	)
@@ -152,6 +185,24 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 				}
 				return p.rows[n].layout(gtx, q.Track, false, h)
 			}
+		})
+	})
+}
+
+func (p *panel) recentBody(gtx layout.Context) layout.Dimensions {
+	switch {
+	case !p.recentRes.Done:
+		return ui.Loading(gtx)
+	case p.recentRes.Err != nil:
+		return ui.Unavailable(gtx, "Recently played", p.recentRes.Err)
+	}
+	ts := p.recentRes.V
+	if len(p.recentRows) < len(ts) {
+		p.recentRows = make([]row, len(ts))
+	}
+	return p.recentList.Layout(gtx, len(ts), func(gtx layout.Context, i int) layout.Dimensions {
+		return ui.Pad(gtx, 0, 8, 0, 8, func(gtx layout.Context) layout.Dimensions {
+			return p.recentRows[i].layout(gtx, ts[i], ui.IsCurrent(ts[i].URI, ""), nil)
 		})
 	})
 }

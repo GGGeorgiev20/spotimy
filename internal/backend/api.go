@@ -289,3 +289,9 @@ func (a *App) YourEpisodes() ([]spotify.Episode, error) {
 	defer cancel()
 	return a.sp.YourEpisodes(ctx)
 }
+
+func (a *App) RecentlyPlayed() ([]spotify.Track, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.RecentlyPlayed(ctx)
+}
