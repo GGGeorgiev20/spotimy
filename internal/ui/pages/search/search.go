@@ -36,6 +36,7 @@ var groupTab = map[string]string{
 func init() {
 	ui.Register("search", func(args []string) ui.Page {
 		p := &page{tab: "all"}
+		p.chips.Scroll = true
 		if len(args) > 0 {
 			p.query, _ = url.PathUnescape(args[0])
 			p.query = strings.TrimSpace(p.query)

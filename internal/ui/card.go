@@ -210,6 +210,11 @@ type ShelfOpts struct {
 	Inset float32
 	// Carousel lays the cards out in one horizontally scrolling row (Home).
 	Carousel bool
+	// Pitch is the carousel's card width in dp (0 = by the view's width).
+	Pitch float32
+	// Boxed shelves are laid out inside their own box (Search): no side
+	// padding, the first card's art 12dp in, and no gap below.
+	Boxed bool
 }
 
 // Layout draws the shelf: header row, then one row of cards that fit.
@@ -236,8 +241,10 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 	if rows == 0 {
 		rows = 1
 	}
-	pad := o.Inset
-	if pad == 0 {
+	pad, gapBelow, shift := o.Inset, float32(24), float32(0)
+	if o.Boxed {
+		pad, gapBelow, shift = 0, 0, 12
+	} else if pad == 0 {
 		pad = ContentPadDp(gtx)
 	}
 	return Column(gtx,
@@ -254,7 +261,7 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 		},
 		func(gtx layout.Context) layout.Dimensions {
 			if o.Carousel {
-				return s.carousel(gtx, items, o, pad-12)
+				return s.carousel(gtx, items, o, pad-12+shift)
 			}
 			return Pad(gtx, 0, pad-12, 0, pad-12, func(gtx layout.Context) layout.Dimensions {
 				return CardGrid(gtx, len(items), minW, rows, func(gtx layout.Context, i int) layout.Dimensions {
@@ -262,7 +269,7 @@ func (s *Shelf) Layout(gtx layout.Context, items []spotify.Card, o ShelfOpts) la
 				})
 			})
 		},
-		Gap(0, 24),
+		Gap(0, gapBelow),
 	)
 }
 

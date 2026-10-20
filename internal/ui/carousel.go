@@ -37,7 +37,11 @@ func (s *Shelf) carousel(gtx layout.Context, items []spotify.Card, o ShelfOpts, 
 	c := &s.car
 	ppd := gtx.Metric.PxPerDp
 	W := gtx.Constraints.Max.X
-	pitch := carouselPitch(float32(W)/ppd) * ppd
+	pitch := carouselPitch(float32(W) / ppd)
+	if o.Pitch > 0 {
+		pitch = o.Pitch
+	}
+	pitch *= ppd
 	lp := Dp(gtx, left)
 	maxOff := max(0, float32(lp)+pitch*float32(len(items))+48*ppd-float32(W))
 

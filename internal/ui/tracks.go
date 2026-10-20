@@ -313,6 +313,9 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 
 	r.row.Label = tr.Name
 	r.row.Arrow = true // rows keep the arrow cursor, like the official client
+	if tt.Variant == "compact" {
+		return tt.compactRow(gtx, i, tr, r)
+	}
 	pad := ContentPad(gtx)
 	return Pad(gtx, 0, float32(pad)/gtx.Metric.PxPerDp, 0, float32(pad)/gtx.Metric.PxPerDp, func(gtx layout.Context) layout.Dimensions {
 		rw := w - 2*pad

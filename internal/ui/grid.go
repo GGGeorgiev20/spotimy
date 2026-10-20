@@ -12,12 +12,23 @@ import (
 // gives the rows at the current width, Row draws one (CSS grid auto-fill,
 // minmax(minW, 1fr), inside the page padding less 12dp).
 type CardRows struct {
+	// Boxed rows fill the constraint's width exactly (Search draws them in
+	// its content column); otherwise they sit inside the page padding.
+	Boxed bool
 	cards []Card
+}
+
+// inset is the side padding of the rows less the cards' own 12dp.
+func (g *CardRows) inset(gtx layout.Context) float32 {
+	if g.Boxed {
+		return 0
+	}
+	return ContentPadDp(gtx) - 12
 }
 
 // Count is the number of rows n cards need at the constraint's width.
 func (g *CardRows) Count(gtx layout.Context, n int, minW float32) int {
-	cols := GridColumns(narrow(gtx, ContentPadDp(gtx)-12), minW)
+	cols := GridColumns(narrow(gtx, g.inset(gtx)), minW)
 	return (n + cols - 1) / cols
 }
 
@@ -26,8 +37,8 @@ func (g *CardRows) Row(gtx layout.Context, r int, items []spotify.Card, minW flo
 	if len(g.cards) < len(items) {
 		g.cards = append(g.cards, make([]Card, len(items)-len(g.cards))...)
 	}
-	pad := Dp(gtx, ContentPadDp(gtx)-12)
-	gtx = narrow(gtx, ContentPadDp(gtx)-12)
+	pad := Dp(gtx, g.inset(gtx))
+	gtx = narrow(gtx, g.inset(gtx))
 	cols := GridColumns(gtx, minW)
 	cw := gtx.Constraints.Max.X / cols
 	h := 0
