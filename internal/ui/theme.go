@@ -146,7 +146,10 @@ func newShaper() *text.Shaper {
 	} {
 		if data, err := os.ReadFile(p); err == nil {
 			if face, err := opentype.Parse(data); err == nil {
-				faces = append(faces, font.FontFace{Font: font.Font{Typeface: "Noto Color Emoji"}, Face: face})
+				// One entry per weight, or bold text would skip it and show boxes.
+				for _, w := range []font.Weight{Regular, Medium, SemiBold, Bold, ExtraBold, Black} {
+					faces = append(faces, font.FontFace{Font: font.Font{Typeface: "Noto Color Emoji", Weight: w}, Face: face})
+				}
 				break
 			}
 		}
