@@ -19,7 +19,7 @@ type EntityHeader struct {
 
 type HeaderOpts struct {
 	Images []spotify.Image
-	Type   string // "Playlist", "Album", "Single", "Profile"...
+	Type   string // "Playlist", "Album", "Single", "Profile"... ("" = none)
 	Title  string
 	Color  color.NRGBA
 	Round  bool
@@ -30,6 +30,20 @@ type HeaderOpts struct {
 	// OnEdit makes the title clickable ("Edit details").
 	OnEdit func()
 	Icon   string // placeholder icon when there's no image
+}
+
+// HeaderTitleSize is the font size (sp) of a header title in a w px wide
+// header: smaller for long titles, as in the official client.
+func HeaderTitleSize(gtx layout.Context, w int, title string) float32 {
+	n := len([]rune(title))
+	pw := float32(w) / gtx.Metric.PxPerSp
+	switch {
+	case n > 40:
+		return max(24, min(48, pw*.04))
+	case n > 18:
+		return max(32, min(72, pw*.06))
+	}
+	return max(32, min(96, pw*.08))
 }
 
 // Layout draws the header at full width.
@@ -43,18 +57,7 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	w := gtx.Constraints.Max.X
 	px := func(v float32) int { return Dp(gtx, v) }
 	art := max(px(128), min(px(232), w*20/100))
-	// Title size: smaller for long titles, as in the official client.
-	n := len([]rune(o.Title))
-	var size float32
-	pw := float32(w) / gtx.Metric.PxPerSp
-	switch {
-	case n > 40:
-		size = max(24, min(48, pw*.04))
-	case n > 18:
-		size = max(32, min(72, pw*.06))
-	default:
-		size = max(32, min(96, pw*.08))
-	}
+	size := HeaderTitleSize(gtx, w, o.Title)
 	infoX := px(24) + art + px(24)
 	infoW := max(0, w-infoX-px(24))
 
@@ -62,10 +65,12 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	m := op.Record(gtx.Ops)
 	info := Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
+			if o.Type == "" {
+				return layout.Dimensions{}
+			}
 			gtx.Constraints.Max.X = infoW
-			return Text(gtx, o.Type, 14, Medium, ColText)
+			return Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions { return Text(gtx, o.Type, 14, Medium, ColText) })
 		},
-		Gap(0, 8),
 		func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Max.X = infoW
 			title := func(gtx layout.Context) layout.Dimensions {
