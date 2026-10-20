@@ -79,6 +79,12 @@ func main() {
 		time.Sleep(2 * time.Second)
 		err = cn.CommandTo(ctx, deviceID, "play", map[string]any{"context": map[string]any{"uri": os.Args[2], "url": "context://" + os.Args[2]}})
 		cn.Close()
+	case "episodes": // saved episodes, to check the collection call
+		_, err = client.Me(ctx)
+		check(err)
+		var eps []spotify.Episode
+		eps, err = client.YourEpisodes(ctx)
+		out, _ = json.MarshalIndent(map[string]any{"count": len(eps)}, "", "  ")
 	case "cluster":
 		var cn *spotify.Connect
 		cn, err = client.StartConnect(ctx, deviceID, nil)
