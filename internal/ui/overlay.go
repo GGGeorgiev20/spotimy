@@ -227,7 +227,7 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 	y += pad
 	call := m.Stop()
 	r := image.Rect(0, 0, w, y)
-	Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 12), Dp(gtx, 8), .35)
+	Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 24), Dp(gtx, 16), .3)
 	FillRect(gtx.Ops, r, Dp(gtx, 4), RGB(0x282828))
 	// Swallow clicks on the menu's own background.
 	st := clip.Rect(r).Push(gtx.Ops)

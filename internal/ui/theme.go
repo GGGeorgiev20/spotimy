@@ -2,6 +2,7 @@ package ui
 
 import (
 	"embed"
+	"math"
 	"fmt"
 	"image"
 	"image/color"
@@ -33,9 +34,9 @@ var (
 	ColAccent      = RGB(0x1ed760)
 	ColAccentHover = RGB(0x3be477)
 	ColToast       = RGB(0x3d91f4)
-	ColRowHover    = ARGB(0x1affffff) // hsla(0,0%,100%,.1)
-	ColRowSelected = ARGB(0x4dffffff) // .3
-	ColDivider     = ARGB(0x1affffff)
+	ColRowHover    = Alpha(ColText, .1) // hsla(0,0%,100%,.1)
+	ColRowSelected = Alpha(ColText, .3)
+	ColDivider     = Alpha(ColText, .1)
 	ColNone        = color.NRGBA{}
 )
 
@@ -47,10 +48,33 @@ func ARGB(c uint32) color.NRGBA {
 	return color.NRGBA{A: uint8(c >> 24), R: uint8(c >> 16), G: uint8(c >> 8), B: uint8(c)}
 }
 
-// Alpha returns c with its alpha multiplied by a (0..1).
+// Alpha returns c with its alpha multiplied by a (0..1), as the browser would
+// show it. Gio blends in linear light, where a translucent white over a dark
+// panel comes out much brighter than in the browser's sRGB blending (10%
+// white over #121212 gives #5c5c5c instead of #2a2a2a), so the alpha is
+// corrected for the backdrop these colors are usually drawn on: the dark
+// panels for light colors, mid tones (artwork, gradients) for dark ones.
 func Alpha(c color.NRGBA, a float32) color.NRGBA {
-	c.A = uint8(float32(c.A) * clamp01(a))
+	a = clamp01(a) * float32(c.A) / 255
+	fg := (float64(c.R) + float64(c.G) + float64(c.B)) / 3 / 255
+	bg := 0.07 // #121212
+	if fg < 0.5 {
+		bg = 0.35
+	}
+	want := toLinear(bg + float64(a)*(fg-bg)) // the browser's sRGB blend, in linear light
+	lb, lf := toLinear(bg), toLinear(fg)
+	if lf != lb {
+		a = float32(max(0, min(1, (want-lb)/(lf-lb))))
+	}
+	c.A = uint8(a*255 + .5)
 	return c
+}
+
+func toLinear(v float64) float64 {
+	if v <= 0.04045 {
+		return v / 12.92
+	}
+	return math.Pow((v+0.055)/1.055, 2.4)
 }
 
 // Mix blends a toward b by t (0..1).
@@ -168,14 +192,85 @@ func VGradient(ops *op.Ops, r image.Rectangle, top, bottom color.NRGBA) {
 	paint.PaintOp{}.Add(ops)
 }
 
-// Shadow approximates a CSS box-shadow (no blur in Gio) with stacked
-// translucent rounded rects around r, offset down by dy.
-func Shadow(ops *op.Ops, r image.Rectangle, radius, spread, dy int, alpha float32) {
-	const steps = 4
-	for i := steps; i >= 1; i-- {
-		g := spread * i / steps
-		rr := r.Inset(-g).Add(image.Pt(0, dy))
-		FillRect(ops, rr, radius+g, color.NRGBA{A: uint8(255 * alpha / steps)})
+// Shadow draws a CSS-like box-shadow under r: a black rounded rect blurred
+// by blur px, moved down by dy, at the given opacity. Masks are rendered once
+// per size and cached.
+func Shadow(ops *op.Ops, r image.Rectangle, radius, blur, dy int, alpha float32) {
+	if r.Empty() || alpha <= 0 {
+		return
+	}
+	blur = max(1, blur)
+	k := shadowKey{r.Dx(), r.Dy(), radius, blur}
+	img, ok := shadows[k]
+	if !ok {
+		if len(shadows) > 128 {
+			clear(shadows)
+		}
+		img = paint.NewImageOp(shadowMask(k))
+		shadows[k] = img
+	}
+	defer op.Offset(r.Min.Add(image.Pt(-blur, dy-blur))).Push(ops).Pop()
+	defer paint.PushOpacity(ops, clamp01(alpha)).Pop()
+	img.Add(ops)
+	paint.PaintOp{}.Add(ops)
+}
+
+type shadowKey struct{ w, h, r, blur int }
+
+var shadows = map[shadowKey]paint.ImageOp{}
+
+// shadowMask renders a rounded rect inset by blur into an alpha mask and
+// blurs it with three box blurs (close to a Gaussian). The alpha is shaped
+// for Gio's linear blending so the falloff looks like the browser's.
+func shadowMask(k shadowKey) *image.NRGBA {
+	w, h := k.w+2*k.blur, k.h+2*k.blur
+	a := make([]float32, w*h)
+	rr := float64(min(k.r, k.w/2, k.h/2))
+	for y := 0; y < k.h; y++ {
+		for x := 0; x < k.w; x++ {
+			// Distance outside the rounded corner (0 inside).
+			cx, cy := float64(x)+.5, float64(y)+.5
+			dx := max(rr-cx, cx-(float64(k.w)-rr), 0)
+			dy := max(rr-cy, cy-(float64(k.h)-rr), 0)
+			if dx*dx+dy*dy <= rr*rr {
+				a[(y+k.blur)*w+x+k.blur] = 1
+			}
+		}
+	}
+	box := max(1, k.blur/3)
+	tmp := make([]float32, len(a))
+	for range 3 {
+		boxBlur(a, tmp, w, h, box, 1, w)
+		boxBlur(tmp, a, h, w, box, w, 1)
+	}
+	img := image.NewNRGBA(image.Rect(0, 0, w, h))
+	for i, v := range a {
+		// Browser-like falloff under linear blending over mid tones.
+		img.Pix[i*4+3] = uint8(255*(1-math.Pow(1-float64(v), 2.2)) + .5)
+	}
+	return img
+}
+
+// boxBlur averages src along rows of length n (stride step within a row,
+// rows rowStride apart) into dst, with a window of 2r+1.
+func boxBlur(src, dst []float32, n, rows, r, step, rowStride int) {
+	inv := 1 / float32(2*r+1)
+	for row := 0; row < rows; row++ {
+		base := row * rowStride
+		var sum float32
+		at := func(i int) float32 {
+			if i < 0 || i >= n {
+				return 0
+			}
+			return src[base+i*step]
+		}
+		for i := -r; i <= r; i++ {
+			sum += at(i)
+		}
+		for i := 0; i < n; i++ {
+			dst[base+i*step] = sum * inv
+			sum += at(i+r+1) - at(i-r)
+		}
 	}
 }
 

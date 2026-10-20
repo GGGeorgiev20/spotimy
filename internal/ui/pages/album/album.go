@@ -160,8 +160,11 @@ func (p *page) footer(gtx layout.Context, a *spotify.Album) layout.Dimensions {
 	return ui.Pad(gtx, 32, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
 		rows := []layout.Widget{func(gtx layout.Context) layout.Dimensions {
 			released := a.Date
-			if t, err := time.Parse("2006-01-02", a.Date); err == nil {
-				released = t.Format("January 2, 2006")
+			for _, f := range []string{time.RFC3339, "2006-01-02"} {
+				if t, err := time.Parse(f, a.Date); err == nil {
+					released = t.Format("January 2, 2006")
+					break
+				}
 			}
 			return ui.Pad(gtx, 0, 0, 4, 0, func(gtx layout.Context) layout.Dimensions {
 				return ui.Text(gtx, released, 14, ui.Regular, ui.ColText2)

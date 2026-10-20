@@ -91,7 +91,7 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 		if cardRound(c) {
 			radius = art / 2
 		}
-		Shadow(gtx.Ops, r, radius, Dp(gtx, 12), Dp(gtx, 8), .3)
+		Shadow(gtx.Ops, r, radius, Dp(gtx, 24), Dp(gtx, 8), .5)
 		Offset(gtx, pad, y, func() {
 			Image{URL: Pick(c.Images, art), Radius: radius, Round: cardRound(c), Icon: cardIcon(c.Type)}.Layout(gtx, image.Pt(art, art))
 		})
@@ -105,7 +105,7 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 				by := y + art - Dp(gtx, 8) - bs + int((1-v)*float32(Dp(gtx, 8)))
 				Offset(gtx, bx, by, func() {
 					st := paint.PushOpacity(gtx.Ops, v)
-					Shadow(gtx.Ops, image.Rect(0, 0, bs, bs), bs/2, Dp(gtx, 4), Dp(gtx, 6), .3)
+					Shadow(gtx.Ops, image.Rect(0, 0, bs, bs), bs/2, Dp(gtx, 8), Dp(gtx, 8), .3)
 					k.Play.Layout(gtx, 48, playing)
 					st.Pop()
 				})

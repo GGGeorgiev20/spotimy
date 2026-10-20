@@ -469,7 +469,7 @@ func navCircle(gtx layout.Context, b *IconButton, icon, label string, disabled b
 	b.Click.Label, b.Click.Disabled = label, disabled
 	d := b.Click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		s := Dp(gtx, 32)
-		FillCircle(gtx.Ops, s, ARGB(0xb3000000))
+		FillCircle(gtx.Ops, s, Alpha(ColBg, .7))
 		c := ColText
 		if disabled {
 			c = Alpha(ColText2, .6)

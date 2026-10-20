@@ -113,7 +113,7 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 		if o.Round {
 			radius = art / 2
 		}
-		Shadow(gtx.Ops, image.Rect(0, 0, art, art), radius, px(24), px(8), .5)
+		Shadow(gtx.Ops, image.Rect(0, 0, art, art), radius, px(60), px(4), .5)
 		h.Art.Label = "View artwork"
 		h.Art.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			icon := o.Icon

@@ -33,3 +33,13 @@ func TestFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestAlphaMatchesBrowser(t *testing.T) {
+	// 10% white over #121212 must look like the browser's #2a2a2a after
+	// Gio's linear blend: lin(out) = lin(bg) + a*(lin(fg)-lin(bg)).
+	a := float64(Alpha(ColText, .1).A) / 255
+	out := toLinear(0.07) + a*(1-toLinear(0.07))
+	if want := toLinear(42.0 / 255); out < want*0.9 || out > want*1.1 {
+		t.Errorf("alpha %.3f gives linear %.4f, want %.4f", a, out, want)
+	}
+}

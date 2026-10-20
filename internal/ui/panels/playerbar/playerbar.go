@@ -108,7 +108,7 @@ func layoutLeft(gtx layout.Context) {
 			if bar.cover.Hovered() {
 				b := dp(24)
 				ui.Offset(gtx, cs-b-dp(4), dp(4), func() {
-					ui.FillCircle(gtx.Ops, b, ui.ARGB(0xb3000000))
+					ui.FillCircle(gtx.Ops, b, ui.Alpha(ui.ColBg, .7))
 					icon := "chevron-up"
 					if ui.Prefs.RightPanel == "npv" {
 						icon = "chevron-down"
