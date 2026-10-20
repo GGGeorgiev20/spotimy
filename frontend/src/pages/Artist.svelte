@@ -22,6 +22,9 @@
   let error = $state('')
   let color = $state('rgb(83, 83, 83)')
   let more = $state(false)
+  let aboutOpen = $state(false)
+  // Main is a size container, which would trap position: fixed; render on body.
+  const portal = (node: HTMLElement) => void document.body.appendChild(node)
   let disc = $state<'popular' | 'albums' | 'singles' | 'compilations'>('popular')
   let top = $state<Paged | null>(null)
 
@@ -66,6 +69,8 @@
   )
   const discKind = $derived(disc === 'popular' ? 'all' : disc)
 </script>
+
+<svelte:window onkeydown={(e) => aboutOpen && e.key === 'Escape' && (aboutOpen = false)} />
 
 {#if error}
   <Unavailable what="This artist" {error} />
@@ -116,20 +121,44 @@
     </section>
   {/if}
 
-  {#each ar.shelves as s (s.title)}
+  {#each ar.shelves as s, i (s.title)}
     <Shelf title={s.title} items={s.items} />
+    {#if i === 0}{@render about()}{/if}
   {/each}
+  {#if !ar.shelves.length}{@render about()}{/if}
 
-  {#if ar.bio}
-    <section class="about">
-      <h2>About</h2>
-      <div class="about-card" style:background-image={ar.gallery?.length ? `url(${pick(ar.gallery, 640)})` : undefined}>
-        <div class="about-text">
-          <div class="big">{fmtNumber(ar.monthlyListeners)} monthly listeners</div>
-          <p>{ar.bio}</p>
+  {#snippet about()}
+    {#if ar!.bio}
+      <section class="about">
+        <h2>About</h2>
+        <button class="about-card" onclick={() => (aboutOpen = true)} style:background-image={ar!.gallery?.length ? `url(${pick(ar!.gallery, 640)})` : undefined}>
+          {#if ar!.worldRank}<span class="rank"><b>#{ar!.worldRank}</b><span>in the world</span></span>{/if}
+          <div class="about-text">
+            <div class="big">{fmtNumber(ar!.monthlyListeners)} monthly listeners</div>
+            <p>{ar!.bio}</p>
+          </div>
+        </button>
+      </section>
+    {/if}
+  {/snippet}
+
+  {#if aboutOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="overlay" use:portal onclick={() => (aboutOpen = false)}>
+      <div class="modal" role="dialog" tabindex="-1" aria-label="About {ar.name}" onclick={(e) => e.stopPropagation()}>
+        <button class="close" aria-label="Close" onclick={() => (aboutOpen = false)}><Icon name="close" /></button>
+        {#if ar.gallery?.length}<img src={pick(ar.gallery, 1280)} alt="" />{/if}
+        <div class="modal-body">
+          <div class="stats">
+            <div><b>{fmtNumber(ar.followers)}</b><span>Followers</span></div>
+            <div><b>{fmtNumber(ar.monthlyListeners)}</b><span>Monthly Listeners</span></div>
+            {#each ar.cities?.slice(0, 5) ?? [] as c (c)}<div class="city">{c}</div>{/each}
+          </div>
+          <p class="full">{ar.bio}</p>
         </div>
       </div>
-    </section>
+    </div>
   {/if}
 {/if}
 
@@ -165,8 +194,19 @@
   .disc :global(.shelf header) { display: none; }
   .about { padding: 0 24px 24px; }
   .about h2 { margin: 0 0 16px; }
-  .about-card { border-radius: 8px; background-color: #242424; background-size: cover; background-position: center; min-height: 360px; max-width: 760px; display: flex; align-items: flex-end; overflow: hidden; }
+  .about-card { position: relative; width: 100%; text-align: left; cursor: pointer; border-radius: 8px; background-color: #242424; background-size: cover; background-position: center; min-height: 360px; max-width: 760px; display: flex; align-items: flex-end; overflow: hidden; }
   .about-text { padding: 40px; background: linear-gradient(transparent, rgba(0,0,0,.8)); width: 100%; }
+  .about-card:hover { transform: scale(1.01); transition: transform .2s; }
+  .rank { position: absolute; top: 24px; left: 24px; width: 104px; height: 104px; border-radius: 50%; background: #3d91f4; display: grid; place-content: center; text-align: center; font-size: 14px; line-height: 1.2; }
+  .rank b { font-size: 24px; display: block; }
+  .overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.7); display: grid; place-items: center; }
+  .modal { position: relative; width: min(820px, 90vw); max-height: 85vh; overflow-y: auto; background: #282828; border-radius: 8px; }
+  .modal img { width: 100%; max-height: 480px; object-fit: cover; display: block; }
+  .modal-body { display: flex; gap: 48px; padding: 32px 40px; }
+  .stats { flex: none; width: 180px; display: flex; flex-direction: column; gap: 16px; font-size: 14px; color: var(--text-2); }
+  .stats b { display: block; font-size: 24px; color: var(--text); }
+  .full { margin: 0; color: hsla(0,0%,100%,.85); line-height: 1.6; white-space: pre-line; }
+  .close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,.6); display: grid; place-items: center; }
   .big { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
   .about-text p { margin: 0; color: hsla(0,0%,100%,.85); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 </style>

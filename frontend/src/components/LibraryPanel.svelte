@@ -3,7 +3,7 @@
   import Virtual from './Virtual.svelte'
   import { App, libraryVersion, pick } from '../lib/api.svelte'
   import { Paged } from '../lib/paged.svelte'
-  import { isContext, playing } from '../lib/player.svelte'
+  import { ctxPlaying, isContext, playContext, playing } from '../lib/player.svelte'
   import { current, openUri, uriToPath } from '../lib/router.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { openMenu } from '../lib/menu.svelte'
@@ -140,6 +140,17 @@
     </div>
   {/if}
 
+  <!-- A span, not a button: the row itself is a button. -->
+  {#snippet play(it: Item, kind: string)}
+    {#if it.type !== 'folder'}
+      <span
+        class={kind} role="button" tabindex="-1" aria-label="Play {it.name}"
+        onclick={(e) => (e.stopPropagation(), playContext(it.uri))}
+        onkeydown={() => {}}
+      ><Icon name={ctxPlaying(it.uri) ? 'pause' : 'play'} size={kind === 'fab' ? 24 : 20} /></span>
+    {/if}
+  {/snippet}
+
   <div class="items" bind:this={scroller}>
     {#if error}
       <p class="err" title={error}>Couldn't load Your Library.</p>
@@ -152,7 +163,10 @@
                 {@const it = list!.items[r * cols + c]}
                 {#if it}
                   <button class="gcard" class:here={here === uriToPath(it.uri)} onclick={() => open(it)} oncontextmenu={(e) => libMenu(e, it)}>
-                    <img class:round={it.type === 'artist'} src={pick(it.images, 160)} alt="" loading="lazy" />
+                    <span class="gw">
+                      <img class:round={it.type === 'artist'} src={pick(it.images, 160)} alt="" loading="lazy" />
+                      {@render play(it, 'fab')}
+                    </span>
                     <span class="name ellipsis" class:playing={isCtx(it)}>{it.name}</span>
                     <span class="sub ellipsis">{sub(it)}</span>
                   </button>
@@ -174,7 +188,10 @@
                   {#if it.type === 'folder'}
                     <span class="thumb folder"><Icon name="library" size={20} /></span>
                   {:else}
-                    <img class="thumb" class:round={it.type === 'artist'} src={pick(it.images, 64)} alt="" loading="lazy" />
+                    <span class="tw">
+                      <img class="thumb" class:round={it.type === 'artist'} src={pick(it.images, 64)} alt="" loading="lazy" />
+                      {@render play(it, 'overlay')}
+                    </span>
                   {/if}
                 {/if}
                 {#if !collapsed}
@@ -243,6 +260,17 @@
   .item.here:hover { background: var(--surface-3); }
   .thumb { width: 48px; height: 48px; border-radius: 4px; flex: none; object-fit: cover; background: var(--surface-3); }
   .thumb.round { border-radius: 50%; }
+  .tw, .gw { position: relative; flex: none; display: block; }
+  .overlay { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 4px; background: rgba(0,0,0,.5); color: #fff; opacity: 0; }
+  .item:hover .overlay { opacity: 1; }
+  .tw:has(.round) .overlay { border-radius: 50%; }
+  .fab {
+    position: absolute; right: 8px; bottom: 8px; width: 48px; height: 48px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--accent); color: #000;
+    box-shadow: 0 8px 8px rgba(0,0,0,.3); opacity: 0; transform: translateY(8px); transition: all .3s ease;
+  }
+  .gcard:hover .fab { opacity: 1; transform: none; }
+  .fab:hover { transform: scale(1.04) !important; background: var(--accent-hover); }
   .thumb.folder { display: grid; place-items: center; color: var(--text-2); }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .compact .text { flex-direction: row; align-items: baseline; gap: 4px; }

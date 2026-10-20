@@ -177,11 +177,12 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 		}
 	}
 	for _, s := range []Shelf{
+		// The official order; the page puts About after the first shelf.
 		{Title: "Featuring " + out.Name, Items: a.RelatedContent.FeaturingV2.cards()},
+		{Title: "Discovered on", Items: a.RelatedContent.DiscoveredOnV2.cards()},
+		{Title: "Artist Playlists", Items: a.Profile.PlaylistsV2.cards()},
 		{Title: "Fans also like", Items: related},
 		{Title: "Appears On", Items: a.RelatedContent.AppearsOn.cards()},
-		{Title: "Artist Playlists", Items: a.Profile.PlaylistsV2.cards()},
-		{Title: "Discovered On", Items: a.RelatedContent.DiscoveredOnV2.cards()},
 	} {
 		if len(s.Items) > 0 {
 			s.Kind = "shelf"

@@ -64,6 +64,7 @@ type Playlist struct {
 	CanEdit     bool      `json:"canEdit"`
 	IsOwner     bool      `json:"isOwner"`
 	Collab      bool      `json:"collaborative"`
+	Members     []User    `json:"members"` // collaborators other than the owner
 	RevisionID  string    `json:"revisionId"`
 	Tracks      TrackPage `json:"tracks"`
 }

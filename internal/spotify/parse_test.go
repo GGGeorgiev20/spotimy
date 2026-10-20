@@ -121,10 +121,10 @@ func TestParseHome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if h.Greeting == "" || len(h.Chips) == 0 || len(h.Sections) != 2 {
+	if h.Greeting == "" || len(h.Chips) == 0 || len(h.Sections) != 3 {
 		t.Fatalf("home: greeting=%q chips=%d sections=%d", h.Greeting, len(h.Chips), len(h.Sections))
 	}
-	if h.Sections[0].Kind != "shortcuts" || h.Sections[1].Title != "Made For Test User" {
+	if h.Sections[0].Kind != "shortcuts" || h.Sections[1].Label != "Made For" || h.Sections[1].Title != "Test User" || h.Sections[2].Kind != "recents" {
 		t.Errorf("sections: %+v", h.Sections)
 	}
 	for _, s := range h.Sections {
@@ -171,5 +171,20 @@ func TestParseArtist(t *testing.T) {
 	}
 	if !fans {
 		t.Errorf("no related artists shelf: %+v", a.Shelves)
+	}
+}
+
+func TestLabelSplit(t *testing.T) {
+	cases := []struct{ label, base, wantLabel, wantTitle string }{
+		{"Made For Galin", "Made For {0}", "Made For", "Galin"},
+		{"For fans of Radiohead", "For fans of {0}", "For fans of", "Radiohead"},
+		{"Jump back in", "Jump back in", "", "Jump back in"},
+		{"Galin's picks", "{0}'s picks", "", "Galin's picks"},
+	}
+	for _, c := range cases {
+		l, title := gqlLabel{c.label, c.base}.split()
+		if l != c.wantLabel || title != c.wantTitle {
+			t.Errorf("%q: got (%q, %q)", c.base, l, title)
+		}
 	}
 }

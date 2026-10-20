@@ -17,7 +17,7 @@
   <Unavailable what="This section" {error} />
 {:else if shelf}
   <div class="page">
-    <h1>{shelf.title}</h1>
+    <h1>{[shelf.label, shelf.title].filter(Boolean).join(" ")}</h1>
     <div class="grid">{#each shelf.items as card (card.uri)}<Card {card} />{/each}</div>
   </div>
 {/if}

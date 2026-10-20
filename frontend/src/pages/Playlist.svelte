@@ -71,20 +71,31 @@
   function text(html: string) {
     return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
   }
-  const total = $derived(tracks && tracks.loaded.length === tracks.total ? tracks.loaded.reduce((s, t) => s + t.durationMs, 0) : 0)
+  // Exact once every row is loaded; until then an estimate from the loaded
+  // rows, which is what the official client's "about" means too.
+  const total = $derived.by(() => {
+    const loaded = tracks?.loaded.filter(Boolean) ?? []
+    if (!loaded.length) return ''
+    const ms = loaded.reduce((s, t) => s + t.durationMs, 0)
+    if (loaded.length === tracks!.total) return fmtTotal(ms)
+    const est = fmtTotal((ms / loaded.length) * tracks!.total)
+    return est.startsWith('about') ? est : `about ${est}`
+  })
 </script>
 
 {#if error}
   <Unavailable what="This playlist" {error} />
 {:else if pl && tracks}
-  <EntityHeader image={pick(pl.images, 300)} type={pl.collaborative ? 'Collaborative playlist' : 'Playlist'} title={pl.name} {color} onedit={pl.isOwner ? edit : undefined}>
+  <EntityHeader image={pick(pl.images, 640)} type="Playlist" title={pl.name} {color} onedit={pl.isOwner ? edit : undefined}>
     {#snippet meta()}
       {#if pl!.description}<div class="desc">{text(pl!.description)}</div>{/if}
       <div class="line">
         {#if pl!.owner.images?.length}<img class="avatar" src={pick(pl!.owner.images, 24)} alt="" />{/if}
         <a href="/" class="owner" onclick={(e) => (e.preventDefault(), navigate(`/user/${pl!.owner.uri.split(':')[2]}`))}>{pl!.owner.name}</a>
+        {#if pl!.members?.length === 1}<span class="sub">and</span><a href="/" class="owner" onclick={(e) => (e.preventDefault(), navigate(`/user/${pl!.members[0].uri.split(':')[2]}`))}>{pl!.members[0].name}</a>
+        {:else if pl!.members?.length}<span class="sub">and {pl!.members.length} others</span>{/if}
         {#if pl!.followers > 0}<span class="dot">•</span><span class="sub">{fmtNumber(pl!.followers)} saves</span>{/if}
-        <span class="dot">•</span><span class="sub">{tracks!.total} songs{total ? `, ${fmtTotal(total)}` : ''}</span>
+        <span class="dot">•</span><span class="sub">{tracks!.total} songs{total ? `, ${total}` : ''}</span>
       </div>
     {/snippet}
   </EntityHeader>

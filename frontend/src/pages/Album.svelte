@@ -11,7 +11,7 @@
   import { setChrome } from '../lib/chrome.svelte'
   import { fmtTotal, headerColor } from '../lib/format'
   import { ctxPlaying, playContext } from '../lib/player.svelte'
-  import { openUri } from '../lib/router.svelte'
+  import { navigate, openUri } from '../lib/router.svelte'
   import type { spotify } from '../../wailsjs/go/models'
 
   let { id, scroller }: { id: string; scroller: HTMLElement | undefined } = $props()
@@ -50,7 +50,7 @@
 {#if error}
   <Unavailable what="This album" {error} />
 {:else if al && tracks}
-  <EntityHeader image={pick(al.images, 300)} type={typeLabel} title={al.name} {color}>
+  <EntityHeader image={pick(al.images, 640)} type={typeLabel} title={al.name} {color}>
     {#snippet meta()}
       {#if al!.artists[0]?.images?.length}<img class="avatar" src={pick(al!.artists[0].images, 24)} alt="" />{/if}
       {#each al!.artists as a, i}
@@ -70,7 +70,10 @@
   </div>
   {#if al.more?.length}
     <section class="more">
-      <h2>More by {al.artists[0]?.name}</h2>
+      <header class="more-h">
+        <h2>More by {al.artists[0]?.name}</h2>
+        <button class="all" onclick={() => navigate(`/artist/${al!.artists[0].uri.split(':')[2]}/discography/all`)}>See discography</button>
+      </header>
       <div class="grid">
         {#each al.more.slice(0, 8) as card (card.uri)}<Card {card} />{/each}
       </div>
@@ -85,6 +88,9 @@
   .foot { padding: 32px 24px 0; color: var(--text-2); font-size: 11px; }
   .date { font-size: 14px; margin-bottom: 4px; }
   .more { padding: 32px 12px 24px; }
-  .more h2 { font-size: 24px; margin: 0 12px 8px; }
+  .more-h { display: flex; align-items: baseline; justify-content: space-between; margin: 0 12px 8px; }
+  .more h2 { font-size: 24px; margin: 0; }
+  .all { font-size: 14px; font-weight: 700; color: var(--text-2); }
+  .all:hover { color: var(--text); text-decoration: underline; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); grid-auto-rows: auto; }
 </style>

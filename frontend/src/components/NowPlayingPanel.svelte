@@ -76,7 +76,7 @@
         <div class="meta">
           <button class="title ellipsis" onclick={() => track.albumUri && openUri(track.albumUri)}>{track.name}</button>
           <div class="artists ellipsis">
-            {#each track.artists ?? [] as a, i}{#if i > 0}, {/if}<a href="/" onclick={(e) => (e.preventDefault(), openUri(a.uri))}>{a.name}</a>{/each}
+            {#each track.artists ?? [] as a, i}{#if i > 0}{', '}{/if}<a href="/" onclick={(e) => (e.preventDefault(), openUri(a.uri))}>{a.name}</a>{/each}
           </div>
         </div>
         <button class="icon-btn save" class:on={saved[track.uri]} onclick={() => toggleSaved(track.uri)} aria-label="Save to Liked Songs">
@@ -97,7 +97,7 @@
               <button class="follow" onclick={() => toggleLibrary(ar.uri)}>{saved[ar.uri] ? 'Unfollow' : 'Follow'}</button>
             </div>
             {#if ar.bio}
-              <button class="bio" class:open={bioOpen} onclick={() => (bioOpen = !bioOpen)}>{ar.bio}</button>
+              <button class="bio" class:open={bioOpen} onclick={() => (bioOpen = !bioOpen)}><span>{ar.bio}</span></button>
             {/if}
           </div>
         </section>
@@ -160,8 +160,10 @@
   .sub { color: var(--text-2); font-size: 14px; }
   .follow { border: 1px solid #727272; border-radius: 999px; padding: 4px 14px; font-size: 14px; font-weight: 700; flex: none; }
   .follow:hover { border-color: var(--text); transform: scale(1.04); }
-  .bio { text-align: left; color: var(--text-2); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .bio.open { display: block; }
+  /* Clamp on an inner span: line-clamp doesn't apply to a <button> box. */
+  .bio { display: block; width: 100%; text-align: left; color: var(--text-2); font-size: 14px; }
+  .bio span { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .bio.open span { display: block; }
   h3 { font-size: 16px; margin: 0 0 12px; }
   .credit { margin-bottom: 12px; }
   .credit a:hover { text-decoration: underline; }

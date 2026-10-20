@@ -7,6 +7,7 @@
   import Home from '../pages/Home.svelte'
   import Placeholder from '../pages/Placeholder.svelte'
   import Section from '../pages/Section.svelte'
+  import Genre from '../pages/Genre.svelte'
   import Search from '../pages/Search.svelte'
   import Artist from '../pages/Artist.svelte'
   import Discography from '../pages/Discography.svelte'
@@ -75,6 +76,8 @@
         <YourEpisodes />
       {:else if page === 'section'}
         <Section {id} />
+      {:else if page === 'genre'}
+        <Genre {id} />
       {:else if page === 'search'}
         <Search query={id ? decodeURIComponent(id) : ''} tab={parts[2] ?? 'all'} {scroller} />
       {:else if page === 'artist' && parts[2] === 'discography'}

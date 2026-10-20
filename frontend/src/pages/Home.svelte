@@ -27,7 +27,7 @@
   })
 
   const shortcuts = $derived(home?.sections.find((s) => s.kind === 'shortcuts')?.items.slice(0, 8) ?? [])
-  const shelves = $derived(home?.sections.filter((s) => s.kind === 'shelf') ?? [])
+  const shelves = $derived(home?.sections.filter((s) => s.kind !== 'shortcuts') ?? [])
   const chips = $derived([{ id: '', label: 'All' }, ...(home?.chips ?? [])])
 </script>
 
@@ -61,7 +61,7 @@
       </div>
     {/if}
     {#each shelves as s (s.uri)}
-      <Shelf title={s.title} items={s.items} showAll={s.total > s.items.length ? () => navigate(`/section/${s.uri.split(':')[2]}`) : undefined} />
+      <Shelf title={s.title} label={s.label} header={s.header} bare={s.kind === 'recents'} items={s.items} showAll={() => navigate(`/section/${s.uri.split(':')[2]}`)} />
     {/each}
   {/if}
 </div>

@@ -39,7 +39,7 @@
       <div class="meta">
         <a class="title ellipsis" href="/" onclick={(e) => (e.preventDefault(), track.albumUri && openUri(track.albumUri))}>{track.name}</a>
         <div class="artists ellipsis">
-          {#each track.artists ?? [] as a, i}{#if i > 0}, {/if}<a href="/" onclick={(e) => (e.preventDefault(), a.uri && openUri(a.uri))}>{a.name}</a>{/each}
+          {#each track.artists ?? [] as a, i}{#if i > 0}{', '}{/if}<a href="/" onclick={(e) => (e.preventDefault(), a.uri && openUri(a.uri))}>{a.name}</a>{/each}
         </div>
       </div>
       <button class="icon-btn save" class:on={saved[track.uri]} onclick={() => toggleSaved(track.uri)} title={saved[track.uri] ? 'Remove from Liked Songs' : 'Save to Liked Songs'}>

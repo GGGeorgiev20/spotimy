@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte'
+  import CategoryTile from '../components/CategoryTile.svelte'
   import Card from '../components/Card.svelte'
   import Shelf from '../components/Shelf.svelte'
   import TrackTable from '../components/TrackTable.svelte'
@@ -25,6 +26,8 @@
   let tracks = $state<Paged | null>(null)
   let topTracks = $state<Paged | null>(null)
   let recents = $state<spotify.Card[] | null>(null)
+  let browse = $state<spotify.Category[]>([])
+  App.BrowseAll().then((b) => (browse = b)).catch(() => {})
   let error = $state('')
   let loadingMore = false
 
@@ -113,8 +116,10 @@
           </div>
         {/each}
       </div>
-    {:else if recents}
-      <p class="hint">Search for songs, artists, albums, playlists, podcasts and more.</p>
+    {/if}
+    {#if browse.length}
+      <h2>Browse all</h2>
+      <div class="browse">{#each browse as cat (cat.uri)}<CategoryTile {cat} />{/each}</div>
     {/if}
   </div>
 {:else}
@@ -169,6 +174,8 @@
   .hint { color: var(--text-2); text-align: center; padding: 64px 24px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
   .grid.pad { padding: 0 12px; }
+  .browse { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; padding: 0 12px; margin-bottom: 24px; }
+  .grid + h2 { margin-top: 24px; }
   .recent { position: relative; }
   .x { position: absolute; top: 18px; right: 18px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,.7); display: grid; place-items: center; color: var(--text-2); opacity: 0; }
   .recent:hover .x { opacity: 1; }

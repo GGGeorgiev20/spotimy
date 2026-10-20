@@ -70,7 +70,7 @@
           },
         })
       list.push({
-        label: saved[tr.uri] ? 'Remove from your Liked Songs' : 'Save to your Liked Songs',
+        label: saved[tr.uri] ? 'Remove from Liked Songs' : 'Save to your Liked Songs',
         icon: saved[tr.uri] ? 'check-circle' : 'plus-circle',
         run: () => toggleSaved(tr.uri),
       })
@@ -90,14 +90,14 @@
     if (c.type === 'album' || c.type === 'playlist') list.push({ label: 'Add to queue', icon: 'queue', run: () => queueContext(c.uri) })
     if (c.type === 'artist')
       list.push({ label: saved[c.uri] ? 'Unfollow' : 'Follow', icon: saved[c.uri] ? 'close' : 'user', run: () => toggleLibrary(c.uri) })
-    if (c.type === 'artist' || c.type === 'album' || c.type === 'playlist')
-      list.push({ label: `Go to ${c.type} radio`, icon: 'radio', run: () => startRadio(c.uri) })
-    else if (c.type !== 'collection' && c.type !== 'folder' && c.type !== 'user' && !(t.library && own))
+    if (c.type !== 'artist' && c.type !== 'collection' && c.type !== 'folder' && c.type !== 'user' && c.type !== 'genre' && !own)
       list.push({
         label: saved[c.uri] ? 'Remove from Your Library' : 'Add to Your Library',
         icon: saved[c.uri] ? 'check-circle' : 'plus-circle',
         run: () => toggleLibrary(c.uri),
       })
+    if (c.type === 'artist' || c.type === 'album' || c.type === 'playlist')
+      list.push({ label: `Go to ${c.type} radio`, icon: 'radio', run: () => startRadio(c.uri) })
     if (t.library && c.type !== 'folder')
       list.push({ label: t.pinned ? 'Unpin' : 'Pin', icon: 'pin', run: () => setPinned(c.uri, !t.pinned) })
     if (c.type === 'playlist' && own) {

@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"strings"
 	"context"
 	"time"
 )
@@ -66,7 +67,11 @@ func (c *Client) Album(ctx context.Context, uri string) (*Album, error) {
 		if c.Type == "P" {
 			sym = "℗"
 		}
-		out.Copyright = append(out.Copyright, sym+" "+c.Text)
+		text := c.Text
+		if !strings.HasPrefix(text, sym) { // some labels already include it
+			text = sym + " " + text
+		}
+		out.Copyright = append(out.Copyright, text)
 	}
 	ref := &AlbumRef{URI: a.URI, Name: a.Name, Images: out.Images}
 	for _, it := range a.TracksV2.Items {

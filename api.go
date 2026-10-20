@@ -83,6 +83,18 @@ func (a *App) HomeSection(uri string) (*spotify.Shelf, error) {
 	return a.sp.HomeSection(ctx, uri)
 }
 
+func (a *App) BrowseAll() ([]spotify.Category, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.BrowseAll(ctx)
+}
+
+func (a *App) Browse(uri string) (*spotify.BrowsePage, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Browse(ctx, uri)
+}
+
 func (a *App) Search(term string) (*spotify.SearchResults, error) {
 	ctx, cancel := a.call()
 	defer cancel()

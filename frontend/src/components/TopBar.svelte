@@ -34,8 +34,8 @@
   </div>
 
   <div class="right">
-    <button class="avatar" onclick={() => (menu = !menu)} aria-label="Profile" style:background={me.user?.color}>
-      {#if me.user?.images?.length}<img src={pick(me.user.images, 32)} alt="" />{:else}{initial}{/if}
+    <button class="avatar" onclick={() => (menu = !menu)} aria-label="Profile">
+      {#if me.user?.images?.length}<img src={pick(me.user.images, 32)} alt="" />{:else}<span class="initial" style:background={me.user?.color}>{initial}</span>{/if}
     </button>
     {#if menu}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -70,9 +70,8 @@
   .right { display: flex; justify-content: flex-end; position: relative; --wails-draggable: no-drag; }
   .avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); padding: 8px; }
   .avatar:hover { transform: scale(1.04); }
-  .avatar img, .avatar { overflow: hidden; }
-  .avatar img { width: 32px; height: 32px; border-radius: 50%; }
-  .avatar { font-weight: 700; color: #000; }
+  .avatar img, .initial { width: 32px; height: 32px; border-radius: 50%; }
+  .initial { display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #000; background: #ff6437; }
   .backdrop { position: fixed; inset: 0; z-index: 50; }
   .menu { position: absolute; top: 56px; right: 0; z-index: 51; width: 196px; background: var(--surface-3); border-radius: 4px; padding: 4px; box-shadow: 0 16px 24px rgba(0,0,0,.3), 0 6px 8px rgba(0,0,0,.2); }
   .mi { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 8px 12px 12px; font-size: 14px; color: hsla(0,0%,100%,.9); border-radius: 2px; }

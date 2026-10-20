@@ -95,6 +95,12 @@ func (c *Client) Playlist(ctx context.Context, uri string, offset, limit int) (*
 		RevisionID:  p.RevisionID,
 		Tracks:      TrackPage{Total: p.Content.TotalCount, Offset: offset, Items: playlistTracks(p.Content.Items)},
 	}
+	out.Members = []User{}
+	for _, m := range p.Members.Items {
+		if !m.IsOwner {
+			out.Members = append(out.Members, m.User.Data.user())
+		}
+	}
 	out.IsOwner = owner.URI != "" && owner.URI == c.UserURI()
 	return out, nil
 }

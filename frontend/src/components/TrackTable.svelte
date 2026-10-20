@@ -139,7 +139,7 @@
               <div class="name ellipsis">{t.name}</div>
               <div class="artists ellipsis">
                 {#if t.explicit}<span class="e" title="Explicit">E</span>{/if}
-                {#each t.artists as a, k}{#if k > 0}, {/if}<a href="/" onclick={(e) => link(e, a.uri)}>{a.name}</a>{/each}
+                {#each t.artists as a, k}{#if k > 0}{', '}{/if}<a href="/" onclick={(e) => link(e, a.uri)}>{a.name}</a>{/each}
               </div>
             </div>
           </div>

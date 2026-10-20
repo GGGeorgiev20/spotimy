@@ -11,14 +11,29 @@
     onedit,
   }: { image: string; type: string; title: string; color: string; round?: boolean; meta?: Snippet; onedit?: () => void } = $props()
 
+  let big = $state(false)
+  // Main is a size container, which would trap position: fixed; render on body.
+  const portal = (node: HTMLElement) => void document.body.appendChild(node)
+
   // Long titles get a smaller ceiling, as in the official client.
   const size = $derived(title.length > 40 ? 'small' : title.length > 18 ? 'medium' : 'large')
 </script>
 
+<svelte:window onkeydown={(e) => big && e.key === 'Escape' && (big = false)} />
+
 <header class="hdr" style:--c={color}>
   <div class="art" class:round>
-    {#if image}<img src={image} alt="" />{/if}
+    {#if image}
+      <button class="art-btn" onclick={() => (big = true)} aria-label="View artwork"><img src={image} alt="" /></button>
+    {/if}
   </div>
+  {#if big}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="big" use:portal onclick={() => (big = false)}>
+      <img src={image} alt="" />
+    </div>
+  {/if}
   <div class="info">
     <span class="type">{type}</span>
     {#if onedit}
@@ -32,6 +47,9 @@
 <div class="fade" style:--c={color}></div>
 
 <style>
+  .art-btn { display: block; width: 100%; height: 100%; padding: 0; cursor: pointer; border-radius: inherit; }
+  .big { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.7); display: grid; place-items: center; cursor: pointer; }
+  .big img { width: min(640px, 80vw, 80vh); aspect-ratio: 1; object-fit: cover; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   .hdr {
     display: flex;
     align-items: flex-end;

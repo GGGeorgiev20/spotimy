@@ -43,6 +43,7 @@ export function uriToPath(uri: string): string {
     return p[2] === 'your-episodes' ? '/collection/episodes' : '/collection/tracks'
   }
   if (p[1] === 'user' && p.length === 3) return `/user/${p[2]}`
+  if (p[1] === 'page') return `/genre/${p[2]}`
   return `/${p[1]}/${p[2]}`
 }
 

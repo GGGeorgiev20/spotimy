@@ -114,7 +114,7 @@
         {#if current && playing()}<span class="eq"><Icon name="volume" size={12} /></span>{/if}{name}
       </button>
       <div class="artists ellipsis">
-        {#each artists ?? [] as a, k}{#if k > 0}, {/if}<a href="/" onclick={(e) => (e.preventDefault(), openUri(a.uri))}>{a.name}</a>{/each}
+        {#each artists ?? [] as a, k}{#if k > 0}{', '}{/if}<a href="/" onclick={(e) => (e.preventDefault(), openUri(a.uri))}>{a.name}</a>{/each}
       </div>
     </div>
     {#if onremove}<button class="rm" onclick={onremove} aria-label="Remove from queue"><Icon name="close" /></button>{/if}
