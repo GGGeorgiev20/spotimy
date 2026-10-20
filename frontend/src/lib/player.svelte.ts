@@ -65,7 +65,7 @@ export const controls = {
       player.status.track.position = ms
       player.fetchedAt = player.now = Date.now()
     }
-    return App.Seek(Math.round(ms))
+    return App.SeekTo(Math.round(ms))
   },
   // Dragging fires many inputs; each one becomes a connect-state push, so send
   // at most one every 150ms plus the final value.

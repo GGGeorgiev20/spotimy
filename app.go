@@ -117,7 +117,7 @@ func (a *App) PlayPause() error { _, err := a.do(daemon.ApiRequestTypePlayPause,
 func (a *App) Next() error      { _, err := a.do(daemon.ApiRequestTypeNext, daemon.ApiNext{}); return err }
 func (a *App) Prev() error      { _, err := a.do(daemon.ApiRequestTypePrev, nil); return err }
 
-func (a *App) Seek(ms int64) error {
+func (a *App) SeekTo(ms int64) error {
 	_, err := a.do(daemon.ApiRequestTypeSeek, daemon.ApiSeek{Position: ms})
 	return err
 }
