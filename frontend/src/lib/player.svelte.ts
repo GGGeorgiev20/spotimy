@@ -51,6 +51,10 @@ export function initPlayer() {
   refresh()
 }
 
+let volTimer = 0
+let volPending = 0
+let volSent = 0
+
 // Optimistic helpers: update local state immediately, the event refresh confirms.
 export const controls = {
   playPause: () => App.PlayPause(),
@@ -63,9 +67,18 @@ export const controls = {
     }
     return App.Seek(Math.round(ms))
   },
+  // Dragging fires many inputs; each one becomes a connect-state push, so send
+  // at most one every 150ms plus the final value.
   setVolume(v: number) {
     if (player.status) player.status.volume = v
-    return App.SetVolume(Math.round(v))
+    volPending = Math.round(v)
+    if (volTimer) return
+    App.SetVolume(volPending)
+    volSent = volPending
+    volTimer = setTimeout(function flush() {
+      volTimer = 0
+      if (volPending !== volSent) controls.setVolume(volPending)
+    }, 150)
   },
   toggleShuffle: () => App.SetShuffle(!player.status?.shuffle_context),
   cycleRepeat() {

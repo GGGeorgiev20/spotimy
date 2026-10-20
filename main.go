@@ -38,6 +38,13 @@ func main() {
 	configDir = filepath.Join(configDir, "personal-spotify")
 	cacheDir = filepath.Join(cacheDir, "personal-spotify")
 
+	// Software rendering saves ~60 MB (no Mesa/LLVM in either process) and is
+	// smooth enough here; PERSONAL_SPOTIFY_GPU=1 turns compositing back on.
+	gpu := linux.WebviewGpuPolicyNever
+	if os.Getenv("PERSONAL_SPOTIFY_GPU") == "1" {
+		gpu = linux.WebviewGpuPolicyOnDemand
+	}
+
 	app := NewApp(log, configDir, cacheDir)
 	err = wails.Run(&options.App{
 		Title:            "Spotify",
@@ -50,7 +57,7 @@ func main() {
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
 		Bind:             []any{app},
-		Linux:            &linux.Options{ProgramName: "personal-spotify", WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand},
+		Linux:            &linux.Options{ProgramName: "personal-spotify", WebviewGpuPolicy: gpu},
 	})
 	if err != nil {
 		log.Error("wails", "err", err)

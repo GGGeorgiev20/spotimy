@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Personal Spotify
+Comment=Lightweight Spotify client
+Exec=personal-spotify %U
+Icon=personal-spotify
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+MimeType=x-scheme-handler/spotify;
+StartupWMClass=personal-spotify

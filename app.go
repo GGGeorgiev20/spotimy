@@ -85,6 +85,9 @@ func (a *App) OpenLoginURL() {
 
 func (a *App) Logout() error { return a.player.Logout() }
 
+// do forwards a request to the daemon. Payload types must match what the
+// daemon's handler type-asserts (see go-librespot daemon/player.go), or its
+// player loop panics.
 func (a *App) do(typ daemon.ApiRequestType, data any) (any, error) {
 	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
 	defer cancel()
@@ -111,7 +114,7 @@ func (a *App) Play(uri, skipToURI string) error {
 }
 
 func (a *App) PlayPause() error { _, err := a.do(daemon.ApiRequestTypePlayPause, nil); return err }
-func (a *App) Next() error      { _, err := a.do(daemon.ApiRequestTypeNext, nil); return err }
+func (a *App) Next() error      { _, err := a.do(daemon.ApiRequestTypeNext, daemon.ApiNext{}); return err }
 func (a *App) Prev() error      { _, err := a.do(daemon.ApiRequestTypePrev, nil); return err }
 
 func (a *App) Seek(ms int64) error {
@@ -125,15 +128,15 @@ func (a *App) SetVolume(v int32) error {
 }
 
 func (a *App) SetShuffle(on bool) error {
-	_, err := a.do(daemon.ApiRequestTypeSetShufflingContext, daemon.ApiShuffleContext{ShuffleContext: on})
+	_, err := a.do(daemon.ApiRequestTypeSetShufflingContext, on)
 	return err
 }
 
 // SetRepeat takes "off", "context" or "track".
 func (a *App) SetRepeat(mode string) error {
-	if _, err := a.do(daemon.ApiRequestTypeSetRepeatingContext, daemon.ApiRepeatContext{RepeatContext: mode != "off"}); err != nil {
+	if _, err := a.do(daemon.ApiRequestTypeSetRepeatingContext, mode != "off"); err != nil {
 		return err
 	}
-	_, err := a.do(daemon.ApiRequestTypeSetRepeatingTrack, daemon.ApiRepeatTrack{RepeatTrack: mode == "track"})
+	_, err := a.do(daemon.ApiRequestTypeSetRepeatingTrack, mode == "track")
 	return err
 }
