@@ -1,0 +1,332 @@
+package ui
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
+	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
+)
+
+// ---- Player ----
+
+// Player is the playback state shown everywhere. Read it on the UI goroutine.
+var Player struct {
+	Status    *backend.PlayerStatus
+	FetchedAt time.Time
+	// Version bumps on every refresh (queue and device views reload on it).
+	Version int
+}
+
+var (
+	refreshPending bool
+	volSent        int
+	volPending     int
+	volTimer       *time.Timer
+)
+
+// RefreshPlayer re-reads the status soon (coalescing bursts of events).
+// Safe from any goroutine.
+func RefreshPlayer() {
+	Post(func() {
+		if refreshPending {
+			return
+		}
+		refreshPending = true
+		time.AfterFunc(30*time.Millisecond, func() {
+			Async(B.Status, func(s *backend.PlayerStatus, err error) {
+				refreshPending = false
+				if err != nil {
+					return
+				}
+				Player.Status, Player.FetchedAt = s, time.Now()
+				Player.Version++
+			})
+		})
+	})
+}
+
+// Track is the playing track, or nil.
+func NowTrack() *backend.NowTrack {
+	if Player.Status == nil {
+		return nil
+	}
+	return Player.Status.Track
+}
+
+// Playing reports audio running (not paused) with a track loaded.
+func Playing() bool {
+	return Player.Status != nil && Player.Status.Track != nil && Player.Status.Playing
+}
+
+// Position extrapolates the playback position to now.
+func Position(now time.Time) time.Duration {
+	s := Player.Status
+	if s == nil || s.Track == nil {
+		return 0
+	}
+	p := time.Duration(s.PositionMs) * time.Millisecond
+	if s.Playing && !s.Buffering {
+		p += now.Sub(Player.FetchedAt)
+	}
+	return min(p, time.Duration(s.Track.DurationMs)*time.Millisecond)
+}
+
+func RepeatMode() string {
+	switch s := Player.Status; {
+	case s == nil:
+		return "off"
+	case s.RepeatTrack:
+		return "track"
+	case s.RepeatContext:
+		return "context"
+	}
+	return "off"
+}
+
+// IsContext reports whether uri is the playing context. Liked Songs plays as
+// spotify:user:<name>:collection but is listed as spotify:collection:tracks.
+func IsContext(uri string) bool {
+	if Player.Status == nil || uri == "" || Player.Status.ContextURI == "" {
+		return false
+	}
+	ctx := Player.Status.ContextURI
+	if uri == "spotify:collection:tracks" {
+		return len(ctx) > 11 && ctx[len(ctx)-11:] == ":collection"
+	}
+	return ctx == uri
+}
+
+// CtxPlaying reports whether uri is the context playing right now.
+func CtxPlaying(uri string) bool { return IsContext(uri) && Playing() }
+
+// IsCurrent reports whether track uri is the one loaded (in contextURI, if set).
+func IsCurrent(trackURI, contextURI string) bool {
+	t := NowTrack()
+	return t != nil && t.URI == trackURI && (contextURI == "" || IsContext(contextURI))
+}
+
+func playerCall(name string, f func() error) {
+	Go("Couldn't "+name, f, RefreshPlayer)
+}
+
+// PlayContext plays a context, or toggles pause if it's already the one playing.
+func PlayContext(uri string) {
+	if IsContext(uri) {
+		PlayPause()
+		return
+	}
+	Play(uri, "")
+}
+
+func Play(uri, skipTo string) {
+	playerCall("play", func() error { return B.Play(uri, skipTo) })
+}
+
+// PlayPause toggles optimistically; the event refresh confirms.
+func PlayPause() {
+	if s := Player.Status; s != nil {
+		now := time.Now()
+		s.PositionMs = Position(now).Milliseconds()
+		Player.FetchedAt = now
+		s.Playing = !s.Playing
+	}
+	playerCall("play", B.PlayPause)
+}
+
+func Next() { playerCall("skip", B.Next) }
+func Prev() { playerCall("go back", B.Prev) }
+
+func Seek(ms int64) {
+	if s := Player.Status; s != nil && s.Track != nil {
+		s.PositionMs, Player.FetchedAt = ms, time.Now()
+	}
+	playerCall("seek", func() error { return B.SeekTo(ms) })
+}
+
+// SetVolume sends at most one change per 150ms while dragging, plus the last.
+func SetVolume(v int) {
+	if s := Player.Status; s != nil {
+		s.Volume = v
+	}
+	volPending = v
+	if volTimer != nil {
+		return
+	}
+	send := func(v int) {
+		volSent = v
+		go B.SetVolume(int32(v))
+	}
+	send(v)
+	volTimer = time.AfterFunc(150*time.Millisecond, func() {
+		Post(func() {
+			volTimer = nil
+			if volPending != volSent {
+				SetVolume(volPending)
+			}
+		})
+	})
+}
+
+func ToggleShuffle() {
+	on := Player.Status == nil || !Player.Status.Shuffle
+	if Player.Status != nil {
+		Player.Status.Shuffle = on
+	}
+	playerCall("shuffle", func() error { return B.SetShuffle(on) })
+}
+
+func CycleRepeat() {
+	next := map[string]string{"off": "context", "context": "track", "track": "off"}[RepeatMode()]
+	playerCall("repeat", func() error { return B.SetRepeat(next) })
+}
+
+// ---- Saved state (hearts and checks) ----
+
+// Saved holds what's in the library, by URI; missing = unknown.
+var Saved = map[string]bool{}
+
+// LibraryVersion bumps whenever the library changes so the left panel reloads.
+var LibraryVersion int
+
+// LikeKey is the URI whose saved state a track row shows: a relinked track is
+// liked under its original id.
+func LikeKey(t spotify.Track) string {
+	if t.LinkedURI != "" {
+		return t.LinkedURI
+	}
+	return t.URI
+}
+
+// LoadSaved looks up unknown URIs in batches.
+func LoadSaved(uris []string) {
+	var missing []string
+	seen := map[string]bool{}
+	for _, u := range uris {
+		if _, ok := Saved[u]; !ok && u != "" && !seen[u] {
+			missing = append(missing, u)
+			seen[u] = true
+		}
+	}
+	for i := 0; i < len(missing); i += 50 {
+		chunk := missing[i:min(i+50, len(missing))]
+		Async(func() ([]bool, error) { return B.AreSaved(chunk) }, func(res []bool, err error) {
+			if err != nil || len(res) != len(chunk) {
+				return
+			}
+			for j, u := range chunk {
+				Saved[u] = res[j]
+			}
+		})
+	}
+}
+
+// ToggleSaved likes/unlikes (tracks) or adds/removes (albums, playlists...).
+func ToggleSaved(uri string) {
+	next := !Saved[uri]
+	Saved[uri] = next
+	kind := URIType(uri)
+	Async(func() (struct{}, error) { return struct{}{}, B.SetSaved([]string{uri}, next) }, func(_ struct{}, err error) {
+		if err != nil {
+			Saved[uri] = !next
+			Toast("Couldn't update Your Library: " + err.Error())
+			return
+		}
+		LibraryVersion++
+		switch {
+		case kind == "track" && next:
+			Toast("Added to Liked Songs")
+		case kind == "track":
+			Toast("Removed from Liked Songs")
+		case next:
+			Toast("Added to Your Library")
+		default:
+			Toast("Removed from Your Library")
+		}
+	})
+}
+
+// URIType is spotify.URIType.
+func URIType(uri string) string { return spotify.URIType(uri) }
+
+// ---- Me ----
+
+// Me is the logged-in user (nil until loaded).
+var Me *spotify.Me
+
+func loadMe() {
+	Async(B.Me, func(m *spotify.Me, err error) {
+		if err == nil {
+			Me = m
+		}
+	})
+}
+
+// ---- Toasts ----
+
+type toast struct {
+	text string
+	at   time.Time
+}
+
+var toasts []toast
+
+// Toast shows a short message above the player bar for 3 seconds.
+func Toast(text string) {
+	toasts = append(toasts, toast{text, time.Now()})
+	Log.Info("toast", "text", text)
+	time.AfterFunc(3*time.Second+50*time.Millisecond, Invalidate)
+	Invalidate()
+}
+
+// ---- Prefs ----
+
+// Prefs are per-device UI preferences, saved to the config dir.
+var Prefs = struct {
+	LibSort      string `json:"libSort"`
+	LibView      string `json:"libView"` // list, compact, grid
+	LibWidth     int    `json:"libWidth"`
+	LibCollapsed bool   `json:"libCollapsed"`
+	// RightPanel: "", queue, npv, devices, friends
+	RightPanel string `json:"rightPanel"`
+}{LibSort: "Recents", LibView: "list", LibWidth: 340}
+
+var (
+	prefsPath  string
+	prefsSaved string
+)
+
+func loadPrefs(dir string) {
+	prefsPath = filepath.Join(dir, "ui.json")
+	if data, err := os.ReadFile(prefsPath); err == nil {
+		_ = json.Unmarshal(data, &Prefs)
+		prefsSaved = string(data)
+	}
+}
+
+// savePrefs writes the prefs if they changed; called after each frame.
+func savePrefs() {
+	if prefsPath == "" {
+		return
+	}
+	data, _ := json.Marshal(Prefs)
+	if string(data) == prefsSaved {
+		return
+	}
+	prefsSaved = string(data)
+	go func() {
+		_ = os.MkdirAll(filepath.Dir(prefsPath), 0o700)
+		_ = os.WriteFile(prefsPath, data, 0o600)
+	}()
+}
+
+// TogglePanel opens the right panel name, or closes it if it's open.
+func TogglePanel(name string) {
+	if Prefs.RightPanel == name {
+		Prefs.RightPanel = ""
+	} else {
+		Prefs.RightPanel = name
+	}
+}

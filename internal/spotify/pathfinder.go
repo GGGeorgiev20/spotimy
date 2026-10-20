@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"net/http"
 	"os"
 	"time"
 )
@@ -150,4 +151,14 @@ func (c *Client) RawQuery(ctx context.Context, op string, vars map[string]any) (
 // RawGet GETs an spclient path and returns the body.
 func (c *Client) RawGet(ctx context.Context, path, accept string) ([]byte, error) {
 	return c.do(ctx, request{op: "GET " + path, method: "GET", url: c.spclientURL + path, accept: accept, idempotent: true})
+}
+
+// RawGetWith is RawGet with extra request headers (dev tooling).
+func (c *Client) RawGetWith(ctx context.Context, path, accept string, h http.Header) ([]byte, error) {
+	return c.do(ctx, request{op: "GET " + path, method: "GET", url: c.spclientURL + path, accept: accept, idempotent: true, headers: h})
+}
+
+// RawPostJSON POSTs a JSON body to an spclient path (dev tooling; only for read-style endpoints).
+func (c *Client) RawPostJSON(ctx context.Context, path string, body []byte) ([]byte, error) {
+	return c.do(ctx, request{op: "POST " + path, method: "POST", url: c.spclientURL + path, body: body, contentType: "application/json", accept: "application/json"})
 }

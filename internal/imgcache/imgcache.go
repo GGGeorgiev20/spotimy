@@ -1,5 +1,5 @@
-// Package imgcache serves Spotify images to the webview from a size-capped
-// disk cache (GET /img?u=<url>), and computes dominant colors for headers.
+// Package imgcache keeps Spotify images in a size-capped disk cache and
+// computes dominant colors for headers.
 package imgcache
 
 import (
@@ -50,31 +50,8 @@ func (c *Cache) path(rawURL string) string {
 	return filepath.Join(c.dir, hex.EncodeToString(sum[:]))
 }
 
-// Middleware serves /img?u=<url> ahead of the frontend assets (the Vite dev
-// server would otherwise answer it with index.html).
-func (c *Cache) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/img" {
-			c.ServeHTTP(w, r)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// ServeHTTP handles /img?u=<url>.
-func (c *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	p, err := c.file(r.Context(), r.URL.Query().Get("u"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return
-	}
-	w.Header().Set("Cache-Control", "max-age=31536000, immutable")
-	http.ServeFile(w, r, p)
-}
-
-// file returns the local path of the image, downloading it on a miss.
-func (c *Cache) file(ctx context.Context, raw string) (string, error) {
+// File returns the local path of the image, downloading it on a miss.
+func (c *Cache) File(ctx context.Context, raw string) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil || !allowed(u) {
 		return "", errors.New("image host not allowed")

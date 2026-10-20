@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	"github.com/devgianlu/go-librespot/daemon"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Playback bindings. When this app's own device is playing (or nothing is),
@@ -52,9 +51,11 @@ func (a *App) startConnect() {
 	}
 	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
 	defer cancel()
-	cn, err := a.sp.StartConnect(ctx, a.player.DeviceID(), func() {
-		runtime.EventsEmit(a.ctx, "player:event", "cluster")
-	})
+	id := a.player.DeviceID()
+	if a.opts.Sandbox {
+		id = a.deviceID
+	}
+	cn, err := a.sp.StartConnect(ctx, id, a.emitPlayer)
 	if err != nil {
 		a.log.Warn("connect unavailable; remote devices won't show", "err", err)
 		return
@@ -96,6 +97,19 @@ func (a *App) remote() (*spotify.Connect, *spotify.ConnectState) {
 var errNoConnect = errors.New("Spotify Connect isn't available yet")
 
 func (a *App) Status() (*PlayerStatus, error) {
+	if a.opts.Sandbox {
+		a.mu.Lock()
+		fake := a.fake
+		a.mu.Unlock()
+		if fake != nil {
+			cp := *fake
+			return &cp, nil
+		}
+		if _, st := a.remote(); st != nil {
+			return a.remoteStatus(st), nil
+		}
+		return &PlayerStatus{VolumeMax: 65535, Volume: 65535}, nil
+	}
 	if _, st := a.remote(); st != nil {
 		return a.remoteStatus(st), nil
 	}
@@ -173,6 +187,10 @@ func (a *App) cmd(endpoint string, fields map[string]any) error {
 }
 
 func (a *App) Play(uri, skipToURI string) error {
+	if a.sandboxed("Play", uri, skipToURI) {
+		a.fakePlay(uri, skipToURI)
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		cmd := map[string]any{"context": map[string]any{"uri": uri, "url": "context://" + uri}}
 		if skipToURI != "" {
@@ -185,6 +203,10 @@ func (a *App) Play(uri, skipToURI string) error {
 }
 
 func (a *App) PlayPause() error {
+	if a.sandboxed("PlayPause") {
+		a.fakeSet(func(s *PlayerStatus) { s.Playing = !s.Playing })
+		return nil
+	}
 	if _, st := a.remote(); st != nil {
 		if st.Playing && !st.Paused {
 			return a.cmd("pause", nil)
@@ -196,6 +218,9 @@ func (a *App) PlayPause() error {
 }
 
 func (a *App) Next() error {
+	if a.sandboxed("Next") {
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		return a.cmd("skip_next", nil)
 	}
@@ -204,6 +229,9 @@ func (a *App) Next() error {
 }
 
 func (a *App) Prev() error {
+	if a.sandboxed("Prev") {
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		return a.cmd("skip_prev", nil)
 	}
@@ -212,6 +240,10 @@ func (a *App) Prev() error {
 }
 
 func (a *App) SeekTo(ms int64) error {
+	if a.sandboxed("SeekTo", ms) {
+		a.fakeSet(func(s *PlayerStatus) { s.PositionMs = ms })
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		return a.cmd("seek_to", map[string]any{"value": ms})
 	}
@@ -220,6 +252,10 @@ func (a *App) SeekTo(ms int64) error {
 }
 
 func (a *App) SetVolume(v int32) error {
+	if a.sandboxed("SetVolume", v) {
+		a.fakeSet(func(s *PlayerStatus) { s.Volume = int(v) })
+		return nil
+	}
 	if cn, st := a.remote(); cn != nil {
 		ctx, cancel := a.call()
 		defer cancel()
@@ -230,6 +266,10 @@ func (a *App) SetVolume(v int32) error {
 }
 
 func (a *App) SetShuffle(on bool) error {
+	if a.sandboxed("SetShuffle", on) {
+		a.fakeSet(func(s *PlayerStatus) { s.Shuffle = on })
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		return a.cmd("set_shuffling_context", map[string]any{"value": on})
 	}
@@ -239,6 +279,10 @@ func (a *App) SetShuffle(on bool) error {
 
 // SetRepeat takes "off", "context" or "track".
 func (a *App) SetRepeat(mode string) error {
+	if a.sandboxed("SetRepeat", mode) {
+		a.fakeSet(func(s *PlayerStatus) { s.RepeatContext, s.RepeatTrack = mode != "off", mode == "track" })
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		if err := a.cmd("set_repeating_context", map[string]any{"value": mode != "off"}); err != nil {
 			return err
@@ -303,6 +347,9 @@ func (a *App) Queue() (*Queue, error) {
 }
 
 func (a *App) AddToQueue(uris []string) error {
+	if a.sandboxed("AddToQueue", uris) {
+		return nil
+	}
 	if cn, _ := a.remote(); cn != nil {
 		ctx, cancel := a.call()
 		defer cancel()
@@ -323,6 +370,9 @@ func (a *App) AddToQueue(uris []string) error {
 
 // SetQueue replaces the upcoming tracks; the UI uses it to remove and reorder.
 func (a *App) SetQueue(next []spotify.QueueItem) error {
+	if a.sandboxed("SetQueue", len(next)) {
+		return nil
+	}
 	cn := a.conn()
 	if cn == nil {
 		return errNoConnect
@@ -343,6 +393,9 @@ func (a *App) Devices() ([]spotify.Device, error) {
 }
 
 func (a *App) TransferPlayback(deviceID string) error {
+	if a.sandboxed("TransferPlayback", deviceID) {
+		return nil
+	}
 	cn := a.conn()
 	if cn == nil {
 		return errNoConnect
@@ -350,4 +403,42 @@ func (a *App) TransferPlayback(deviceID string) error {
 	ctx, cancel := a.call()
 	defer cancel()
 	return cn.Transfer(ctx, deviceID)
+}
+
+// fakeSet changes the sandbox's pretend playback state.
+func (a *App) fakeSet(f func(*PlayerStatus)) {
+	a.mu.Lock()
+	if a.fake == nil {
+		a.fake = &PlayerStatus{VolumeMax: 65535, Volume: 65535}
+	}
+	f(a.fake)
+	a.mu.Unlock()
+	a.emitPlayer()
+}
+
+// fakePlay pretends to start a context so the UI's playing states can be
+// tested in the sandbox.
+func (a *App) fakePlay(uri, skipTo string) {
+	track := skipTo
+	if track == "" && spotify.URIType(uri) == "track" {
+		track = uri
+	}
+	var nt *NowTrack
+	if track != "" {
+		ctx, cancel := a.call()
+		defer cancel()
+		if ts, err := a.sp.Tracks(ctx, []string{track}); err == nil && len(ts) == 1 {
+			t := ts[0]
+			nt = &NowTrack{URI: t.URI, Name: t.Name, Artists: t.Artists, DurationMs: int64(t.DurationMs)}
+			if t.Album != nil {
+				nt.AlbumURI, nt.AlbumName, nt.Images = t.Album.URI, t.Album.Name, t.Album.Images
+			}
+		}
+	}
+	a.fakeSet(func(s *PlayerStatus) {
+		s.ContextURI, s.Playing, s.PositionMs = uri, true, 0
+		if nt != nil {
+			s.Track = nt
+		}
+	})
 }

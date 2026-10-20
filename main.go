@@ -1,21 +1,18 @@
 package main
 
 import (
-	"embed"
-	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"gioui.org/app"
+
+	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
+	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
+	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/pages"
 )
-
-//go:embed all:frontend/dist
-var assets embed.FS
 
 func main() {
 	level := slog.LevelInfo
@@ -39,50 +36,44 @@ func main() {
 	configDir = filepath.Join(configDir, "personal-spotify")
 	cacheDir = filepath.Join(cacheDir, "personal-spotify")
 
-	// Software rendering saves ~60 MB (no Mesa/LLVM in either process) and is
-	// smooth enough here; PERSONAL_SPOTIFY_GPU=1 turns compositing back on.
-	gpu := linux.WebviewGpuPolicyNever
-	if os.Getenv("PERSONAL_SPOTIFY_GPU") == "1" {
-		gpu = linux.WebviewGpuPolicyOnDemand
-	}
-
-	cfg := loadConfig(configDir, cacheDir, log)
-	app := NewApp(log, cfg)
-	err = wails.Run(&options.App{
-		Title:            "Spotify",
-		Width:            1280,
-		Height:           800,
-		MinWidth:         800,
-		MinHeight:        600,
-		AssetServer:      &assetserver.Options{Assets: assets, Middleware: app.img.Middleware},
-		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 255},
-		OnStartup:        app.startup,
-		OnShutdown:       app.shutdown,
-		Bind:             []any{app},
-		Linux:            &linux.Options{ProgramName: "personal-spotify", WebviewGpuPolicy: gpu},
+	// PERSONAL_SPOTIFY_HARNESS=127.0.0.1:port runs the UI headless in sandbox
+	// mode for automated testing (see internal/ui/harness.go).
+	harness := os.Getenv("PERSONAL_SPOTIFY_HARNESS")
+	b := backend.New(backend.Options{
+		Config:   backend.LoadConfig(configDir, cacheDir, log),
+		Log:      log,
+		Sandbox:  harness != "",
+		OnPlayer: ui.OnPlayer,
+		OnState:  ui.OnState,
 	})
-	if err != nil {
-		log.Error("wails", "err", err)
-		os.Exit(1)
+	ui.Log = log
+	prefsDir := configDir
+	if harness != "" {
+		prefsDir = filepath.Join(cacheDir, "harness") // don't touch the real prefs
 	}
-}
+	ui.Init(b, prefsDir)
+	b.Start()
 
-// Config holds paths plus the optional user overrides from config.json.
-type Config struct {
-	ConfigDir  string `json:"-"`
-	CacheDir   string `json:"-"`
-	AppVersion string `json:"appVersion"` // spotify-app-version; bump when Spotify rejects the old one
-	Language   string `json:"language"`   // Accept-Language, e.g. "en" or "bg"
-}
-
-func loadConfig(configDir, cacheDir string, log *slog.Logger) Config {
-	cfg := Config{ConfigDir: configDir, CacheDir: cacheDir}
-	data, err := os.ReadFile(filepath.Join(configDir, "config.json"))
-	if err == nil {
-		if err := json.Unmarshal(data, &cfg); err != nil {
-			log.Warn("ignoring bad config.json", "err", err)
+	if harness != "" {
+		w, h, scale := envInt("PERSONAL_SPOTIFY_HARNESS_W", 1280), envInt("PERSONAL_SPOTIFY_HARNESS_H", 800), float32(1)
+		if err := ui.RunHarness(harness, w, h, scale); err != nil {
+			log.Error("harness", "err", err)
+			os.Exit(1)
 		}
+		return
 	}
-	cfg.ConfigDir, cfg.CacheDir = configDir, cacheDir
-	return cfg
+
+	go func() {
+		ui.Run()
+		b.Stop()
+		os.Exit(0)
+	}()
+	app.Main()
+}
+
+func envInt(k string, def int) int {
+	if v, err := strconv.Atoi(os.Getenv(k)); err == nil {
+		return v
+	}
+	return def
 }

@@ -1,12 +1,10 @@
-package main
+package backend
 
 import (
 	"context"
-	"net/url"
 	"time"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Internal API bindings. Each returns a typed result or an error the UI shows
@@ -47,6 +45,9 @@ func (a *App) LikedSongs(offset, limit int) (*spotify.TrackPage, error) {
 }
 
 func (a *App) SetSaved(uris []string, saved bool) error {
+	if a.sandboxed("SetSaved", uris, saved) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.SetSaved(ctx, uris, saved)
@@ -59,6 +60,9 @@ func (a *App) AreSaved(uris []string) ([]bool, error) {
 }
 
 func (a *App) SetPinned(uri string, pinned bool) error {
+	if a.sandboxed("SetPinned", uri, pinned) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.SetPinned(ctx, uri, pinned)
@@ -126,12 +130,18 @@ func (a *App) RecentSearches() ([]spotify.Card, error) {
 }
 
 func (a *App) SaveRecentSearch(uri string) error {
+	if a.sandboxed("SaveRecentSearch", uri) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.SaveRecentSearch(ctx, uri)
 }
 
 func (a *App) RemoveRecentSearches(uris []string) error {
+	if a.sandboxed("RemoveRecentSearches", uris) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.RemoveRecentSearches(ctx, uris)
@@ -156,12 +166,18 @@ func (a *App) EditablePlaylists(uris []string) ([]spotify.EditablePlaylist, erro
 }
 
 func (a *App) AddToPlaylist(playlist string, uris []string) error {
+	if a.sandboxed("AddToPlaylist", playlist, uris) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.AddToPlaylist(ctx, playlist, uris, spotify.Position{})
 }
 
 func (a *App) RemoveFromPlaylist(playlist string, uids []string) error {
+	if a.sandboxed("RemoveFromPlaylist", playlist, uids) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.RemoveFromPlaylist(ctx, playlist, uids)
@@ -169,31 +185,39 @@ func (a *App) RemoveFromPlaylist(playlist string, uids []string) error {
 
 // MovePlaylistItems moves items (by uid) before or after another item.
 func (a *App) MovePlaylistItems(playlist string, uids []string, pos spotify.Position) error {
+	if a.sandboxed("MovePlaylistItems", playlist, uids, pos) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.MoveInPlaylist(ctx, playlist, uids, pos)
 }
 
 func (a *App) CreatePlaylist(name string) (string, error) {
+	if a.sandboxed("CreatePlaylist", name) {
+		return "spotify:playlist:sandbox", nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.CreatePlaylist(ctx, name)
 }
 
 func (a *App) RenamePlaylist(uri, name, description string) error {
+	if a.sandboxed("RenamePlaylist", uri, name, description) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.RenamePlaylist(ctx, uri, name, &description)
 }
 
 func (a *App) DeletePlaylist(uri string) error {
+	if a.sandboxed("DeletePlaylist", uri) {
+		return nil
+	}
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.sp.DeletePlaylist(ctx, uri)
-}
-
-func (a *App) CopyText(text string) {
-	runtime.ClipboardSetText(a.ctx, text)
 }
 
 func (a *App) Lyrics(trackURI string) (*spotify.Lyrics, error) {
@@ -202,16 +226,16 @@ func (a *App) Lyrics(trackURI string) (*spotify.Lyrics, error) {
 	return a.sp.Lyrics(ctx, trackURI)
 }
 
-// Canvas returns a local URL for the track's looping video ("" if none).
-// The video is served through the disk cache like images.
+// Canvas returns the URL of the track's looping video ("" if none).
 func (a *App) Canvas(trackURI string) (string, error) {
 	ctx, cancel := a.call()
 	defer cancel()
-	u, err := a.sp.Canvas(ctx, trackURI)
-	if err != nil || u == "" {
-		return "", err
-	}
-	return "/img?u=" + url.QueryEscape(u), nil
+	return a.sp.Canvas(ctx, trackURI)
+}
+
+// ImageFile returns the local path of a cached image, downloading it on a miss.
+func (a *App) ImageFile(ctx context.Context, url string) (string, error) {
+	return a.img.File(ctx, url)
 }
 
 func (a *App) NowPlaying(trackURI, artistURI string) (*spotify.NowPlayingInfo, error) {
@@ -224,6 +248,9 @@ func (a *App) NowPlaying(trackURI, artistURI string) (*spotify.NowPlayingInfo, e
 func (a *App) StartRadio(seedURI string) (string, error) {
 	ctx, cancel := a.call()
 	defer cancel()
+	if a.sandboxed("StartRadio", seedURI) {
+		return "", nil
+	}
 	pl, err := a.sp.Radio(ctx, seedURI)
 	if err != nil {
 		return "", err

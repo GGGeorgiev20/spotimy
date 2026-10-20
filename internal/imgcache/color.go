@@ -13,7 +13,7 @@ func (c *Cache) DominantColor(ctx context.Context, rawURL string) (string, error
 	if v, ok := c.color.Load(rawURL); ok {
 		return v.(string), nil
 	}
-	p, err := c.file(ctx, rawURL)
+	p, err := c.File(ctx, rawURL)
 	if err != nil {
 		return "", err
 	}
