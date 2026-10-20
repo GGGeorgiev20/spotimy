@@ -32,6 +32,7 @@ import (
 //	/click?x=&y=[&button=right][&double=1]
 //	/clicktext?text=Show all[&n=0][&button=right]   click the n-th element whose label contains text
 //	/move?x=&y=                    hover
+//	/drag?x=&y=&x2=&y2=[&hold=1]   press at (x,y), drag to (x2,y2), release (unless hold=1)
 //	/scroll?x=&y=&dy=              wheel scroll (px, positive = down)
 //	/key?name=Space[&mods=ctrl,shift,alt]
 //	/type?text=hello               type into the focused field
@@ -272,6 +273,21 @@ func (hr *harness) mux() *http.ServeMux {
 	m.HandleFunc("/move", func(w http.ResponseWriter, r *http.Request) {
 		hr.do(func() { hr.pointer(pointer.Move, f32.Pt(num(r, "x"), num(r, "y")), 0) })
 		time.Sleep(700 * time.Millisecond) // let hover animations and tooltips finish
+		hr.settle(5 * time.Second)
+		ok(w, "ok")
+	})
+	m.HandleFunc("/drag", func(w http.ResponseWriter, r *http.Request) {
+		from, to := f32.Pt(num(r, "x"), num(r, "y")), f32.Pt(num(r, "x2"), num(r, "y2"))
+		hr.do(func() { hr.pointer(pointer.Move, from, 0) })
+		hr.do(func() { hr.pointer(pointer.Press, from, pointer.ButtonPrimary) })
+		for i := 1; i <= 8; i++ {
+			p := from.Add(to.Sub(from).Mul(float32(i) / 8))
+			hr.do(func() { hr.pointer(pointer.Move, p, pointer.ButtonPrimary) }) // the router turns moves with a button held into drags
+			time.Sleep(20 * time.Millisecond)
+		}
+		if r.URL.Query().Get("hold") != "1" {
+			hr.do(func() { hr.pointer(pointer.Release, to, 0) })
+		}
 		hr.settle(5 * time.Second)
 		ok(w, "ok")
 	})
