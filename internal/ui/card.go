@@ -27,6 +27,9 @@ type CardOpts struct {
 	Menu func() []MenuItem
 	// NoNavigate skips opening the card's page on click.
 	NoNavigate bool
+	// Overlay draws on top of the artwork (art, in card coordinates) while
+	// the card is hovered; clickables inside it win over the card.
+	Overlay func(gtx layout.Context, c spotify.Card, art image.Rectangle)
 }
 
 func cardRound(c spotify.Card) bool { return c.Type == "artist" || c.Type == "user" }
@@ -110,6 +113,9 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 					st.Pop()
 				})
 			}
+		}
+		if hov && o.Overlay != nil {
+			o.Overlay(gtx, c, r)
 		}
 		y += art
 		if !o.Bare {
@@ -290,6 +296,7 @@ func (s *Shelf) header(gtx layout.Context, o ShelfOpts) layout.Dimensions {
 	Offset(gtx, x, h-d.Size.Y, func() { call.Add(gtx.Ops) })
 	if o.OnShowAll != nil {
 		Offset(gtx, w-allW+Dp(gtx, 12), h-Dp(gtx, 6)-Dp(gtx, 18), func() {
+			s.ShowAll.Click.Label = all
 			s.ShowAll.Layout(gtx, all, 14, Bold, ColText2, ColText)
 		})
 	}
