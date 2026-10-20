@@ -502,7 +502,7 @@ func layoutSearchBox(gtx layout.Context, w int) {
 	if !focused && SearchQuery.Len() > 0 && !strings.HasPrefix(Current().Path, "/search") {
 		SearchQuery.SetText("")
 	}
-	if changed {
+	if changed && focused { // programmatic SetText must not navigate
 		searchChanged()
 	}
 	for {

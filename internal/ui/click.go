@@ -7,6 +7,7 @@ import (
 	"gioui.org/f32"
 	"gioui.org/gesture"
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
@@ -187,6 +188,11 @@ func trackPointer(gtx layout.Context, tag event.Tag) {
 		}
 		if pe, ok := e.(pointer.Event); ok {
 			pointerPos = pe.Position
+			// A press anywhere drops keyboard focus, like the browser; a text
+			// field that was hit takes focus again later in this frame.
+			if pe.Kind == pointer.Press {
+				gtx.Execute(key.FocusCmd{})
+			}
 		}
 	}
 	event.Op(gtx.Ops, tag)
