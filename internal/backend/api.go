@@ -160,10 +160,27 @@ func (a *App) Artist(uri string) (*spotify.ArtistPage, error) {
 	return a.sp.Artist(ctx, uri)
 }
 
-func (a *App) Discography(uri, kind string, offset, limit int) (*spotify.SearchPage, error) {
+// ArtistShelf is the "Show all" page of one of an artist's shelves.
+func (a *App) ArtistShelf(uri, kind string) (*spotify.Shelf, error) {
 	ctx, cancel := a.call()
 	defer cancel()
-	return a.sp.Discography(ctx, uri, kind, offset, limit)
+	return a.sp.ArtistShelf(ctx, uri, kind)
+}
+
+func (a *App) Discography(uri, kind string, byName bool, offset, limit int) (*spotify.ReleasePage, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Discography(ctx, uri, kind, byName, offset, limit)
+}
+
+// SetFollowing follows or unfollows a user profile.
+func (a *App) SetFollowing(userURI string, follow bool) error {
+	if a.sandboxed("SetFollowing", userURI, follow) {
+		return nil
+	}
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.SetFollowing(ctx, userURI, follow)
 }
 
 func (a *App) EditablePlaylists(uris []string) ([]spotify.EditablePlaylist, error) {

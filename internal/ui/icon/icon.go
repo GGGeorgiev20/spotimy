@@ -24,6 +24,7 @@ const (
 
 type shape struct {
 	fill bool
+	box  float32 // viewBox size
 	cmds []cmd
 }
 
@@ -38,15 +39,25 @@ func load() {
 	for name, ps := range sources {
 		sorted = append(sorted, name)
 		for _, p := range ps {
-			d, fill := strings.CutPrefix(p, "f:")
+			d, fill, box := split(p)
 			cmds, err := parsePath(d)
 			if err != nil {
 				panic("icon " + name + ": " + err.Error())
 			}
-			icons[name] = append(icons[name], shape{fill, cmds})
+			icons[name] = append(icons[name], shape{fill, box, cmds})
 		}
 	}
 	sort.Strings(sorted)
+}
+
+// split reads a source path's prefix: "f:" = filled, "f24:" = filled in a
+// 24x24 viewBox (brand glyphs).
+func split(p string) (d string, fill bool, box float32) {
+	if d, ok := strings.CutPrefix(p, "f24:"); ok {
+		return d, true, 24
+	}
+	d, fill = strings.CutPrefix(p, "f:")
+	return d, fill, viewBox
 }
 
 // Names returns all icon names (sorted), for tests and a debug gallery.
@@ -61,8 +72,8 @@ func Layout(gtx layout.Context, name string, size unit.Dp, col color.NRGBA) layo
 	once.Do(load)
 	px := gtx.Dp(size)
 	dims := layout.Dimensions{Size: image.Pt(px, px)}
-	scale := float32(px) / viewBox
 	for _, s := range icons[name] {
+		scale := float32(px) / s.box
 		var p clip.Path
 		p.Begin(gtx.Ops)
 		for _, c := range s.cmds {

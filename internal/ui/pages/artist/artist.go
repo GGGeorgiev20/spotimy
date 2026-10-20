@@ -22,6 +22,9 @@ func init() {
 		if len(args) >= 3 && args[1] == "discography" {
 			return newDiscography(args[0], args[2])
 		}
+		if len(args) >= 2 && shelfKinds[args[1]] {
+			return newShelfPage(args[0], args[1])
+		}
 		p := &page{uri: "spotify:artist:" + args[0], color: ui.RGB(0x535353)}
 		p.res.Load(func() (*spotify.ArtistPage, error) { return ui.B.Artist(p.uri) })
 		return p
@@ -46,6 +49,8 @@ type page struct {
 	disc     ui.Shelf
 	shelves  []ui.Shelf
 	aboutBtn ui.Click
+	tour     tour
+	merch    []ui.Click
 	items    []layout.Widget
 	headerH  int
 }
@@ -131,21 +136,35 @@ func (p *page) build(a *spotify.ArtistPage) {
 	if p.kind != "" {
 		p.items = append(p.items, p.discography)
 	}
-	aboutAt := 0 // after the Featuring shelf, as in the official page
+	// On Tour, About and Merch come after the Featuring shelf, as in the official page.
+	extras := func() {
+		if len(a.Concerts) > 0 {
+			p.items = append(p.items, p.tourSection)
+		}
+		if a.Bio != "" {
+			p.items = append(p.items, p.aboutSection)
+		}
+		if len(a.Merch) > 0 {
+			p.items = append(p.items, p.merchSection)
+		}
+	}
+	aboutAt := 0
 	if len(a.Shelves) > 0 && strings.HasPrefix(a.Shelves[0].Title, "Featuring") {
 		aboutAt = 1
 	}
 	for i := range a.Shelves {
-		if i == aboutAt && a.Bio != "" {
-			p.items = append(p.items, p.aboutSection)
+		if i == aboutAt {
+			extras()
 		}
 		p.items = append(p.items, func(gtx layout.Context) layout.Dimensions {
 			s := a.Shelves[i]
-			return p.shelves[i].Layout(gtx, s.Items, ui.ShelfOpts{Title: s.Title})
+			return p.shelves[i].Layout(gtx, s.Items, ui.ShelfOpts{Title: s.Title, OnShowAll: func() {
+				ui.Navigate("/artist/" + ui.URIID(p.uri) + "/" + s.URI)
+			}})
 		})
 	}
-	if aboutAt >= len(a.Shelves) && a.Bio != "" {
-		p.items = append(p.items, p.aboutSection)
+	if aboutAt >= len(a.Shelves) {
+		extras()
 	}
 }
 
@@ -174,7 +193,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		ui.ToggleSaved(p.uri)
 	}
 	if p.aboutBtn.Clicked(gtx) {
-		ui.ShowOverlay(&about{a: a})
+		ui.ShowOverlay(&about{a: a, links: make([]ui.Click, len(a.Links))})
 	}
 	// The color wash continues behind the action bar.
 	top := p.headerH - p.list.ScrollTop()

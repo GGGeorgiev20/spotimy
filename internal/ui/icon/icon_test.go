@@ -66,10 +66,7 @@ func TestAllIconsParse(t *testing.T) {
 	}
 	for name, ps := range sources {
 		for _, p := range ps {
-			d := p
-			if len(d) > 2 && d[:2] == "f:" {
-				d = d[2:]
-			}
+			d, _, _ := split(p)
 			if cmds, err := parsePath(d); err != nil || len(cmds) == 0 {
 				t.Errorf("%s %q: %v", name, p, err)
 			}

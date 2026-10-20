@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -18,6 +19,8 @@ type Profile struct {
 	Following       int     `json:"following"`
 	PublicPlaylists int     `json:"publicPlaylists"`
 	IsMe            bool    `json:"isMe"`
+	CanFollow       bool    `json:"canFollow"`   // not themselves and they allow followers
+	IsFollowing     bool    `json:"isFollowing"` // the listener follows them
 	Playlists       []Card  `json:"playlists"`
 	// Only for the current user ("Top artists/tracks this month").
 	TopArtists    []Card  `json:"topArtists"`
@@ -62,6 +65,7 @@ func (c *Client) Profile(ctx context.Context, username string) (*Profile, error)
 		Following       int    `json:"following_count"`
 		TotalPlaylists  int    `json:"total_public_playlists_count"`
 		IsCurrentUser   bool   `json:"is_current_user"`
+		AllowFollows    *bool  `json:"allow_follows"`
 		PublicPlaylists []struct {
 			URI       string `json:"uri"`
 			Name      string `json:"name"`
@@ -103,8 +107,48 @@ func (c *Client) Profile(ctx context.Context, username string) (*Profile, error)
 		if err := c.topContent(ctx, p); err != nil {
 			c.log.Warn("top content unavailable", "err", err)
 		}
+	} else if p.CanFollow = resp.AllowFollows == nil || *resp.AllowFollows; p.CanFollow {
+		if f, err := c.IsFollowing(ctx, resp.URI); err != nil {
+			c.log.Warn("follow state unavailable", "err", err)
+		} else {
+			p.IsFollowing = f
+		}
 	}
 	return p, nil
+}
+
+// IsFollowing reports whether the listener follows the user.
+func (c *Client) IsFollowing(ctx context.Context, userURI string) (bool, error) {
+	var resp struct {
+		Users []struct {
+			Following bool `json:"following"`
+		} `json:"users"`
+	}
+	if err := c.query(ctx, "isFollowingUsers", map[string]any{"uris": []string{userURI}}, 0, &resp); err != nil {
+		return false, err
+	}
+	return len(resp.Users) > 0 && resp.Users[0].Following, nil
+}
+
+// SetFollowing follows or unfollows a user (spotify:user:<name>).
+func (c *Client) SetFollowing(ctx context.Context, userURI string, follow bool) error {
+	op := "unfollowUsers"
+	if follow {
+		op = "followUsers"
+	}
+	var resp map[string]struct {
+		Responses []struct {
+			Result bool `json:"result"`
+		} `json:"responses"`
+	}
+	vars := map[string]any{"usernames": []string{strings.TrimPrefix(userURI, "spotify:user:")}}
+	if err := c.mutateInto(ctx, op, vars, &resp); err != nil {
+		return err
+	}
+	if r := resp[op].Responses; len(r) == 0 || !r[0].Result {
+		return &Error{Op: op, Err: errors.New("not applied")}
+	}
+	return nil
 }
 
 // ProfileUsers lists the profiles that follow username (kind "followers") or
