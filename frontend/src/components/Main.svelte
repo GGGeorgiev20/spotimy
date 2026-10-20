@@ -10,6 +10,10 @@
   import Search from '../pages/Search.svelte'
   import Artist from '../pages/Artist.svelte'
   import Discography from '../pages/Discography.svelte'
+  import Lyrics from '../pages/Lyrics.svelte'
+  import Show from '../pages/Show.svelte'
+  import EpisodePage from '../pages/Episode.svelte'
+  import YourEpisodes from '../pages/YourEpisodes.svelte'
   import { current, saveScroll } from '../lib/router.svelte'
   import { chrome, setChrome } from '../lib/chrome.svelte'
   import { ctxPlaying } from '../lib/player.svelte'
@@ -61,6 +65,14 @@
         <Album {id} {scroller} />
       {:else if page === 'collection' && id === 'tracks'}
         <Collection {scroller} />
+      {:else if page === 'lyrics'}
+        <Lyrics {scroller} />
+      {:else if page === 'show'}
+        <Show {id} {scroller} />
+      {:else if page === 'episode'}
+        <EpisodePage {id} />
+      {:else if page === 'collection' && id === 'episodes'}
+        <YourEpisodes />
       {:else if page === 'section'}
         <Section {id} />
       {:else if page === 'search'}

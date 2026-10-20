@@ -11,6 +11,8 @@
   import ContextMenu from './components/ContextMenu.svelte'
   import Dialog from './components/Dialog.svelte'
   import QueuePanel from './components/QueuePanel.svelte'
+  import NowPlayingPanel from './components/NowPlayingPanel.svelte'
+  import Shortcuts from './components/Shortcuts.svelte'
   import Boundary from './components/Boundary.svelte'
   import { initPlayer, refresh } from './lib/player.svelte'
   import { loadMe } from './lib/me.svelte'
@@ -72,10 +74,13 @@
       <div class="center"><Main /></div>
       {#if prefs.rightPanel === 'queue'}
         <div class="right"><Boundary label="The queue"><QueuePanel onclose={() => (prefs.rightPanel = '')} /></Boundary></div>
+      {:else if prefs.rightPanel === 'npv'}
+        <div class="right"><Boundary label="Now Playing"><NowPlayingPanel onclose={() => (prefs.rightPanel = '')} /></Boundary></div>
       {/if}
     </div>
     <Boundary label="The player"><PlayerBar /></Boundary>
     <ContextMenu />
+    <Shortcuts />
     <Dialog />
     <div class="toasts">
       {#each toasts as t (t.id)}<div class="toast">{t.text}</div>{/each}

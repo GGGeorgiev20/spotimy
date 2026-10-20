@@ -4,7 +4,7 @@
   import { player, playing, position, repeatMode, controls } from '../lib/player.svelte'
   import { fmtDuration as fmtTime } from '../lib/format'
   import { pick, saved, loadSaved, toggleSaved } from '../lib/api.svelte'
-  import { openUri } from '../lib/router.svelte'
+  import { openUri, navigate, back, current } from '../lib/router.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import DevicePicker from './DevicePicker.svelte'
 
@@ -13,6 +13,7 @@
   const max = $derived(s?.volumeMax || 1)
   let lastVolume = 0
   let devicesOpen = $state(false)
+  const onLyrics = $derived(current().path === '/lyrics')
   let seekPreview: number | null = $state(null)
 
   function toggleMute() {
@@ -78,8 +79,8 @@
   </div>
 
   <div class="right">
-    <button class="icon-btn" disabled title="Now playing view"><Icon name="now-playing" /></button>
-    <button class="icon-btn" disabled title="Lyrics"><Icon name="lyrics" /></button>
+    <button class="icon-btn" class:active={prefs.rightPanel === 'npv'} onclick={() => (prefs.rightPanel = prefs.rightPanel === 'npv' ? '' : 'npv')} title="Now playing view"><Icon name="now-playing" /></button>
+    <button class="icon-btn" class:active={onLyrics} disabled={!track} onclick={() => (onLyrics ? back() : navigate('/lyrics'))} title="Lyrics"><Icon name="lyrics" /></button>
     <button class="icon-btn" class:active={prefs.rightPanel === 'queue'} onclick={() => (prefs.rightPanel = prefs.rightPanel === 'queue' ? '' : 'queue')} title="Queue"><Icon name="queue" /></button>
     <div class="dev-wrap">
       <button class="icon-btn" class:active={s?.remote} onclick={() => (devicesOpen = !devicesOpen)} title="Connect to a device"><Icon name="devices" /></button>

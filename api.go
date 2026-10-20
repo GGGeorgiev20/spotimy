@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
@@ -169,4 +170,64 @@ func (a *App) DeletePlaylist(uri string) error {
 
 func (a *App) CopyText(text string) {
 	runtime.ClipboardSetText(a.ctx, text)
+}
+
+func (a *App) Lyrics(trackURI string) (*spotify.Lyrics, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Lyrics(ctx, trackURI)
+}
+
+// Canvas returns a local URL for the track's looping video ("" if none).
+// The video is served through the disk cache like images.
+func (a *App) Canvas(trackURI string) (string, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	u, err := a.sp.Canvas(ctx, trackURI)
+	if err != nil || u == "" {
+		return "", err
+	}
+	return "/img?u=" + url.QueryEscape(u), nil
+}
+
+func (a *App) NowPlaying(trackURI, artistURI string) (*spotify.NowPlayingInfo, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.NowPlaying(ctx, trackURI, artistURI)
+}
+
+// StartRadio plays the radio playlist seeded from uri and returns its URI.
+func (a *App) StartRadio(seedURI string) (string, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	pl, err := a.sp.Radio(ctx, seedURI)
+	if err != nil {
+		return "", err
+	}
+	return pl, a.Play(pl, "")
+}
+
+func (a *App) Show(uri string) (*spotify.Show, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Show(ctx, uri)
+}
+
+func (a *App) ShowEpisodes(uri string, offset, limit int) ([]spotify.Episode, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	eps, _, err := a.sp.ShowEpisodes(ctx, uri, offset, limit)
+	return eps, err
+}
+
+func (a *App) Episode(uri string) (*spotify.Episode, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Episode(ctx, uri)
+}
+
+func (a *App) YourEpisodes() ([]spotify.Episode, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.YourEpisodes(ctx)
 }

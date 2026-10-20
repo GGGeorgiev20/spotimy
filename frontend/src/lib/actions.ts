@@ -105,3 +105,13 @@ export async function toggleLibrary(uri: string) {
     toast(`Couldn't update Your Library: ${e}`)
   }
 }
+
+// "Go to song/artist radio": play the generated radio playlist and open it.
+export async function startRadio(seedUri: string) {
+  try {
+    const pl = await App.StartRadio(seedUri)
+    navigate(`/playlist/${pl.split(':')[2]}`)
+  } catch (e) {
+    toast(`Couldn't start radio: ${e}`)
+  }
+}

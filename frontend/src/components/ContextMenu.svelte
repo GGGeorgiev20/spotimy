@@ -5,7 +5,7 @@
   import { openUri } from '../lib/router.svelte'
   import {
     addToQueue, queueContext, addToPlaylist, createPlaylist, editPlaylist, deletePlaylist,
-    setPinned, copyLink, toggleLibrary,
+    setPinned, copyLink, toggleLibrary, startRadio,
   } from '../lib/actions'
   import type { spotify } from '../../wailsjs/go/models'
 
@@ -77,6 +77,7 @@
       if (t.kind === 'track') list.push({ label: 'Add to queue', icon: 'queue', run: () => addToQueue([tr.uri]) })
       if (t.kind === 'queue')
         list.push({ label: 'Remove from queue', icon: 'close', run: () => window.dispatchEvent(new CustomEvent('queue-remove', { detail: t.index })) })
+      if (!tr.episode) list.push({ label: 'Go to song radio', icon: 'radio', run: () => startRadio(tr.uri) })
       if (tr.artists?.length === 1) list.push({ label: 'Go to artist', icon: 'artist', run: () => openUri(tr.artists[0].uri) })
       else if (tr.artists?.length) list.push({ label: 'Go to artist', icon: 'artist', sub: 'artists' })
       if (tr.album?.uri) list.push({ label: 'Go to album', icon: 'album', run: () => openUri(tr.album!.uri) })
@@ -89,6 +90,8 @@
     if (c.type === 'album' || c.type === 'playlist') list.push({ label: 'Add to queue', icon: 'queue', run: () => queueContext(c.uri) })
     if (c.type === 'artist')
       list.push({ label: saved[c.uri] ? 'Unfollow' : 'Follow', icon: saved[c.uri] ? 'close' : 'user', run: () => toggleLibrary(c.uri) })
+    if (c.type === 'artist' || c.type === 'album' || c.type === 'playlist')
+      list.push({ label: `Go to ${c.type} radio`, icon: 'radio', run: () => startRadio(c.uri) })
     else if (c.type !== 'collection' && c.type !== 'folder' && c.type !== 'user' && !(t.library && own))
       list.push({
         label: saved[c.uri] ? 'Remove from Your Library' : 'Add to Your Library',
