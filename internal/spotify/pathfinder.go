@@ -68,7 +68,7 @@ func (c *Client) query(ctx context.Context, op string, vars map[string]any, ttl 
 	body, cached := c.cache.get(key)
 	if !cached {
 		body, err = c.do(ctx, request{
-			op: op, method: "POST", url: pathfinderURL, body: reqBody,
+			op: op, method: "POST", url: c.pathfinderURL, body: reqBody,
 			contentType: "application/json;charset=UTF-8", accept: "application/json",
 			idempotent: true, // queries only; mutations go through mutate
 		})
@@ -110,7 +110,7 @@ func (c *Client) mutate(ctx context.Context, op string, vars map[string]any) err
 		"extensions":    map[string]any{"persistedQuery": map[string]any{"version": 1, "sha256Hash": hash}},
 	})
 	body, err := c.do(ctx, request{
-		op: op, method: "POST", url: pathfinderURL, body: reqBody,
+		op: op, method: "POST", url: c.pathfinderURL, body: reqBody,
 		contentType: "application/json;charset=UTF-8", accept: "application/json",
 	})
 	if err != nil {
@@ -129,4 +129,25 @@ func (c *Client) fail(op string, body []byte, err error) error {
 	e := &Error{Op: op, Status: 200, Body: excerpt(body), Err: err}
 	c.log.Warn("pathfinder call failed", "op", op, "err", err, "body", e.Body)
 	return e
+}
+
+// RawQuery runs a pathfinder operation and returns the whole response body
+// (for cmd/spdev and fixture capture).
+func (c *Client) RawQuery(ctx context.Context, op string, vars map[string]any) ([]byte, error) {
+	hash, ok := c.ops[op]
+	if !ok {
+		return nil, &Error{Op: op, Err: errors.New("operation not in registry")}
+	}
+	body, _ := json.Marshal(map[string]any{
+		"variables":     vars,
+		"operationName": op,
+		"extensions":    map[string]any{"persistedQuery": map[string]any{"version": 1, "sha256Hash": hash}},
+	})
+	return c.do(ctx, request{op: op, method: "POST", url: c.pathfinderURL, body: body,
+		contentType: "application/json;charset=UTF-8", accept: "application/json"})
+}
+
+// RawGet GETs an spclient path and returns the body.
+func (c *Client) RawGet(ctx context.Context, path, accept string) ([]byte, error) {
+	return c.do(ctx, request{op: "GET " + path, method: "GET", url: c.spclientURL + path, accept: accept, idempotent: true})
 }

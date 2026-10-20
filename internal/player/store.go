@@ -108,3 +108,16 @@ func (s *stateStore) wipe() error {
 	}
 	return err
 }
+
+// StoredCredentials returns the persisted login, for dev tools that need a
+// token without running the whole player.
+func StoredCredentials(configDir string) (username string, data []byte, deviceID string, err error) {
+	st, err := newStateStore(configDir).Load()
+	if err != nil {
+		return "", nil, "", err
+	}
+	if len(st.Credentials.Data) == 0 {
+		return "", nil, "", errors.New("not logged in; start the app once")
+	}
+	return st.Credentials.Username, st.Credentials.Data, st.DeviceId, nil
+}

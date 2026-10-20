@@ -36,6 +36,7 @@ type Client struct {
 
 	mu         sync.Mutex
 	pauseUntil time.Time // set by 429s; every request waits for it
+	userURI    string
 
 	tokMu     sync.Mutex
 	bearer    string
@@ -46,6 +47,10 @@ type Client struct {
 	clientTokEx time.Time
 
 	cache *cache
+
+	// Base URLs; tests point them at httptest servers.
+	pathfinderURL string
+	spclientURL   string
 }
 
 func New(id Identity, token TokenFunc, log *slog.Logger, opsOverride string) *Client {
@@ -56,6 +61,9 @@ func New(id Identity, token TokenFunc, log *slog.Logger, opsOverride string) *Cl
 		token: token,
 		ops:   loadOperations(opsOverride, log),
 		cache: newCache(512),
+
+		pathfinderURL: pathfinderURL,
+		spclientURL:   spclientBase,
 	}
 }
 
@@ -233,7 +241,7 @@ func excerpt(b []byte) string {
 
 // getJSON is a GET against spclient decoding JSON into out.
 func (c *Client) getJSON(ctx context.Context, op, path string, out any) error {
-	body, err := c.do(ctx, request{op: op, method: "GET", url: spclientBase + path, accept: "application/json", idempotent: true})
+	body, err := c.do(ctx, request{op: op, method: "GET", url: c.spclientURL + path, accept: "application/json", idempotent: true})
 	if err != nil {
 		return err
 	}
@@ -241,4 +249,15 @@ func (c *Client) getJSON(ctx context.Context, op, path string, out any) error {
 		return &Error{Op: op, Err: fmt.Errorf("decoding: %w", err)}
 	}
 	return nil
+}
+
+// Reset forgets tokens and cached responses (on logout).
+func (c *Client) Reset() {
+	c.tokMu.Lock()
+	c.bearer = ""
+	c.tokMu.Unlock()
+	c.mu.Lock()
+	c.userURI = ""
+	c.mu.Unlock()
+	c.cache.invalidate("")
 }

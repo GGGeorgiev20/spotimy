@@ -1,0 +1,172 @@
+{
+ "data": {
+  "me": {
+   "library": {
+    "tracks": {
+     "__typename": "UserLibraryTrackPage",
+     "items": [
+      {
+       "__typename": "UserLibraryTrackResponse",
+       "addedAt": {
+        "isoString": "2026-10-20T11:54:11Z"
+       },
+       "track": {
+        "_uri": "spotify:track:test0",
+        "data": {
+         "__typename": "Track",
+         "albumOfTrack": {
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Various Artists"
+             },
+             "uri": "spotify:artist:0LyfQWJT6nXafLPZqxe9Of"
+            }
+           ]
+          },
+          "coverArt": {
+           "sources": [
+            {
+             "height": 300,
+             "url": "https://i.scdn.co/image/ab67616d00001e02700d8622557dc8fc7837feb4",
+             "width": 300
+            },
+            {
+             "height": 64,
+             "url": "https://i.scdn.co/image/ab67616d00004851700d8622557dc8fc7837feb4",
+             "width": 64
+            },
+            {
+             "height": 640,
+             "url": "https://i.scdn.co/image/ab67616d0000b273700d8622557dc8fc7837feb4",
+             "width": 640
+            }
+           ]
+          },
+          "name": "Erased Tapes 20･･－－－0",
+          "uri": "spotify:album:17Whk4TOI2NxOTVcrIklQn"
+         },
+         "artists": {
+          "items": [
+           {
+            "profile": {
+             "name": "･ ･－･ ･－ ･･･ ･ －･･"
+            },
+            "uri": "spotify:artist:0EUOiLsLpv9g7H9YCzUnBS"
+           }
+          ]
+         },
+         "associationsV3": {
+          "audioAssociations": {
+           "totalCount": 0
+          },
+          "videoAssociations": {
+           "totalCount": 0
+          }
+         },
+         "contentRating": {
+          "label": "NONE"
+         },
+         "discNumber": 1,
+         "duration": {
+          "totalMilliseconds": 344883
+         },
+         "mediaType": "AUDIO",
+         "name": "Test Track 0",
+         "playability": {
+          "playable": true
+         },
+         "trackNumber": 7,
+         "uri": "spotify:track:test0"
+        }
+       }
+      },
+      {
+       "__typename": "UserLibraryTrackResponse",
+       "addedAt": {
+        "isoString": "2026-10-14T17:50:30Z"
+       },
+       "track": {
+        "_uri": "spotify:track:test1",
+        "data": {
+         "__typename": "Track",
+         "albumOfTrack": {
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Radiohead"
+             },
+             "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+            }
+           ]
+          },
+          "coverArt": {
+           "sources": [
+            {
+             "height": 300,
+             "url": "https://i.scdn.co/image/ab67616d00001e02de3c04b5fc750b68899b20a9",
+             "width": 300
+            },
+            {
+             "height": 64,
+             "url": "https://i.scdn.co/image/ab67616d00004851de3c04b5fc750b68899b20a9",
+             "width": 64
+            },
+            {
+             "height": 640,
+             "url": "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9",
+             "width": 640
+            }
+           ]
+          },
+          "name": "In Rainbows",
+          "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+         },
+         "artists": {
+          "items": [
+           {
+            "profile": {
+             "name": "Radiohead"
+            },
+            "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+           }
+          ]
+         },
+         "associationsV3": {
+          "audioAssociations": {
+           "totalCount": 0
+          },
+          "videoAssociations": {
+           "totalCount": 0
+          }
+         },
+         "contentRating": {
+          "label": "NONE"
+         },
+         "discNumber": 1,
+         "duration": {
+          "totalMilliseconds": 318186
+         },
+         "mediaType": "AUDIO",
+         "name": "Test Track 1",
+         "playability": {
+          "playable": true
+         },
+         "trackNumber": 4,
+         "uri": "spotify:track:test1"
+        }
+       }
+      }
+     ],
+     "pagingInfo": {
+      "limit": 2,
+      "offset": 0
+     },
+     "totalCount": 188
+    }
+   }
+  }
+ }
+}

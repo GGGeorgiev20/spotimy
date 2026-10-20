@@ -1,0 +1,226 @@
+{
+ "data": {
+  "me": {
+   "libraryV3": {
+    "__typename": "LibraryPage",
+    "availableFilters": [
+     {
+      "id": "Playlists",
+      "name": "Playlists"
+     },
+     {
+      "id": "Albums",
+      "name": "Albums"
+     }
+    ],
+    "availableSortOrders": [
+     {
+      "id": "Recents",
+      "name": "Recents"
+     },
+     {
+      "id": "Recently Added",
+      "name": "Recently Added"
+     },
+     {
+      "id": "Alphabetical",
+      "name": "Alphabetical"
+     }
+    ],
+    "breadcrumbs": [],
+    "items": [
+     {
+      "addedAt": {
+       "isoString": "2026-10-20T11:54:11Z"
+      },
+      "depth": 0,
+      "item": {
+       "__typename": "LibraryPseudoPlaylistResponseWrapper",
+       "_uri": "spotify:collection:tracks",
+       "data": {
+        "__typename": "PseudoPlaylist",
+        "count": 188,
+        "image": {
+         "extractedColors": {
+          "colorDark": {
+           "hex": "#5018F0",
+           "isFallback": false
+          }
+         },
+         "sources": [
+          {
+           "height": 64,
+           "url": "https://misc.scdn.co/liked-songs/liked-songs-64.png",
+           "width": 64
+          },
+          {
+           "height": 300,
+           "url": "https://misc.scdn.co/liked-songs/liked-songs-300.png",
+           "width": 300
+          },
+          {
+           "height": 640,
+           "url": "https://misc.scdn.co/liked-songs/liked-songs-640.png",
+           "width": 640
+          }
+         ]
+        },
+        "name": "Liked Songs",
+        "uri": "spotify:collection:tracks"
+       }
+      },
+      "pinnable": true,
+      "pinned": true,
+      "playedAt": null
+     },
+     {
+      "addedAt": {
+       "isoString": "2026-02-03T16:40:56Z"
+      },
+      "depth": 0,
+      "item": {
+       "__typename": "PlaylistResponseWrapper",
+       "_uri": "spotify:playlist:0NaSZK5v34khhnogLKeMLw",
+       "data": {
+        "__typename": "Playlist",
+        "attributes": [],
+        "currentUserCapabilities": {
+         "canEditItems": true,
+         "canView": true
+        },
+        "description": "",
+        "format": "",
+        "images": {
+         "items": [
+          {
+           "extractedColors": {
+            "colorDark": {
+             "hex": "#587898",
+             "isFallback": false
+            }
+           },
+           "sources": [
+            {
+             "height": 640,
+             "url": "https://mosaic.scdn.co/640/test",
+             "width": 640
+            },
+            {
+             "height": 300,
+             "url": "https://mosaic.scdn.co/640/test",
+             "width": 300
+            },
+            {
+             "height": 60,
+             "url": "https://mosaic.scdn.co/640/test",
+             "width": 60
+            }
+           ]
+          }
+         ]
+        },
+        "name": "Test Playlist 1",
+        "ownerV2": {
+         "data": {
+          "__typename": "User",
+          "avatar": null,
+          "id": "testuser",
+          "name": "Test User",
+          "socialHandle": null,
+          "uri": "spotify:user:testuser",
+          "username": "testuser"
+         }
+        },
+        "revisionId": "AAAAjW2NmwxgW71ZtA44AOfqpdlvz9n5",
+        "uri": "spotify:playlist:0NaSZK5v34khhnogLKeMLw"
+       }
+      },
+      "pinnable": true,
+      "pinned": false,
+      "playedAt": {
+       "isoString": "2026-10-20T10:02:48.125Z"
+      }
+     },
+     {
+      "addedAt": {
+       "isoString": "2024-04-26T06:50:11.177Z"
+      },
+      "depth": 0,
+      "item": {
+       "__typename": "PlaylistResponseWrapper",
+       "_uri": "spotify:playlist:4ViOSBzHA4WOXGhlNnAOEr",
+       "data": {
+        "__typename": "Playlist",
+        "attributes": [],
+        "currentUserCapabilities": {
+         "canEditItems": true,
+         "canView": true
+        },
+        "description": "https:&#x2F;&#x2F;open.spotify.com&#x2F;playlist&#x2F;0Vl7xTZw4HgBFYCzIhquC8?si=0067e58ac49a4694",
+        "format": "",
+        "images": {
+         "items": [
+          {
+           "extractedColors": {
+            "colorDark": {
+             "hex": "#985850",
+             "isFallback": false
+            }
+           },
+           "sources": [
+            {
+             "height": 640,
+             "url": "https://mosaic.scdn.co/640/test",
+             "width": 640
+            },
+            {
+             "height": 300,
+             "url": "https://mosaic.scdn.co/640/test",
+             "width": 300
+            },
+            {
+             "height": 60,
+             "url": "https://mosaic.scdn.co/640/test",
+             "width": 60
+            }
+           ]
+          }
+         ]
+        },
+        "name": "Test Playlist 2",
+        "ownerV2": {
+         "data": {
+          "__typename": "User",
+          "avatar": null,
+          "id": "testuser",
+          "name": "Test User",
+          "socialHandle": null,
+          "uri": "spotify:user:testuser",
+          "username": "testuser"
+         }
+        },
+        "revisionId": "AAAB8So2TKWo8et2fJbcReIME47+R6el",
+        "uri": "spotify:playlist:4ViOSBzHA4WOXGhlNnAOEr"
+       }
+      },
+      "pinnable": true,
+      "pinned": false,
+      "playedAt": {
+       "isoString": "2026-10-20T08:00:59.434Z"
+      }
+     }
+    ],
+    "pagingInfo": {
+     "limit": 50,
+     "offset": 0
+    },
+    "selectedFilters": [],
+    "selectedSortOrder": {
+     "id": "Recents",
+     "name": "Recents"
+    },
+    "totalCount": 23
+   }
+  }
+ }
+}

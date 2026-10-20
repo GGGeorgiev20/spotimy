@@ -1,0 +1,1089 @@
+{
+ "data": {
+  "playlistV2": {
+   "__typename": "Playlist",
+   "content": {
+    "__typename": "PlaylistItemsPage",
+    "items": [
+     {
+      "addedAt": {
+       "isoString": "2026-10-16T04:01:13.791Z"
+      },
+      "addedBy": null,
+      "attributes": [
+       {
+        "key": "decision_id",
+        "value": "ssp~065e44c1259bab743d04597e232d67789668"
+       }
+      ],
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "artists": {
+          "items": [
+           {
+            "profile": {
+             "name": "Olivia Rodrigo"
+            },
+            "uri": "spotify:artist:1McMsnEElThX1knmY4oliG"
+           },
+           {
+            "profile": {
+             "name": "Chappell Roan"
+            },
+            "uri": "spotify:artist:7GlBOeep6PqTfFi59PTUUN"
+           }
+          ]
+         },
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02706ab55cf3e8cb64efb0ccba",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851706ab55cf3e8cb64efb0ccba",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273706ab55cf3e8cb64efb0ccba",
+            "width": 640
+           }
+          ]
+         },
+         "date": {
+          "isoString": "2026-10-16T00:00:00Z",
+          "precision": "DAY"
+         },
+         "name": "expectations (feat. Chappell Roan)",
+         "uri": "spotify:album:1q9LM9xC5ebSY216u31FOx"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Olivia Rodrigo"
+           },
+           "uri": "spotify:artist:1McMsnEElThX1knmY4oliG"
+          },
+          {
+           "profile": {
+            "name": "Chappell Roan"
+           },
+           "uri": "spotify:artist:7GlBOeep6PqTfFi59PTUUN"
+          }
+         ]
+        },
+        "associationsV3": {
+         "audioAssociations": {
+          "__typename": "TrackAudioAssociationPage",
+          "items": []
+         },
+         "videoAssociations": {
+          "totalCount": 1
+         }
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 223935
+        },
+        "mediaType": "AUDIO",
+        "name": "expectations (feat. Chappell Roan)",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playlistAudioAttributes": {
+         "bpm": 132.9994354248047,
+         "key": {
+          "camelotKey": {
+           "color": "#cb90ff",
+           "value": "9B"
+          },
+          "key": "G",
+          "mode": "MODE_MAJOR"
+         }
+        },
+        "trackNumber": 1,
+        "uri": "spotify:track:3XmwAZpIMNpTJy8faw3ajD"
+       }
+      },
+      "itemV3": {
+       "__typename": "EntityResponseWrapper",
+       "data": {
+        "__typename": "Entity",
+        "consumptionExperienceTrait": {
+         "__typename": "ConsumptionExperienceTrait",
+         "contentRatings": [],
+         "duration": {
+          "nanoSeconds": 0,
+          "seconds": 223
+         },
+         "formats": [
+          "FORMAT_AUDIO",
+          "FORMAT_VIDEO",
+          "FORMAT_LOSSLESS"
+         ]
+        },
+        "contentExperienceTrait": {
+         "__typename": "ContentExperienceTrait",
+         "contentExperience": "CONTENT_EXPERIENCE_MUSIC"
+        },
+        "entityTypeTrait": {
+         "__typename": "EntityTypeTrait",
+         "type": "ENTITY_TYPE_TRACK"
+        },
+        "identityTrait": {
+         "__typename": "IdentityTrait",
+         "contentHierarchyParent": {
+          "__typename": "Entity",
+          "identityTrait": {
+           "__typename": "IdentityTrait",
+           "name": "expectations (feat. Chappell Roan)"
+          },
+          "publishingMetadataTrait": {
+           "__typename": "PublishingMetadataTrait",
+           "firstPublishedAt": {
+            "isoString": "2026-10-16",
+            "precision": "DAY"
+           }
+          },
+          "uri": "spotify:album:1q9LM9xC5ebSY216u31FOx"
+         },
+         "contributors": {
+          "items": [
+           {
+            "name": "Olivia Rodrigo",
+            "uri": "spotify:artist:1McMsnEElThX1knmY4oliG"
+           },
+           {
+            "name": "Chappell Roan",
+            "uri": "spotify:artist:7GlBOeep6PqTfFi59PTUUN"
+           }
+          ],
+          "totalCount": 2
+         },
+         "description": "",
+         "name": "expectations (feat. Chappell Roan)",
+         "type": "Song"
+        },
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:3XmwAZpIMNpTJy8faw3ajD",
+        "visualIdentityTrait": {
+         "__typename": "VisualIdentityTrait",
+         "sixteenByNineCoverImage": {
+          "image": {
+           "data": {
+            "__typename": "ImageV2",
+            "sources": [
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 360,
+              "maxWidth": 640,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab6742d3000052b7332417a785eb5cc2d57e0823"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 720,
+              "maxWidth": 1280,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab6742d3000053b7332417a785eb5cc2d57e0823"
+             }
+            ]
+           }
+          }
+         },
+         "squareCoverImage": {
+          "extractedColorSet": {
+           "encoreBaseSetTextColor": {
+            "alpha": 255,
+            "blue": 77,
+            "green": 166,
+            "red": 255
+           },
+           "highContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 0,
+             "green": 63,
+             "red": 131
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 0,
+             "green": 30,
+             "red": 88
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 139,
+             "green": 193,
+             "red": 255
+            }
+           },
+           "higherContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 0,
+             "green": 32,
+             "red": 92
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 39,
+             "green": 68,
+             "red": 131
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 96,
+             "green": 215,
+             "red": 30
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 139,
+             "green": 193,
+             "red": 255
+            }
+           },
+           "minContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 8,
+             "green": 120,
+             "red": 208
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 0,
+             "green": 94,
+             "red": 179
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            }
+           }
+          },
+          "image": {
+           "data": {
+            "__typename": "ImageV2",
+            "sources": [
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 300,
+              "maxWidth": 300,
+              "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02706ab55cf3e8cb64efb0ccba"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 64,
+              "maxWidth": 64,
+              "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00004851706ab55cf3e8cb64efb0ccba"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 640,
+              "maxWidth": 640,
+              "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d0000b273706ab55cf3e8cb64efb0ccba"
+             }
+            ]
+           }
+          }
+         }
+        }
+       }
+      },
+      "uid": "6e4a782b54436844635930"
+     },
+     {
+      "addedAt": {
+       "isoString": "2026-09-11T04:01:53.033Z"
+      },
+      "addedBy": null,
+      "attributes": [
+       {
+        "key": "decision_id",
+        "value": "ssp~065e44c1259bab743d04597e232d67789668"
+       }
+      ],
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "artists": {
+          "items": [
+           {
+            "profile": {
+             "name": "ADÉLA"
+            },
+            "uri": "spotify:artist:2qanRMyA5bNuTvz1dK45OP"
+           }
+          ]
+         },
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02ac9d5d5263e9f03802d6864c",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851ac9d5d5263e9f03802d6864c",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273ac9d5d5263e9f03802d6864c",
+            "width": 640
+           }
+          ]
+         },
+         "date": {
+          "isoString": "2026-09-04T00:00:00Z",
+          "precision": "DAY"
+         },
+         "name": "PRIMA",
+         "uri": "spotify:album:2yDFVH9CeOHt0sc9eI0aBs"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "ADÉLA"
+           },
+           "uri": "spotify:artist:2qanRMyA5bNuTvz1dK45OP"
+          }
+         ]
+        },
+        "associationsV3": {
+         "audioAssociations": {
+          "__typename": "TrackAudioAssociationPage",
+          "items": []
+         },
+         "videoAssociations": {
+          "totalCount": 1
+         }
+        },
+        "contentRating": {
+         "label": "EXPLICIT"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 181270
+        },
+        "mediaType": "AUDIO",
+        "name": "Nicole Kidman",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playlistAudioAttributes": {
+         "bpm": 70.49910736083984,
+         "key": {
+          "camelotKey": {
+           "color": "#ffadb9",
+           "value": "6A"
+          },
+          "key": "G",
+          "mode": "MODE_MINOR"
+         }
+        },
+        "trackNumber": 2,
+        "uri": "spotify:track:70cHKK8bHAfJrOGVnfRG9J"
+       }
+      },
+      "itemV3": {
+       "__typename": "EntityResponseWrapper",
+       "data": {
+        "__typename": "Entity",
+        "consumptionExperienceTrait": {
+         "__typename": "ConsumptionExperienceTrait",
+         "contentRatings": [
+          "CONTENT_RATING_EXPLICIT"
+         ],
+         "duration": {
+          "nanoSeconds": 0,
+          "seconds": 181
+         },
+         "formats": [
+          "FORMAT_AUDIO",
+          "FORMAT_VIDEO",
+          "FORMAT_LOSSLESS"
+         ]
+        },
+        "contentExperienceTrait": {
+         "__typename": "ContentExperienceTrait",
+         "contentExperience": "CONTENT_EXPERIENCE_MUSIC"
+        },
+        "entityTypeTrait": {
+         "__typename": "EntityTypeTrait",
+         "type": "ENTITY_TYPE_TRACK"
+        },
+        "identityTrait": {
+         "__typename": "IdentityTrait",
+         "contentHierarchyParent": {
+          "__typename": "Entity",
+          "identityTrait": {
+           "__typename": "IdentityTrait",
+           "name": "PRIMA"
+          },
+          "publishingMetadataTrait": {
+           "__typename": "PublishingMetadataTrait",
+           "firstPublishedAt": {
+            "isoString": "2026-09-04",
+            "precision": "DAY"
+           }
+          },
+          "uri": "spotify:album:2yDFVH9CeOHt0sc9eI0aBs"
+         },
+         "contributors": {
+          "items": [
+           {
+            "name": "ADÉLA",
+            "uri": "spotify:artist:2qanRMyA5bNuTvz1dK45OP"
+           }
+          ],
+          "totalCount": 1
+         },
+         "description": "",
+         "name": "Nicole Kidman",
+         "type": "Song"
+        },
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:70cHKK8bHAfJrOGVnfRG9J",
+        "visualIdentityTrait": {
+         "__typename": "VisualIdentityTrait",
+         "sixteenByNineCoverImage": {
+          "image": {
+           "data": {
+            "__typename": "ImageV2",
+            "sources": [
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 360,
+              "maxWidth": 640,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab6742d3000052b76171b4b06472e963bb13da98"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 720,
+              "maxWidth": 1280,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab6742d3000053b76171b4b06472e963bb13da98"
+             }
+            ]
+           }
+          }
+         },
+         "squareCoverImage": {
+          "extractedColorSet": {
+           "encoreBaseSetTextColor": {
+            "alpha": 255,
+            "blue": 167,
+            "green": 160,
+            "red": 255
+           },
+           "highContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 44,
+             "green": 0,
+             "red": 158
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 17,
+             "green": 0,
+             "red": 97
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 192,
+             "green": 188,
+             "red": 255
+            }
+           },
+           "higherContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 18,
+             "green": 0,
+             "red": 101
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 55,
+             "green": 51,
+             "red": 147
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 96,
+             "green": 215,
+             "red": 30
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 192,
+             "green": 188,
+             "red": 255
+            }
+           },
+           "minContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 64,
+             "green": 32,
+             "red": 184
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 32,
+             "green": 0,
+             "red": 133
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            }
+           }
+          },
+          "image": {
+           "data": {
+            "__typename": "ImageV2",
+            "sources": [
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 300,
+              "maxWidth": 300,
+              "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02ac9d5d5263e9f03802d6864c"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 64,
+              "maxWidth": 64,
+              "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00004851ac9d5d5263e9f03802d6864c"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 640,
+              "maxWidth": 640,
+              "url": "https://image-cdn-ak.spotifycdn.com/image/ab67616d0000b273ac9d5d5263e9f03802d6864c"
+             }
+            ]
+           }
+          }
+         }
+        }
+       }
+      },
+      "uid": "6b754146414d5346426877"
+     },
+     {
+      "addedAt": {
+       "isoString": "2026-09-04T04:02:23.110Z"
+      },
+      "addedBy": null,
+      "attributes": [
+       {
+        "key": "decision_id",
+        "value": "ssp~065e44c1259bab743d04597e232d67789668"
+       }
+      ],
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "artists": {
+          "items": [
+           {
+            "profile": {
+             "name": "Ashe"
+            },
+            "uri": "spotify:artist:6P5NO5hzJbuOqSdyPB7SJM"
+           }
+          ]
+         },
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e020893a0c33fd4b8497b0ef2f6",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d000048510893a0c33fd4b8497b0ef2f6",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b2730893a0c33fd4b8497b0ef2f6",
+            "width": 640
+           }
+          ]
+         },
+         "date": {
+          "isoString": "2026-08-07T00:00:00Z",
+          "precision": "DAY"
+         },
+         "name": "Stop The Wedding!",
+         "uri": "spotify:album:4dem9qxmFf4RD6fqoCH6wc"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Ashe"
+           },
+           "uri": "spotify:artist:6P5NO5hzJbuOqSdyPB7SJM"
+          }
+         ]
+        },
+        "associationsV3": {
+         "audioAssociations": {
+          "__typename": "TrackAudioAssociationPage",
+          "items": []
+         },
+         "videoAssociations": {
+          "totalCount": 1
+         }
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 198840
+        },
+        "mediaType": "AUDIO",
+        "name": "Stop The Wedding!",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playlistAudioAttributes": {
+         "bpm": 138.4382781982422,
+         "key": {
+          "camelotKey": {
+           "color": "#04ebeb",
+           "value": "12B"
+          },
+          "key": "E",
+          "mode": "MODE_MAJOR"
+         }
+        },
+        "trackNumber": 1,
+        "uri": "spotify:track:3zOYmiNOuyDL0ClxJcEJ0T"
+       }
+      },
+      "itemV3": {
+       "__typename": "EntityResponseWrapper",
+       "data": {
+        "__typename": "Entity",
+        "consumptionExperienceTrait": {
+         "__typename": "ConsumptionExperienceTrait",
+         "contentRatings": [],
+         "duration": {
+          "nanoSeconds": 0,
+          "seconds": 198
+         },
+         "formats": [
+          "FORMAT_AUDIO",
+          "FORMAT_VIDEO",
+          "FORMAT_LOSSLESS"
+         ]
+        },
+        "contentExperienceTrait": {
+         "__typename": "ContentExperienceTrait",
+         "contentExperience": "CONTENT_EXPERIENCE_MUSIC"
+        },
+        "entityTypeTrait": {
+         "__typename": "EntityTypeTrait",
+         "type": "ENTITY_TYPE_TRACK"
+        },
+        "identityTrait": {
+         "__typename": "IdentityTrait",
+         "contentHierarchyParent": {
+          "__typename": "Entity",
+          "identityTrait": {
+           "__typename": "IdentityTrait",
+           "name": "Stop The Wedding!"
+          },
+          "publishingMetadataTrait": {
+           "__typename": "PublishingMetadataTrait",
+           "firstPublishedAt": {
+            "isoString": "2026-08-07",
+            "precision": "DAY"
+           }
+          },
+          "uri": "spotify:album:4dem9qxmFf4RD6fqoCH6wc"
+         },
+         "contributors": {
+          "items": [
+           {
+            "name": "Ashe",
+            "uri": "spotify:artist:6P5NO5hzJbuOqSdyPB7SJM"
+           }
+          ],
+          "totalCount": 1
+         },
+         "description": "",
+         "name": "Stop The Wedding!",
+         "type": "Song"
+        },
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:3zOYmiNOuyDL0ClxJcEJ0T",
+        "visualIdentityTrait": {
+         "__typename": "VisualIdentityTrait",
+         "sixteenByNineCoverImage": {
+          "image": {
+           "data": {
+            "__typename": "ImageV2",
+            "sources": [
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 360,
+              "maxWidth": 640,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab6742d3000052b74377315df8d29233ae34067b"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 720,
+              "maxWidth": 1280,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab6742d3000053b74377315df8d29233ae34067b"
+             }
+            ]
+           }
+          }
+         },
+         "squareCoverImage": {
+          "extractedColorSet": {
+           "encoreBaseSetTextColor": {
+            "alpha": 255,
+            "blue": 235,
+            "green": 182,
+            "red": 181
+           },
+           "highContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 124,
+             "green": 79,
+             "red": 79
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 88,
+             "green": 46,
+             "red": 48
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 254,
+             "green": 201,
+             "red": 200
+            }
+           },
+           "higherContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 91,
+             "green": 48,
+             "red": 50
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 127,
+             "green": 81,
+             "red": 82
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 96,
+             "green": 215,
+             "red": 30
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 254,
+             "green": 201,
+             "red": 200
+            }
+           },
+           "minContrast": {
+            "backgroundBase": {
+             "alpha": 255,
+             "blue": 160,
+             "green": 112,
+             "red": 112
+            },
+            "backgroundTintedBase": {
+             "alpha": 255,
+             "blue": 130,
+             "green": 84,
+             "red": 85
+            },
+            "textBase": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textBrightAccent": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            },
+            "textSubdued": {
+             "alpha": 255,
+             "blue": 255,
+             "green": 255,
+             "red": 255
+            }
+           }
+          },
+          "image": {
+           "data": {
+            "__typename": "ImageV2",
+            "sources": [
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 300,
+              "maxWidth": 300,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e020893a0c33fd4b8497b0ef2f6"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 64,
+              "maxWidth": 64,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab67616d000048510893a0c33fd4b8497b0ef2f6"
+             },
+             {
+              "imageFormat": "JPEG",
+              "maxHeight": 640,
+              "maxWidth": 640,
+              "url": "https://image-cdn-fa.spotifycdn.com/image/ab67616d0000b2730893a0c33fd4b8497b0ef2f6"
+             }
+            ]
+           }
+          }
+         }
+        }
+       }
+      },
+      "uid": "654e44597543482f767755"
+     }
+    ],
+    "pagingInfo": {
+     "limit": 3,
+     "offset": 0
+    },
+    "totalCount": 50
+   },
+   "abuseReportingEnabled": false,
+   "attributes": [
+    {
+     "key": "uri",
+     "value": "spotify:user:spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
+    },
+    {
+     "key": "status",
+     "value": "PUBLISHED"
+    },
+    {
+     "key": "isAlgotorial",
+     "value": "false"
+    }
+   ],
+   "basePermission": "VIEWER",
+   "currentUserCapabilities": {
+    "canAbuseReport": true,
+    "canAdministratePermissions": false,
+    "canCancelMembership": false,
+    "canEditItems": false,
+    "canEditMetadata": false,
+    "canMixPlaylist": false,
+    "canView": true
+   },
+   "description": "The hottest 50. Cover: Chappell Roan & Olivia Rodrigo",
+   "followers": 33696818,
+   "following": false,
+   "format": "format-shows-shuffle",
+   "images": {
+    "items": [
+     {
+      "sources": [
+       {
+        "height": null,
+        "url": "https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00",
+        "width": null
+       }
+      ]
+     }
+    ]
+   },
+   "members": {
+    "items": [
+     {
+      "isOwner": true,
+      "permissionLevel": "CONTRIBUTOR",
+      "user": {
+       "data": {
+        "__typename": "User",
+        "avatar": {
+         "sources": [
+          {
+           "height": 64,
+           "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+           "width": 64
+          },
+          {
+           "height": 300,
+           "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+           "width": 300
+          }
+         ]
+        },
+        "name": "Spotify",
+        "socialHandle": null,
+        "uri": "spotify:user:spotify",
+        "username": "spotify"
+       }
+      }
+     }
+    ],
+    "totalCount": 1
+   },
+   "name": "Today’s Top Hits",
+   "ownerV2": {
+    "data": {
+     "__typename": "User",
+     "avatar": {
+      "sources": [
+       {
+        "height": 64,
+        "url": "https://i.scdn.co/image/ab67757000003b8255c25988a6ac314394d3fbf5",
+        "width": 64
+       },
+       {
+        "height": 300,
+        "url": "https://i.scdn.co/image/ab6775700000ee8555c25988a6ac314394d3fbf5",
+        "width": 300
+       }
+      ]
+     },
+     "name": "Spotify",
+     "socialHandle": null,
+     "uri": "spotify:user:spotify",
+     "username": "spotify"
+    }
+   },
+   "revisionId": "AAAAAG3rX6MHa+Qaf1i78/2tSS6bMfXY",
+   "uri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
+  }
+ }
+}
