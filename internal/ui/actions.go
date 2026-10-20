@@ -374,24 +374,23 @@ func (m *confirmModal) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	return Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
-				return Label{Text: m.title, Size: 24, Weight: Bold, MaxLines: 3}.Layout(gtx)
+			return Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions {
+				return Label{Text: m.title, Size: 24, Weight: Bold, Color: ColBg, MaxLines: 3, LineHeight: 29}.Layout(gtx)
 			})
 		},
 		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 24, 0, func(gtx layout.Context) layout.Dimensions {
-				return Label{Text: m.body, Size: 14, Color: ColText2, MaxLines: -1}.Layout(gtx)
+			return Pad(gtx, 0, 0, 32, 0, func(gtx layout.Context) layout.Dimensions {
+				return Label{Text: m.body, Size: 14, Color: ColBg, MaxLines: -1, LineHeight: 20}.Layout(gtx)
 			})
 		},
 		func(gtx layout.Context) layout.Dimensions {
 			return layout.E.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Spacing: layout.SpaceStart, Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return m.cancel.Layout(gtx, PillStyle{Text: "Cancel", Weight: Bold, Height: 48, PadX: 24, Fg: ColText2})
+						return m.cancel.Layout(gtx, PillStyle{Text: "Cancel", Size: 16, Weight: Bold, Height: 48, Fg: ColBg})
 					}),
-					layout.Rigid(Gap(8, 0)),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return m.okBtn.Layout(gtx, PillStyle{Text: m.ok, Weight: Bold, Height: 48, PadX: 32, Bg: ColText, Fg: ColBg})
+						return m.okBtn.Layout(gtx, PillStyle{Text: m.ok, Size: 16, Weight: Bold, Height: 48, PadX: 32, Bg: RGB(0xe91429), BgHover: RGB(0xe91429), Fg: ColText})
 					}),
 				)
 			})
@@ -399,12 +398,14 @@ func (m *confirmModal) Layout(gtx layout.Context) layout.Dimensions {
 	)
 }
 
-// Confirm asks a yes/no question; onOK runs if confirmed.
+// Confirm asks a destructive yes/no question (red confirm button); onOK runs
+// if confirmed.
 func Confirm(title, body, ok string, onOK func()) {
-	ShowModal(&confirmModal{title: title, body: body, ok: ok, onOK: onOK}, 0)
+	ShowLightModal(&confirmModal{title: title, body: body, ok: ok, onOK: onOK}, 420)
 }
 
 type editModal struct {
+	title      ModalTitle
 	name, desc Input
 	save       Pill
 	onSave     func(name, desc string)
@@ -423,20 +424,21 @@ func (m *editModal) Layout(gtx layout.Context) layout.Dimensions {
 		CloseModal()
 		m.onSave(name, m.desc.Text())
 	}
+	m.title.Hang = true
 	return Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
-				return Text(gtx, "Edit details", 24, Bold, ColText)
+			return Pad(gtx, 0, 0, 24, 0, func(gtx layout.Context) layout.Dimensions {
+				return m.title.Layout(gtx, "Edit details", "")
 			})
 		},
 		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 12, 0, func(gtx layout.Context) layout.Dimensions {
+			return Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
 				return FieldBox(gtx, &m.name, InputStyle{Hint: "Add a name"}, 40)
 			})
 		},
 		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 12, 0, func(gtx layout.Context) layout.Dimensions {
-				return FieldBox(gtx, &m.desc, InputStyle{Hint: "Add an optional description", MaxLines: 5}, 120)
+			return Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
+				return FieldBox(gtx, &m.desc, InputStyle{Hint: "Add an optional description", MaxLines: 5}, 124)
 			})
 		},
 		func(gtx layout.Context) layout.Dimensions {
@@ -460,6 +462,7 @@ func EditDetails(name, desc string, onSave func(name, desc string)) {
 }
 
 type creditsModal struct {
+	title ModalTitle
 	track string
 	res   Res[*spotify.NowPlayingInfo]
 	links []Link
@@ -469,13 +472,8 @@ type creditsModal struct {
 func (m *creditsModal) Layout(gtx layout.Context) layout.Dimensions {
 	return Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions {
-				return Text(gtx, "Credits", 24, Bold, ColText)
-			})
-		},
-		func(gtx layout.Context) layout.Dimensions {
-			return Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
-				return Text(gtx, m.track, 14, Bold, ColText)
+			return Pad(gtx, 0, 0, 24, 0, func(gtx layout.Context) layout.Dimensions {
+				return m.title.Layout(gtx, "Credits", m.track)
 			})
 		},
 		func(gtx layout.Context) layout.Dimensions {
@@ -521,5 +519,5 @@ func (m *creditsModal) Layout(gtx layout.Context) layout.Dimensions {
 func ShowCredits(track, uri string) {
 	m := &creditsModal{track: track}
 	m.res.Load(func() (*spotify.NowPlayingInfo, error) { return B.NowPlaying(uri, "") })
-	ShowModal(m, 0)
+	showBox(m, 440, ColSurface, 24, false)
 }

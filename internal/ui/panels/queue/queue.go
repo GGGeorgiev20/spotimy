@@ -10,6 +10,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/text"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
@@ -285,28 +286,34 @@ func heading(gtx layout.Context, left, right layout.Widget) layout.Dimensions {
 	})
 }
 
-// empty is shown when nothing is playing and nothing is queued.
+// empty is shown when nothing is playing and nothing is queued: centered
+// text and a "Find something to play" button, sitting 40dp below the middle.
 func (p *panel) empty(gtx layout.Context) layout.Dimensions {
 	if p.find.Click.Clicked(gtx) {
 		ui.Navigate("/search")
 	}
-	return ui.Pad(gtx, 24, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
-		return ui.Column(gtx,
-			func(gtx layout.Context) layout.Dimensions {
-				return ui.Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions {
-					return ui.Label{Text: "Add to your queue", Size: 16, Weight: ui.Bold, MaxLines: 2}.Layout(gtx)
-				})
-			},
-			func(gtx layout.Context) layout.Dimensions {
-				return ui.Pad(gtx, 0, 0, 24, 0, func(gtx layout.Context) layout.Dimensions {
-					return ui.Label{Text: "Tap \"Add to queue\" from a track's menu to see it here", Size: 14, Color: ui.ColText2, MaxLines: 3}.Layout(gtx)
-				})
-			},
-			func(gtx layout.Context) layout.Dimensions {
-				return p.find.Layout(gtx, ui.PillStyle{Text: "Find something to play", Weight: ui.Bold, Height: 48, PadX: 32, Bg: ui.ColText, Fg: ui.ColBg})
-			},
-		)
-	})
+	size := gtx.Constraints.Max
+	m := op.Record(gtx.Ops)
+	g := gtx
+	g.Constraints = layout.Constraints{Max: image.Pt(size.X-2*ui.Dp(gtx, 16), size.Y)}
+	d := ui.Column(g,
+		func(gtx layout.Context) layout.Dimensions {
+			return ui.Label{Text: "Add to your queue", Size: 24, Weight: ui.Bold, MaxLines: 2, Align: text.Middle, LineHeight: 29}.Layout(gtx)
+		},
+		ui.Gap(0, 8),
+		func(gtx layout.Context) layout.Dimensions {
+			return ui.Label{Text: "Tap \"Add to queue\" from a track's menu to see it here", Size: 16, Color: ui.ColText2, MaxLines: 3, Align: text.Middle, LineHeight: 22}.Layout(gtx)
+		},
+		ui.Gap(0, 40),
+		func(gtx layout.Context) layout.Dimensions {
+			return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return p.find.Layout(gtx, ui.PillStyle{Text: "Find something to play", Size: 16, Weight: ui.Bold, Height: 48, PadX: 32, Bg: ui.ColText, Fg: ui.ColBg})
+			})
+		},
+	)
+	call := m.Stop()
+	ui.Offset(gtx, ui.Dp(gtx, 16), (size.Y-d.Size.Y)/2+ui.Dp(gtx, 40), func() { call.Add(gtx.Ops) })
+	return layout.Dimensions{Size: size}
 }
 
 // row is one 56dp track row.

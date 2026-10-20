@@ -59,7 +59,7 @@ func layoutFullScreen(gtx layout.Context) bool {
 	// Bottom up: buttons, progress bar, cover with title and artists.
 	ctlH := dp(48)
 	ctlY := size.Y - dp(40) - ctlH
-	progY := ctlY - dp(16) - dp(15)
+	progY := ctlY - dp(16) - dp(17)
 	g := gtx
 	g.Constraints = layout.Exact(image.Pt(size.X-2*pad, ctlH))
 	ui.Offset(gtx, pad, ctlY, func() {

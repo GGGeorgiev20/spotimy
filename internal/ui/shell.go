@@ -154,7 +154,7 @@ func Frame(gtx layout.Context) {
 	} else if FullScreen == nil || !FullScreen(gtx) {
 		layoutApp(gtx)
 	}
-	layoutToasts(gtx, Dp(gtx, 96))
+	layoutToasts(gtx, Dp(gtx, 108))
 	layoutModal(gtx)
 	layoutMenus(gtx)
 	layoutHoverTip(gtx)
@@ -269,9 +269,12 @@ func layoutResizer(gtx layout.Context, x, y, w, h int) {
 		pointer.CursorColResize.Add(gtx.Ops)
 		hover := resizeOn || r.Add(image.Pt(x, y)).Overlaps(image.Rectangle{Min: PointerPos(), Max: PointerPos().Add(image.Pt(1, 1))})
 		st.Pop()
-		if hover {
-			lw := max(1, Dp(gtx, 2))
-			FillRect(gtx.Ops, image.Rect((w-lw)/2, 0, (w+lw)/2, h), lw/2, Alpha(ColText, .3))
+		if hover { // a 1dp line, 8dp short of both ends; white while dragging
+			lw, c := max(1, Dp(gtx, 1)), ColText3
+			if resizeOn {
+				c = ColText
+			}
+			FillRect(gtx.Ops, image.Rect((w-lw)/2, Dp(gtx, 8), (w+lw)/2, h-Dp(gtx, 8)), lw/2, c)
 		}
 	})
 }
@@ -338,13 +341,23 @@ func layoutMain(gtx layout.Context) layout.Dimensions {
 
 var (
 	backBtn, fwdBtn, homeBtn, friendsBtn IconButton
-	avatarBtn, clearSearch               Click
+	avatarBtn, clearSearch, browseBtn    Click
 	searchBox                            Click
 	searchTimer                          *time.Timer
 	searchFocused                        bool
 )
 
 var bellBtn IconButton
+
+// centerBlock places a w-wide block centered in a win-wide bar, or, when that
+// would overlap what is left of left or right of right, against left with
+// whatever width remains.
+func centerBlock(win, w, left, right int) (x, bw int) {
+	if x = (win - w) / 2; x < left || x+w > right {
+		return left, min(w, right-left)
+	}
+	return x, w
+}
 
 func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
@@ -384,6 +397,9 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 		SearchQuery.SetText("")
 		searchChanged()
 	}
+	if browseBtn.Clicked(gtx) {
+		Navigate("/search")
+	}
 	if searchBox.Clicked(gtx) {
 		SearchQuery.Focus(gtx)
 	}
@@ -394,10 +410,12 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 		Offset(gtx, Dp(gtx, 40), 0, func() { navCircle(gtx, &fwdBtn, "chevron-right", "Go forward", !CanForward()) })
 	})
 
-	// Center: home + search.
-	searchW := max(Dp(gtx, 280), min(Dp(gtx, 474), size.X*30/100))
-	centerW := Dp(gtx, 48) + Dp(gtx, 8) + searchW
-	cx := (size.X - centerW) / 2
+	// Center: home + search, a 546dp block (8 + 48 + 8 + 474 + 8) that stays
+	// centered while it fits between the nav buttons and the right group, and
+	// otherwise sits next to the nav buttons and shrinks.
+	bx, blockW := centerBlock(size.X, Dp(gtx, 546), Dp(gtx, 96), size.X-Dp(gtx, 104))
+	searchW := blockW - Dp(gtx, 72)
+	cx := bx + Dp(gtx, 8)
 	home := Current().Path == "/"
 	Offset(gtx, cx, (h-Dp(gtx, 48))/2, func() {
 		homeBtn.Click.Label = "Home"
@@ -407,7 +425,11 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 				s = s * 104 / 100
 			}
 			o := (Dp(gtx, 48) - s) / 2
-			Offset(gtx, o, o, func() { FillCircle(gtx.Ops, s, ColSurface2) })
+			bg := ColSurface2
+			if homeBtn.Click.Hovered() {
+				bg = ColSurface3
+			}
+			Offset(gtx, o, o, func() { FillCircle(gtx.Ops, s, bg) })
 			name, c := "home", ColText2
 			if home {
 				name, c = "home-filled", ColText
@@ -433,7 +455,11 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 				s = s * 104 / 100
 			}
 			o := (Dp(gtx, 48) - s) / 2
-			Offset(gtx, o, o, func() { FillCircle(gtx.Ops, s, ColSurface2) })
+			bg := ColSurface2
+			if avatarBtn.Hovered() {
+				bg = ColSurface3
+			}
+			Offset(gtx, o, o, func() { FillCircle(gtx.Ops, s, bg) })
 			is := Dp(gtx, 32)
 			Offset(gtx, (Dp(gtx, 48)-is)/2, (Dp(gtx, 48)-is)/2, func() { Avatar(gtx, is) })
 			return layout.Dimensions{Size: image.Pt(Dp(gtx, 48), Dp(gtx, 48))}
@@ -526,7 +552,7 @@ func layoutSearchBox(gtx layout.Context, w int) {
 	searchBox.Cursor = pointer.CursorText
 	searchBox.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		bg := ColSurface2
-		if searchBox.Hovered() && !focused {
+		if searchBox.Hovered() || focused {
 			bg = ColSurface3
 		}
 		r := image.Rect(0, 0, w, h)
@@ -545,22 +571,28 @@ func layoutSearchBox(gtx layout.Context, w int) {
 		Offset(gtx, Dp(gtx, 12), (h-is)/2, func() { IconPx(gtx, "search", is, ic) })
 		return layout.Dimensions{Size: r.Max}
 	})
-	right := Dp(gtx, 16)
-	if SearchQuery.Len() > 0 {
-		right = Dp(gtx, 48)
-		Offset(gtx, w-Dp(gtx, 40), (h-Dp(gtx, 32))/2, func() {
-			clearSearch.Label = "Clear search"
-			clearSearch.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				c := ColText2
-				if clearSearch.Hovered() {
-					c = ColText
+	// Trailing: [clear] | [browse], a 1dp divider and the Browse button.
+	icon := func(c *Click, label, name string, x, size int) {
+		Offset(gtx, x, (h-Dp(gtx, 24))/2, func() {
+			c.Label = label
+			d := c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				col, s := ColText2, size
+				if c.Hovered() {
+					col, s = ColText, s*104/100
 				}
-				s := Dp(gtx, 32)
-				Offset(gtx, Dp(gtx, 6), Dp(gtx, 6), func() { IconPx(gtx, "close", Dp(gtx, 20), c) })
-				return layout.Dimensions{Size: image.Pt(s, s)}
+				Offset(gtx, (Dp(gtx, 24)-s)/2, (Dp(gtx, 24)-s)/2, func() { IconPx(gtx, name, s, col) })
+				return layout.Dimensions{Size: image.Pt(Dp(gtx, 24), Dp(gtx, 24))}
 			})
+			Tip(gtx, c, d, label, true)
 		})
 	}
+	if SearchQuery.Len() > 0 {
+		icon(&clearSearch, "Clear search field", "close", w-Dp(gtx, 89), Dp(gtx, 26))
+	}
+	dh := Dp(gtx, 25)
+	FillRect(gtx.Ops, image.Rect(w-Dp(gtx, 53), (h-dh)/2, w-Dp(gtx, 53)+max(1, Dp(gtx, 1)), (h+dh)/2), 0, ColText3)
+	icon(&browseBtn, "Browse", "browse", w-Dp(gtx, 40), Dp(gtx, 24))
+	right := Dp(gtx, 96)
 	x := Dp(gtx, 12+24+12)
 	Offset(gtx, x, (h-Dp(gtx, 22))/2, func() {
 		g := gtx
