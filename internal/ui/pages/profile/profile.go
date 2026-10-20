@@ -3,7 +3,6 @@
 package profile
 
 import (
-	"fmt"
 	"image/color"
 	"net/url"
 
