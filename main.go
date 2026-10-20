@@ -3,9 +3,11 @@ package main
 import (
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
+	"syscall"
 
 	"gioui.org/app"
 
@@ -39,6 +41,10 @@ func main() {
 	// PERSONAL_SPOTIFY_HARNESS=127.0.0.1:port runs the UI headless in sandbox
 	// mode for automated testing (see internal/ui/harness.go).
 	harness := os.Getenv("PERSONAL_SPOTIFY_HARNESS")
+	if harness == "" && forwardToRunning(os.Args[1:]) {
+		log.Info("already running; passed the arguments on")
+		return
+	}
 	b := backend.New(backend.Options{
 		Config:   backend.LoadConfig(configDir, cacheDir, log),
 		Log:      log,
@@ -63,10 +69,34 @@ func main() {
 		return
 	}
 
-	go func() {
-		ui.Run()
+	open := func(arg string) {
+		if uri := spotifyURI(arg); uri != "" {
+			ui.Post(func() { ui.OpenURI(uri) })
+		}
+	}
+	stop, err := listenForInstances(open)
+	if err != nil {
+		log.Warn("single-instance socket unavailable", "err", err)
+		stop = func() {}
+	}
+	for _, a := range os.Args[1:] {
+		open(a)
+	}
+
+	quit := func() {
+		stop()
 		b.Stop()
 		os.Exit(0)
+	}
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
+		quit()
+	}()
+	go func() {
+		ui.Run()
+		quit()
 	}()
 	app.Main()
 }
