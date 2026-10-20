@@ -497,6 +497,11 @@ func layoutSearchBox(gtx layout.Context, w int) {
 		}
 	}
 	searchFocused = focused
+	// Like the web player, the box empties when you leave search (going back
+	// to a search page puts its query back).
+	if !focused && SearchQuery.Len() > 0 && !strings.HasPrefix(Current().Path, "/search") {
+		SearchQuery.SetText("")
+	}
 	if changed {
 		searchChanged()
 	}
