@@ -25,6 +25,7 @@ type App struct {
 	img    *imgcache.Cache
 
 	mu       sync.Mutex
+	connect  *spotify.Connect
 	state    player.State
 	stateErr string
 	loginURL string
@@ -57,6 +58,7 @@ func NewApp(log *slog.Logger, cfg Config) *App {
 			}
 			if s == player.StateReady {
 				a.loginURL = ""
+				go a.startConnect()
 			}
 			a.mu.Unlock()
 			runtime.EventsEmit(a.ctx, "app:state", a.GetState())
@@ -113,6 +115,7 @@ func (a *App) OpenLoginURL() {
 }
 
 func (a *App) Logout() error {
+	a.stopConnect()
 	a.sp.Reset()
 	return errors.Join(a.player.Logout(), a.img.Clear())
 }
@@ -130,47 +133,6 @@ func (a *App) do(typ daemon.ApiRequestType, data any) (any, error) {
 		a.log.Debug("player request", "type", typ, "data", data)
 	}
 	return res, err
-}
-
-func (a *App) Status() (*daemon.ApiStatus, error) {
-	res, err := a.do(daemon.ApiRequestTypeStatus, nil)
-	if err != nil {
-		return nil, err
-	}
-	return res.(*daemon.ApiStatus), nil
-}
-
-func (a *App) Play(uri, skipToURI string) error {
-	_, err := a.do(daemon.ApiRequestTypePlay, daemon.ApiPlay{Uri: uri, SkipToUri: skipToURI})
-	return err
-}
-
-func (a *App) PlayPause() error { _, err := a.do(daemon.ApiRequestTypePlayPause, nil); return err }
-func (a *App) Next() error      { _, err := a.do(daemon.ApiRequestTypeNext, daemon.ApiNext{}); return err }
-func (a *App) Prev() error      { _, err := a.do(daemon.ApiRequestTypePrev, nil); return err }
-
-func (a *App) SeekTo(ms int64) error {
-	_, err := a.do(daemon.ApiRequestTypeSeek, daemon.ApiSeek{Position: ms})
-	return err
-}
-
-func (a *App) SetVolume(v int32) error {
-	_, err := a.do(daemon.ApiRequestTypeSetVolume, daemon.ApiSetVolume{Volume: v})
-	return err
-}
-
-func (a *App) SetShuffle(on bool) error {
-	_, err := a.do(daemon.ApiRequestTypeSetShufflingContext, on)
-	return err
-}
-
-// SetRepeat takes "off", "context" or "track".
-func (a *App) SetRepeat(mode string) error {
-	if _, err := a.do(daemon.ApiRequestTypeSetRepeatingContext, mode != "off"); err != nil {
-		return err
-	}
-	_, err := a.do(daemon.ApiRequestTypeSetRepeatingTrack, mode == "track")
-	return err
 }
 
 func (a *App) OpenAccountPage() {

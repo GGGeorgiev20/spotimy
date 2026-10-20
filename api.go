@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Internal API bindings. Each returns a typed result or an error the UI shows
@@ -67,4 +68,105 @@ func (a *App) ImageColor(url string) (string, error) {
 	ctx, cancel := a.call()
 	defer cancel()
 	return a.img.DominantColor(ctx, url)
+}
+
+func (a *App) Home(facet string) (*spotify.Home, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Home(ctx, facet)
+}
+
+func (a *App) HomeSection(uri string) (*spotify.Shelf, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.HomeSection(ctx, uri)
+}
+
+func (a *App) Search(term string) (*spotify.SearchResults, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Search(ctx, term)
+}
+
+func (a *App) SearchType(term, kind string, offset, limit int) (*spotify.SearchPage, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.SearchType(ctx, term, kind, offset, limit)
+}
+
+func (a *App) RecentSearches() ([]spotify.Card, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.RecentSearches(ctx)
+}
+
+func (a *App) SaveRecentSearch(uri string) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.SaveRecentSearch(ctx, uri)
+}
+
+func (a *App) RemoveRecentSearches(uris []string) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.RemoveRecentSearches(ctx, uris)
+}
+
+func (a *App) Artist(uri string) (*spotify.ArtistPage, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Artist(ctx, uri)
+}
+
+func (a *App) Discography(uri, kind string, offset, limit int) (*spotify.SearchPage, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.Discography(ctx, uri, kind, offset, limit)
+}
+
+func (a *App) EditablePlaylists(uris []string) ([]spotify.EditablePlaylist, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.EditablePlaylists(ctx, uris)
+}
+
+func (a *App) AddToPlaylist(playlist string, uris []string) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.AddToPlaylist(ctx, playlist, uris, spotify.Position{})
+}
+
+func (a *App) RemoveFromPlaylist(playlist string, uids []string) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.RemoveFromPlaylist(ctx, playlist, uids)
+}
+
+// MovePlaylistItems moves items (by uid) before or after another item.
+func (a *App) MovePlaylistItems(playlist string, uids []string, pos spotify.Position) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.MoveInPlaylist(ctx, playlist, uids, pos)
+}
+
+func (a *App) CreatePlaylist(name string) (string, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.CreatePlaylist(ctx, name)
+}
+
+func (a *App) RenamePlaylist(uri, name, description string) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.RenamePlaylist(ctx, uri, name, &description)
+}
+
+func (a *App) DeletePlaylist(uri string) error {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.DeletePlaylist(ctx, uri)
+}
+
+func (a *App) CopyText(text string) {
+	runtime.ClipboardSetText(a.ctx, text)
 }
