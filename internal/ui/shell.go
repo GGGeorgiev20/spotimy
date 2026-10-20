@@ -344,6 +344,8 @@ var (
 	searchFocused                        bool
 )
 
+var bellBtn IconButton
+
 func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
 	h := size.Y
@@ -359,6 +361,9 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	}
 	if friendsBtn.Click.Clicked(gtx) {
 		TogglePanel("friends")
+	}
+	if bellBtn.Click.Clicked(gtx) {
+		Navigate("/content-feed")
 	}
 	if avatarBtn.Clicked(gtx) {
 		x := size.X - Dp(gtx, 8) - Dp(gtx, 196)
@@ -442,6 +447,10 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	Offset(gtx, ax-Dp(gtx, 8)-Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
 		d := friendsBtn.Layout(gtx, IconStyle{Icon: "friends", Label: "Friend Activity", Active: Prefs.RightPanel == "friends"})
 		Tip(gtx, &friendsBtn.Click, d, "Friend Activity", true)
+	})
+	Offset(gtx, ax-2*Dp(gtx, 8)-2*Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
+		d := bellBtn.Layout(gtx, IconStyle{Icon: "bell", Label: "What's New", Active: Current().Path == "/content-feed"})
+		Tip(gtx, &bellBtn.Click, d, "What's New", true)
 	})
 	return layout.Dimensions{Size: size}
 }

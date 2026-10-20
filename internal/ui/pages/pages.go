@@ -15,6 +15,8 @@ import (
 	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/pages/search"
 	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/pages/section"
 	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/pages/show"
+	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/pages/whatsnew"
+	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/panels/addsongs"
 	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/panels/devices"
 	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/panels/friends"
 	_ "github.com/GGGeorgiev20/personal-spotify/internal/ui/panels/library"

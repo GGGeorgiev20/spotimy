@@ -19,6 +19,10 @@ const pageSize = 100
 func init() {
 	ui.Register("playlist", func(args []string) ui.Page {
 		p := &page{uri: "spotify:playlist:" + args[0], color: ui.RGB(0x535353)}
+		p.ctl = ui.ListControls{Hint: "Search in playlist", Default: ui.SortCustom, Options: []ui.SortOpt{
+			{Key: ui.SortCustom, Label: "Custom order"}, {Key: ui.SortTitle, Label: "Title"}, {Key: ui.SortArtist, Label: "Artist"},
+			{Key: ui.SortAlbum, Label: "Album"}, {Key: ui.SortAdded, Label: "Date added"}, {Key: ui.SortDuration, Label: "Duration"},
+		}}
 		p.version = ui.PlaylistVersion[p.uri]
 		p.load()
 		return p
@@ -39,6 +43,10 @@ type page struct {
 	owner   ui.Link
 	member  ui.Link
 	headerH int
+
+	ctl  ui.ListControls // search and sort
+	view ui.TrackView
+	recs recs
 
 	desc    string
 	length  string // "about 3 hr", cached per tracks.Gen
@@ -77,8 +85,9 @@ func (p *page) setup(pl *spotify.Playlist) {
 	p.tracks.Seed(pl.Tracks)
 	p.lengthG = -1
 	p.table = ui.TrackTable{Variant: "playlist", ContextURI: p.uri, PlaylistURI: p.uri, CanEdit: pl.CanEdit}
-	if pl.CanEdit {
-		p.table.OnMove = p.move
+	ui.LoadTasteExcluded(p.uri)
+	if pl.CanEdit && !p.recs.res.Done {
+		p.recs.fetch(p.uri, p.haveURIs())
 	}
 	ui.CoverColor(pl.Images, func(c color.NRGBA) { p.color = c })
 }
@@ -151,8 +160,22 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	p.list.Sticky = func(gtx layout.Context) layout.Dimensions { return p.table.Header(gtx, true) }
 	p.list.StickyIndex, p.list.StickyTop = itemTableHeader, ui.Dp(gtx, 64)
 
-	n := p.tracks.Total
-	d := p.list.Layout(gtx, itemRows+n+1, func(gtx layout.Context, i int) layout.Dimensions {
+	reordered := p.view.Update(p.tracks, &p.ctl, &p.table)
+	p.table.OnMove = nil
+	if pl.CanEdit && !reordered { // dragging only makes sense in the playlist's own order
+		p.table.OnMove = p.move
+	}
+	n := p.view.Len(p.tracks)
+	suggest := pl.CanEdit && p.ctl.Query() == "" // no suggestions under a search
+	recs := suggest && p.recs.res.Done && len(p.recs.shown()) > 0
+	extra := 0
+	if suggest {
+		extra = 1
+		if recs {
+			extra = 2
+		}
+	}
+	d := p.list.Layout(gtx, itemRows+n+extra+1, func(gtx layout.Context, i int) layout.Dimensions {
 		switch {
 		case i == itemHeader:
 			o := ui.HeaderOpts{
@@ -176,16 +199,28 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			if !pl.IsOwner {
 				a.SaveURI = p.uri
 			}
-			return p.actions.Layout(gtx, a)
+			d := p.actions.Layout(gtx, a)
+			if p.tracks.Total > 0 {
+				p.ctl.Layout(gtx, d.Size)
+			}
+			return d
 		case i == itemTableHeader:
 			return p.table.Header(gtx, false)
 		case i < itemRows+n:
-			return p.table.Row(gtx, i-itemRows, p.tracks.Items[i-itemRows])
+			return p.table.Row(gtx, i-itemRows, p.view.At(p.tracks, i-itemRows))
+		case n == 0 && reordered && i == itemRows:
+			return ui.NoMatches(gtx, p.ctl.Query())
+		case suggest && i == itemRows+n:
+			return p.layoutFind(gtx, pl)
+		case recs && i == itemRows+n+1:
+			return p.layoutRecs(gtx, pl)
 		}
 		return ui.Gap(0, 32)(gtx)
 	})
-	first, last := p.list.Range()
-	p.tracks.Ensure(first-itemRows-5, last-itemRows+5)
+	if !reordered {
+		first, last := p.list.Range()
+		p.tracks.Ensure(first-itemRows-5, last-itemRows+5)
+	}
 	return d
 }
 

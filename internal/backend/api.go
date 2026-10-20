@@ -295,3 +295,32 @@ func (a *App) RecentlyPlayed() ([]spotify.Track, error) {
 	defer cancel()
 	return a.sp.RecentlyPlayed(ctx)
 }
+
+// PlaylistRecommendations is the "Recommended" list under a playlist.
+func (a *App) PlaylistRecommendations(playlist string, skip []string, n int) ([]spotify.Track, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.PlaylistRecommendations(ctx, playlist, skip, n)
+}
+
+func (a *App) TasteExcluded(uris []string) ([]bool, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.TasteExcluded(ctx, uris)
+}
+
+func (a *App) SetTasteExcluded(uri string, excluded bool) error {
+	if a.sandboxed("SetTasteExcluded", uri, excluded) {
+		return nil
+	}
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.SetTasteExcluded(ctx, uri, excluded)
+}
+
+// WhatsNew is the feed behind the top bar's bell (kinds: "ALBUM", "EPISODE").
+func (a *App) WhatsNew(kinds []string) ([]spotify.FeedItem, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.WhatsNew(ctx, kinds)
+}
