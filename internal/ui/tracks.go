@@ -502,11 +502,11 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 // ExplicitBadge is the small "E" tag.
 func ExplicitBadge(gtx layout.Context) layout.Dimensions {
 	s := Dp(gtx, 16)
-	FillRect(gtx.Ops, image.Rect(0, 0, s, s), Dp(gtx, 2), Alpha(ColText, .6))
+	FillRect(gtx.Ops, image.Rect(0, 0, s, s), Dp(gtx, 4), Alpha(ColText, .1))
 	g := gtx
 	g.Constraints = layout.Exact(image.Pt(s, s))
-	layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions { return Text(gtx, "E", 9, Bold, ColBg) })
-	return layout.Dimensions{Size: image.Pt(s+Dp(gtx, 6), s), Baseline: Dp(gtx, 3)}
+	layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions { return Text(gtx, "E", 12, Bold, ColText) })
+	return layout.Dimensions{Size: image.Pt(s+Dp(gtx, 4), s), Baseline: Dp(gtx, 3)}
 }
 
 // Equalizer draws the animated "playing" bars (size px square).
