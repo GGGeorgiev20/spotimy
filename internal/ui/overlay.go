@@ -313,7 +313,7 @@ func layoutModal(gtx layout.Context) {
 			return
 		}
 	}
-	FillRect(gtx.Ops, image.Rectangle{Max: win}, 0, color.NRGBA{A: 178})
+	FillRect(gtx.Ops, image.Rectangle{Max: win}, 0, Alpha(ColBg, .7))
 	st := clip.Rect{Max: win}.Push(gtx.Ops)
 	event.Op(gtx.Ops, modalTag)
 	st.Pop()

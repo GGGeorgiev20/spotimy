@@ -23,11 +23,12 @@ func init() {
 	ui.Register("lyrics", func([]string) ui.Page { return &page{} })
 }
 
-var (
-	upcoming = color.NRGBA{A: 140}                         // rgba(0,0,0,.55)
-	past     = color.NRGBA{R: 255, G: 255, B: 255, A: 179} // rgba(255,255,255,.7)
-	hover    = color.NRGBA{R: 255, G: 255, B: 255, A: 230}
-)
+// Line colors are the official rgba(0,0,0,.55) / rgba(255,255,255,.7) / .9
+// overlays, pre-blended onto the background in sRGB (Gio blends in linear
+// light, which would wash them out).
+func upcoming(bg color.NRGBA) color.NRGBA { return ui.Mix(bg, ui.ColBg, .55) }
+func past(bg color.NRGBA) color.NRGBA     { return ui.Mix(bg, ui.ColText, .7) }
+func hover(bg color.NRGBA) color.NRGBA    { return ui.Mix(bg, ui.ColText, .9) }
 
 // followIdle is how long a manual scroll keeps the view from jumping back.
 const followIdle = 4 * time.Second
@@ -207,7 +208,7 @@ func (p *page) item(gtx layout.Context, i int, l *spotify.Lyrics, active int, fs
 			return layout.Dimensions{}
 		}
 		return ui.Pad(gtx, 20, side, 0, side, func(gtx layout.Context) layout.Dimensions {
-			return ui.Label{Text: "Lyrics provided by " + l.Provider, Size: 12, Color: past, MaxLines: 2}.Layout(gtx)
+			return ui.Label{Text: "Lyrics provided by " + l.Provider, Size: 12, Color: past(p.color), MaxLines: 2}.Layout(gtx)
 		})
 	}
 	k := i - 1
@@ -222,14 +223,14 @@ func (p *page) item(gtx layout.Context, i int, l *spotify.Lyrics, active int, fs
 	c.Label = words
 	return ui.Pad(gtx, 0, side, 12, side, func(gtx layout.Context) layout.Dimensions {
 		return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			col := upcoming
+			col := upcoming(p.color)
 			switch {
 			case !l.Synced || k == active:
 				col = ui.ColText
 			case k < active:
-				col = past
+				col = past(p.color)
 			case c.Hovered():
-				col = hover
+				col = hover(p.color)
 			}
 			return ui.Label{Text: words, Size: fs, Weight: ui.Bold, Color: col, MaxLines: -1, LineHeight: fs * 1.3}.Layout(gtx)
 		})

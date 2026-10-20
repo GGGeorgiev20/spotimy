@@ -4,7 +4,6 @@ package library
 
 import (
 	"image"
-	"image/color"
 	"strings"
 	"time"
 
@@ -667,7 +666,7 @@ func playIcon(gtx layout.Context, it *spotify.LibraryItem, px int, round bool) {
 	if round {
 		r = px / 2
 	}
-	ui.FillRect(gtx.Ops, image.Rect(0, 0, px, px), r, color.NRGBA{A: 128})
+	ui.FillRect(gtx.Ops, image.Rect(0, 0, px, px), r, ui.Alpha(ui.ColBg, .5))
 	name := "play"
 	if ui.CtxPlaying(it.URI) {
 		name = "pause"

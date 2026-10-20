@@ -4,7 +4,6 @@ package queue
 
 import (
 	"image"
-	"image/color"
 	"math"
 
 	"gioui.org/gesture"
@@ -334,7 +333,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 			r.play.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				ui.Image{URL: ui.Pick(imgs, is), Radius: ui.Dp(gtx, 4), Icon: "note"}.Layout(gtx, image.Pt(is, is))
 				if hov {
-					ui.FillRect(gtx.Ops, image.Rect(0, 0, is, is), ui.Dp(gtx, 4), color.NRGBA{A: 140})
+					ui.FillRect(gtx.Ops, image.Rect(0, 0, is, is), ui.Dp(gtx, 4), ui.Alpha(ui.ColBg, .55))
 					icon := "play"
 					if current && ui.Playing() {
 						icon = "pause"

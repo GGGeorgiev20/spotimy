@@ -226,7 +226,7 @@ func (p *panel) artistCard(gtx layout.Context, a *spotify.ArtistCard) layout.Dim
 			r := ui.Dp(gtx, 8)
 			st := clip.RRect{Rect: image.Rect(0, 0, w, ih), NW: r, NE: r}.Push(gtx.Ops)
 			ui.Image{URL: ui.Pick(imgs, w), Icon: "artist"}.Layout(gtx, image.Pt(w, ih))
-			ui.VGradient(gtx.Ops, image.Rect(0, 0, w, ui.Dp(gtx, 72)), ui.ARGB(0x99000000), ui.ARGB(0))
+			ui.VGradient(gtx.Ops, image.Rect(0, 0, w, ui.Dp(gtx, 72)), ui.Alpha(ui.ColBg, .6), ui.ColNone)
 			st.Pop()
 			ui.Offset(gtx, ui.Dp(gtx, 16), ui.Dp(gtx, 16), func() {
 				ui.Text(gtx, "About the artist", 16, ui.Bold, ui.ColText)
