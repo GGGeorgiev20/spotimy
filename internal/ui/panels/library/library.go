@@ -21,7 +21,7 @@ const (
 	pageSize  = 50
 	maxW      = 600 // the widest the shell lets the panel get ("expanded")
 	typedWait = 250 * time.Millisecond
-	tipWait   = 600 * time.Millisecond
+	tipWait   = 375 * time.Millisecond
 	headerH   = 59 // 16 above, 35 buttons, 8 below
 )
 
@@ -214,11 +214,11 @@ func layoutPanel(gtx layout.Context, collapsed bool) layout.Dimensions {
 	return layout.Dimensions{Size: size}
 }
 
-// roundButton is a 36dp circle with an icon: filled (Create) or bare (Expand).
+// roundButton is a 35dp circle with an icon: filled (Create) or bare (Expand).
 func roundButton(gtx layout.Context, c *ui.Click, icon string, filled bool, tip string) layout.Dimensions {
 	c.Label = tip
 	d := c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		s := ui.Dp(gtx, 36)
+		s := ui.Dp(gtx, 35)
 		hov := c.Hovered()
 		if filled {
 			bg := ui.ColSurface2
@@ -266,7 +266,7 @@ func railHeader(gtx layout.Context, w int) int {
 		ui.Prefs.LibCollapsed = false
 	}
 	if st.create.Clicked(gtx) {
-		createMenu(gtx, (w-ui.Dp(gtx, 36))/2, ui.Dp(gtx, 64+36+4))
+		createMenu(gtx, (w-ui.Dp(gtx, 35))/2, ui.Dp(gtx, 64+35+4))
 	}
 	place(gtx, (w-ui.Dp(gtx, 40))/2, ui.Dp(gtx, 16), w, ui.Dp(gtx, 40), func(gtx layout.Context) layout.Dimensions {
 		st.title.Label = "Expand Your Library"
@@ -281,10 +281,10 @@ func railHeader(gtx layout.Context, w int) int {
 		})
 	})
 	railTip(gtx, &st.title, "Expand Your Library", "", ui.Dp(gtx, 36))
-	place(gtx, (w-ui.Dp(gtx, 36))/2, ui.Dp(gtx, 64), w, ui.Dp(gtx, 36), func(gtx layout.Context) layout.Dimensions {
+	place(gtx, (w-ui.Dp(gtx, 35))/2, ui.Dp(gtx, 64), w, ui.Dp(gtx, 35), func(gtx layout.Context) layout.Dimensions {
 		return roundButton(gtx, &st.create, "plus", true, "Create")
 	})
-	return ui.Dp(gtx, 64+36+8)
+	return ui.Dp(gtx, 64+35+8)
 }
 
 func header(gtx layout.Context, w int) int {
@@ -302,7 +302,7 @@ func header(gtx layout.Context, w int) int {
 			st.restoreW, ui.Prefs.LibWidth = ui.Prefs.LibWidth, maxW
 		}
 	}
-	bw := ui.Dp(gtx, 36)
+	bw := ui.Dp(gtx, 35)
 	expanded := ui.Prefs.LibWidth >= maxW
 	exTip, exIcon := "Expand Your Library", "maximize"
 	if expanded {
@@ -325,7 +325,7 @@ func header(gtx layout.Context, w int) int {
 			ui.Offset(gtx, cx-pw, 0, func() {
 				g := gtx
 				g.Constraints.Max.X = pw
-				st.createPill.Layout(g, ui.PillStyle{Text: "Create", Icon: "plus", Weight: ui.Bold, Height: 36, Bg: ui.ColSurface2, BgHover: ui.ColSurface3, Fg: ui.ColText2})
+				st.createPill.Layout(g, ui.PillStyle{Text: "Create", Icon: "plus", Weight: ui.Bold, Height: 35, Bg: ui.ColSurface2, BgHover: ui.ColSurface3, Fg: ui.ColText2})
 			})
 			return layout.Dimensions{}
 		})
@@ -712,7 +712,14 @@ func listRow(gtx layout.Context, it *spotify.LibraryItem, i int, collapsed, comp
 		r.click.Label = it.Name
 		r.click.Layout(g, func(gtx layout.Context) layout.Dimensions {
 			hov := r.click.Hovered()
-			if hov {
+			switch {
+			case !folder && ui.Current().Path == ui.URIToPath(it.URI): // the open page is tinted
+				a := float32(.1)
+				if hov {
+					a = .14
+				}
+				ui.FillRect(gtx.Ops, image.Rect(0, 0, rw, h), ui.Dp(gtx, 6), ui.Alpha(ui.ColText, a))
+			case hov:
 				ui.FillRect(gtx.Ops, image.Rect(0, 0, rw, h), ui.Dp(gtx, 6), ui.ColSurface2)
 			}
 			pad := ui.Dp(gtx, 8)
@@ -788,7 +795,7 @@ func subLine(gtx layout.Context, it *spotify.LibraryItem) layout.Dimensions {
 		segs = append(segs, ui.Seg{Widget: func(gtx layout.Context) layout.Dimensions {
 			s := ui.Dp(gtx, 12)
 			ui.IconPx(gtx, "pin", s, ui.ColAccent)
-			return layout.Dimensions{Size: image.Pt(s+ui.Dp(gtx, 6), s)}
+			return layout.Dimensions{Size: image.Pt(s+ui.Dp(gtx, 4), s)}
 		}})
 	}
 	segs = append(segs, ui.Seg{Text: subtitle(it)})

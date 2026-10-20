@@ -105,7 +105,7 @@ func (s *Slider) Layout(gtx layout.Context, frac float32, enabled bool) layout.D
 		d := Dp(gtx, 12)
 		x := max(0, min(w-d, fw-d/2))
 		ty := (h - d) / 2
-		Shadow(gtx.Ops, image.Rect(x, ty, x+d, ty+d), d/2, Dp(gtx, 2), Dp(gtx, 2), .3)
+		Shadow(gtx.Ops, image.Rect(x, ty, x+d, ty+d), d/2, Dp(gtx, 4), Dp(gtx, 2), .5)
 		Offset(gtx, x, ty, func() { FillCircle(gtx.Ops, d, ColText) })
 	}
 	return layout.Dimensions{Size: image.Pt(w, h)}

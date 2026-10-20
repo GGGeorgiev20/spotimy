@@ -28,6 +28,7 @@ var sources = map[string][]string{
 	"library":         {"M2 1.5v13", "M5.5 1.5v13", "M9 2.2l4.8 12.3"},
 	"plus":            {"M8 2v12", "M2 8h12"},
 	"close":           {"M3 3l10 10", "M13 3 3 13"},
+	"browse":          {"M2 6h12l-1.2 7.5H3.2z", "M4.5 2.5h7v2h-7z"},
 	"check":           {"M2.5 8.5l3.5 3.5 7.5-8"},
 	"chevron-left":    {"M10.5 2.5 5 8l5.5 5.5"},
 	"chevron-right":   {"M5.5 2.5 11 8l-5.5 5.5"},

@@ -31,16 +31,16 @@ func layoutHoverTip(gtx layout.Context) {
 	g.Constraints = layout.Constraints{Max: image.Pt(min(Dp(gtx, 300), tw+Dp(gtx, 16)), Dp(gtx, 100))}
 	m := op.Record(gtx.Ops)
 	d := Pad(g, 4, 8, 4, 8, func(gtx layout.Context) layout.Dimensions {
-		rows := []layout.Widget{func(gtx layout.Context) layout.Dimensions { return Text(gtx, hoverTip.title, 14, Bold, ColText) }}
+		rows := []layout.Widget{func(gtx layout.Context) layout.Dimensions { return tipLine(gtx, hoverTip.title, Bold, ColText) }}
 		if hoverTip.sub != "" {
-			rows = append(rows, func(gtx layout.Context) layout.Dimensions { return Text(gtx, hoverTip.sub, 14, Regular, ColText2) })
+			rows = append(rows, func(gtx layout.Context) layout.Dimensions { return tipLine(gtx, hoverTip.sub, Regular, ColText2) })
 		}
 		return Column(gtx, rows...)
 	})
 	call := m.Stop()
 	Offset(gtx, hoverTip.at.X, hoverTip.at.Y-d.Size.Y/2, func() {
 		r := image.Rectangle{Max: d.Size}
-		Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 6), Dp(gtx, 4), .3)
+		popupShadow(gtx, r)
 		FillRect(gtx.Ops, r, Dp(gtx, 4), RGB(0x282828))
 		call.Add(gtx.Ops)
 	})

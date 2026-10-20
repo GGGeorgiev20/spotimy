@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"time"
 
+	"gioui.org/font"
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -41,6 +42,7 @@ type menuLevel struct {
 	open   int // index of the item whose flyout is open, -1 none
 	rect   image.Rectangle
 	rows   []image.Rectangle
+	ptr    bool // opened at the pointer: 8dp off it, flipping to its other side
 }
 
 var (
@@ -49,8 +51,12 @@ var (
 	menuOpen time.Time
 )
 
-// OpenMenu shows a context menu at the pointer.
-func OpenMenu(items []MenuItem) { OpenMenuAt(PointerPos(), items) }
+// OpenMenu shows a context menu at the pointer, like a right click: 8dp below
+// it, or above / to the left when there is no room.
+func OpenMenu(items []MenuItem) {
+	OpenMenuAt(PointerPos(), items)
+	menus[0].ptr = true
+}
 
 // OpenMenuAt shows a context menu with its top-left corner at pos (window px),
 // moved as needed to stay inside the window.
@@ -101,17 +107,31 @@ func layoutMenus(gtx layout.Context) {
 		d := layoutMenuBox(gtx, lv, items, li)
 		call := m.Stop()
 		at := lv.at
-		if at.X+d.Size.X > win.X-8 {
+		switch {
+		case lv.ptr:
+			at.Y += Dp(gtx, 8)
+			if at.X+d.Size.X > win.X {
+				at.X -= d.Size.X
+			}
+			if at.Y+d.Size.Y > win.Y {
+				at.Y = max(0, lv.at.Y-Dp(gtx, 8)-d.Size.Y)
+			}
+		case at.X+d.Size.X > win.X-8:
 			if li > 0 {
 				at.X = menus[li-1].rect.Min.X - d.Size.X // flip to the left of the parent
 			} else {
 				at.X = win.X - 8 - d.Size.X
 			}
+			fallthrough
+		default:
+			if at.Y+d.Size.Y > win.Y-8 {
+				at.Y = max(8, win.Y-8-d.Size.Y)
+			}
 		}
-		if at.Y+d.Size.Y > win.Y-8 {
-			at.Y = max(8, win.Y-8-d.Size.Y)
+		at.X = max(Dp(gtx, 8), at.X)
+		if lv.ptr {
+			at.X = max(0, at.X)
 		}
-		at.X = max(8, at.X)
 		lv.rect = image.Rectangle{Min: at, Max: at.Add(d.Size)}
 		Offset(gtx, at.X, at.Y, func() { call.Add(gtx.Ops) })
 		if li == len(menus)-1 {
@@ -122,15 +142,22 @@ func layoutMenus(gtx layout.Context) {
 
 func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) layout.Dimensions {
 	pad := Dp(gtx, 4)
-	minW, maxW := Dp(gtx, 220), Dp(gtx, 360)
+	minW, maxW := Dp(gtx, 160), Dp(gtx, 350)
 	rowH := Dp(gtx, 40)
-	// Width: widest label.
+	// Width: widest label plus the 4dp frame, 12dp before and 8dp after the
+	// row's content, its 16dp icon and 12dp gap, and the 16dp right icon.
 	w := minW
 	for _, it := range items {
 		if it.Divider || it.Widget != nil {
 			continue
 		}
-		lw := Measure(gtx, it.Label, 14, Regular) + Dp(gtx, 12+8+16+12+16+16)
+		lw := Measure(gtx, it.Label, 14, Regular) + Dp(gtx, 2*4+12+8)
+		if it.Icon != "" {
+			lw += Dp(gtx, 16+12)
+		}
+		if it.Sub != nil || it.Check || it.External {
+			lw += Dp(gtx, 16+12)
+		}
 		w = max(w, min(maxW, lw))
 	}
 	lv.rows = lv.rows[:0]
@@ -139,9 +166,9 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 	for i, it := range items {
 		switch {
 		case it.Divider:
-			Offset(gtx, pad, y+Dp(gtx, 4), func() { Hline(gtx, w-2*pad, ColDivider) })
+			Offset(gtx, pad, y, func() { Hline(gtx, w-2*pad, ColDivider) })
 			lv.rows = append(lv.rows, image.Rectangle{})
-			y += Dp(gtx, 9)
+			y += max(1, Dp(gtx, 1))
 			continue
 		case it.Widget != nil:
 			var d layout.Dimensions
@@ -184,6 +211,9 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 					FillRect(gtx.Ops, image.Rect(0, 0, rw, rowH), Dp(gtx, 2), Alpha(ColText, .1))
 				}
 				fg := Alpha(ColText, .9)
+				if c.Hovered() || lv.open == i {
+					fg = ColText
+				}
 				switch {
 				case it.Danger:
 					fg = RGB(0xf3727f)
@@ -200,7 +230,7 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 				}
 				right := Dp(gtx, 8)
 				if it.Sub != nil || it.Check || it.External {
-					right += Dp(gtx, 16) + Dp(gtx, 8)
+					right += Dp(gtx, 16) + Dp(gtx, 12)
 				}
 				Offset(gtx, x, 0, func() {
 					g := gtx
@@ -231,7 +261,7 @@ func layoutMenuBox(gtx layout.Context, lv *menuLevel, items []MenuItem, li int) 
 	y += pad
 	call := m.Stop()
 	r := image.Rect(0, 0, w, y)
-	Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 24), Dp(gtx, 16), .3)
+	popupShadow(gtx, r)
 	FillRect(gtx.Ops, r, Dp(gtx, 4), RGB(0x282828))
 	// Swallow clicks on the menu's own background.
 	st := clip.Rect(r).Push(gtx.Ops)
@@ -250,8 +280,19 @@ func openFlyout(lv *menuLevel, li, i int, sub func() []MenuItem) {
 	menus = menus[:li+1]
 	lv.open = i
 	row := lv.rows[i]
-	at := lv.rect.Min.Add(image.Pt(lv.rect.Dx()-4, row.Min.Y-4))
+	at := lv.rect.Min.Add(image.Pt(lv.rect.Dx()-4, row.Min.Y))
 	menus = append(menus, &menuLevel{sub: sub, at: at, open: -1})
+}
+
+// tipLine is one 14sp tooltip line with the web player's 20dp line height.
+func tipLine(gtx layout.Context, s string, w font.Weight, c color.NRGBA) layout.Dimensions {
+	return Label{Text: s, Size: 14, Weight: w, Color: c, LineHeight: 20}.Layout(gtx)
+}
+
+// popupShadow is the elevated shadow of menus and tooltips.
+func popupShadow(gtx layout.Context, r image.Rectangle) {
+	Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 24), Dp(gtx, 16), .3)
+	Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 8), Dp(gtx, 6), .2)
 }
 
 // ---- Modals ----
@@ -271,13 +312,21 @@ var (
 	modal    Modal
 	modalTag = new(int)
 	// ModalWidth is the box width in dp (0 = 524).
-	modalWidth float32
-	modalBare  bool
+	modalWidth  float32
+	modalBare   bool
+	modalBg     color.NRGBA
+	modalPad    float32 // dp
+	modalShadow bool
 )
 
 // ShowModal opens m in the standard dialog box (width dp, 0 = 524).
-func ShowModal(m Modal, width float32) {
-	modal, modalWidth, modalBare = m, width, false
+func ShowModal(m Modal, width float32) { showBox(m, width, RGB(0x282828), 24, true) }
+
+// ShowLightModal opens m in the white confirmation dialog (black text).
+func ShowLightModal(m Modal, width float32) { showBox(m, width, ColText, 32, false) }
+
+func showBox(m Modal, width float32, bg color.NRGBA, pad float32, shadow bool) {
+	modal, modalWidth, modalBare, modalBg, modalPad, modalShadow = m, width, false, bg, pad, shadow
 	Invalidate()
 }
 
@@ -328,7 +377,7 @@ func layoutModal(gtx layout.Context) {
 		w = 524
 	}
 	bw := min(Dp(gtx, w), win.X*9/10)
-	pad := Dp(gtx, 24)
+	pad := Dp(gtx, modalPad)
 	m := op.Record(gtx.Ops)
 	g := gtx
 	g.Constraints = layout.Constraints{Min: image.Pt(bw-2*pad, 0), Max: image.Pt(bw-2*pad, win.Y*8/10)}
@@ -338,8 +387,10 @@ func layoutModal(gtx layout.Context) {
 	x, y := (win.X-bw)/2, (win.Y-bh)/2
 	Offset(gtx, x, y, func() {
 		r := image.Rect(0, 0, bw, bh)
-		Shadow(gtx.Ops, r, Dp(gtx, 8), Dp(gtx, 24), Dp(gtx, 4), .4)
-		FillRect(gtx.Ops, r, Dp(gtx, 8), RGB(0x282828))
+		if modalShadow {
+			Shadow(gtx.Ops, r, Dp(gtx, 8), Dp(gtx, 4), Dp(gtx, 4), .3)
+		}
+		FillRect(gtx.Ops, r, Dp(gtx, 8), modalBg)
 		st := clip.Rect(r).Push(gtx.Ops)
 		event.Op(gtx.Ops, &modal) // swallow clicks inside the box
 		for {
@@ -352,14 +403,55 @@ func layoutModal(gtx layout.Context) {
 	})
 }
 
+// ModalTitle is a dialog's 24sp title (and an optional 16sp subtitle) with
+// the close button at the right. Hang puts the button 8dp into the box's
+// padding, like the Edit details dialog.
+type ModalTitle struct {
+	Close IconButton
+	Hang  bool
+}
+
+func (t *ModalTitle) Layout(gtx layout.Context, title, sub string) layout.Dimensions {
+	if t.Close.Click.Clicked(gtx) {
+		CloseModal()
+	}
+	w, b := gtx.Constraints.Max.X, Dp(gtx, 32)
+	g := gtx
+	g.Constraints.Max.X = w - Dp(gtx, 40)
+	rows := []layout.Widget{func(gtx layout.Context) layout.Dimensions {
+		return Label{Text: title, Size: 24, Weight: Bold, Color: ColText, LineHeight: 29}.Layout(gtx)
+	}}
+	if sub != "" {
+		rows = append(rows, func(gtx layout.Context) layout.Dimensions {
+			return Pad(gtx, 4, 0, 0, 0, func(gtx layout.Context) layout.Dimensions {
+				return Label{Text: sub, Size: 16, Weight: Bold, Color: ColText, MaxLines: 2, LineHeight: 22}.Layout(gtx)
+			})
+		})
+	}
+	d := Column(g, rows...)
+	x, y := w-b, 0
+	if t.Hang {
+		x, y = x+Dp(gtx, 8), (Dp(gtx, 29)-b)/2
+	}
+	Offset(gtx, x, y, func() {
+		if t.Close.Click.Hovered() {
+			FillCircle(gtx.Ops, b, Alpha(ColText, .1))
+		}
+		t.Close.Layout(gtx, IconStyle{Icon: "close", Label: "Close", Color: Alpha(ColText, .7)})
+	})
+	return layout.Dimensions{Size: image.Pt(w, d.Size.Y)}
+}
+
 // ---- Toasts ----
 
 func layoutToasts(gtx layout.Context, bottom int) {
+	const life = 5 * time.Second
 	now := gtx.Now
 	kept := toasts[:0]
 	for _, t := range toasts {
-		if now.Sub(t.at) < 3*time.Second {
+		if now.Sub(t.at) < life {
 			kept = append(kept, t)
+			gtx.Execute(op.InvalidateCmd{At: t.at.Add(life)})
 		}
 	}
 	toasts = kept
@@ -369,17 +461,17 @@ func layoutToasts(gtx layout.Context, bottom int) {
 		t := toasts[i]
 		m := op.Record(gtx.Ops)
 		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(win.X*2/3, Dp(gtx, 200))}
-		d := Pad(g, 12, 16, 12, 16, func(gtx layout.Context) layout.Dimensions {
-			return Label{Text: t.text, Size: 14, Color: ColText, MaxLines: 3}.Layout(gtx)
+		g.Constraints = layout.Constraints{Max: image.Pt(min(Dp(gtx, 450), win.X*2/3), Dp(gtx, 200))}
+		d := Pad(g, 12, 12, 14, 12, func(gtx layout.Context) layout.Dimensions {
+			return Label{Text: t.text, Size: 16, Color: ColBg, MaxLines: 3, LineHeight: 22}.Layout(gtx)
 		})
 		call := m.Stop()
 		y -= d.Size.Y
 		x := (win.X - d.Size.X) / 2
 		Offset(gtx, x, y, func() {
 			r := image.Rectangle{Max: d.Size}
-			Shadow(gtx.Ops, r, Dp(gtx, 8), Dp(gtx, 12), Dp(gtx, 8), .35)
-			FillRect(gtx.Ops, r, Dp(gtx, 8), ColToast)
+			Shadow(gtx.Ops, r, Dp(gtx, 6), Dp(gtx, 12), Dp(gtx, 4), .3)
+			FillRect(gtx.Ops, r, Dp(gtx, 6), ColText)
 			call.Add(gtx.Ops)
 		})
 		y -= Dp(gtx, 8)
@@ -399,7 +491,7 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 	if c.hoverSince.IsZero() {
 		c.hoverSince = gtx.Now
 	}
-	const delay = 600 * time.Millisecond
+	const delay = 375 * time.Millisecond
 	if gtx.Now.Sub(c.hoverSince) < delay {
 		gtx.Execute(op.InvalidateCmd{At: c.hoverSince.Add(delay)})
 		return
@@ -408,7 +500,7 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 	g := gtx
 	g.Constraints = layout.Constraints{Max: image.Pt(Dp(gtx, 300), Dp(gtx, 100))}
 	td := Pad(g, 4, 8, 4, 8, func(gtx layout.Context) layout.Dimensions {
-		return Text(gtx, text, 14, Regular, ColText)
+		return tipLine(gtx, text, Regular, ColText)
 	})
 	call := m.Stop()
 	x := (d.Size.X - td.Size.X) / 2
@@ -419,7 +511,7 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 	m = op.Record(gtx.Ops)
 	Offset(gtx, x, y, func() {
 		r := image.Rectangle{Max: td.Size}
-		Shadow(gtx.Ops, r, Dp(gtx, 4), Dp(gtx, 6), Dp(gtx, 4), .3)
+		popupShadow(gtx, r)
 		FillRect(gtx.Ops, r, Dp(gtx, 4), RGB(0x282828))
 		call.Add(gtx.Ops)
 	})

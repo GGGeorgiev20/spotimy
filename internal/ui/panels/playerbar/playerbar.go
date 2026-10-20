@@ -60,7 +60,7 @@ func Layout(gtx layout.Context) layout.Dimensions {
 	}
 	at(pad, side, layoutLeft)
 	at(pad+side+(col-centerW)/2, centerW, func(gtx layout.Context) {
-		ui.Offset(gtx, 0, (h-dp(55))/2, func() { bar.tr.layout(gtx, 32, 11) })
+		ui.Offset(gtx, 0, (h-dp(57))/2, func() { bar.tr.layout(gtx, 32, 12) })
 	})
 	at(size.X-pad-side, side, layoutRight)
 
@@ -249,13 +249,13 @@ type transport struct {
 }
 
 // layout draws the buttons row (play button playSize dp) centered, then the
-// progress row below it, filling the constraint width. It's 15dp+8dp+ the
+// progress row below it, filling the constraint width. It's 17dp+8dp+ the
 // larger of 32 and playSize tall.
 func (t *transport) layout(gtx layout.Context, playSize, timeSize float32) layout.Dimensions {
 	d := t.controls(gtx, playSize)
 	dp := dpf(gtx)
 	ui.Offset(gtx, 0, d.Size.Y+dp(8), func() { t.progress(gtx, timeSize) })
-	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, d.Size.Y+dp(8+15))}
+	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, d.Size.Y+dp(8+17))}
 }
 
 func (t *transport) controls(gtx layout.Context, playSize float32) layout.Dimensions {
@@ -323,9 +323,9 @@ func (t *transport) controls(gtx layout.Context, playSize float32) layout.Dimens
 				bg, draw := ui.ColText, ps
 				switch {
 				case !has:
-					bg = ui.Alpha(bg, .4)
+					bg = ui.Alpha(bg, .3)
 				case t.play.Hovered():
-					draw = ps * 106 / 100
+					draw = ps * 104 / 100
 				}
 				o := (ps - draw) / 2
 				ui.Offset(gtx, o, o, func() { ui.FillCircle(gtx.Ops, draw, bg) })
@@ -347,7 +347,7 @@ func (t *transport) controls(gtx layout.Context, playSize float32) layout.Dimens
 // playing, at the second boundary.
 func (t *transport) progress(gtx layout.Context, timeSize float32) layout.Dimensions {
 	dp := dpf(gtx)
-	w, h := gtx.Constraints.Max.X, dp(15)
+	w, h := gtx.Constraints.Max.X, dp(17)
 	var dur int64
 	if tr := ui.NowTrack(); tr != nil {
 		dur = tr.DurationMs

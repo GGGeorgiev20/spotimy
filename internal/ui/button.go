@@ -88,7 +88,7 @@ func (b *IconButton) Layout(gtx layout.Context, s IconStyle) layout.Dimensions {
 		c := s.Color
 		switch {
 		case s.Disabled:
-			c = Alpha(s.Color, .4)
+			c = Alpha(s.Color, .3)
 		case s.Active:
 			c = ColAccent
 			if b.Click.Hovered() {

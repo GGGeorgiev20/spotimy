@@ -33,7 +33,6 @@ var (
 	ColText3       = RGB(0x7c7c7c)
 	ColAccent      = RGB(0x1ed760)
 	ColAccentHover = RGB(0x3be477)
-	ColToast       = RGB(0x3d91f4)
 	ColRowHover    = Alpha(ColText, .1) // hsla(0,0%,100%,.1)
 	ColRowSelected = Alpha(ColText, .3)
 	ColDivider     = Alpha(ColText, .1)
