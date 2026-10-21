@@ -36,6 +36,8 @@ type panel struct {
 	drop  ui.DropTarget
 	heads []ui.DropTarget
 
+	loggedErr error // the load error last logged
+
 	// The "Recently played" tab.
 	recent           bool
 	tabQueue, tabRec ui.Click
@@ -108,7 +110,8 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 	var next []backend.QueueTrack
 	if p.res.Ok() {
 		next = p.res.V.Next
-	} else if p.res.Err != nil {
+	} else if p.res.Err != nil && p.res.Err != p.loggedErr {
+		p.loggedErr = p.res.Err // once, not every frame
 		ui.Log.Warn("queue", "err", p.res.Err)
 	}
 	items := layoutItems(t != nil, next)
