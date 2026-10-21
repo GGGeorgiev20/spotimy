@@ -1196,9 +1196,9 @@ func (p *AppPlayer) addToQueue(track *connectpb.ContextTrack) {
 
 			p.publishUpcoming(snap)
 
-			// The queued track plays next: a stream prefetched under the old
-			// plan must not be switched or faded into.
-			p.invalidateUpcoming()
+			// The queued track may play next: a stream prefetched under the
+			// old plan must not be switched or faded into.
+			p.invalidateUpcomingFor(snap)
 			p.schedulePrefetchNext()
 			p.updateState()
 		})
@@ -1226,7 +1226,7 @@ func (p *AppPlayer) setQueue(prev []*connectpb.ContextTrack, next []*connectpb.C
 
 			// The upcoming track may have changed: a stream prefetched under
 			// the old plan must not be switched or faded into.
-			p.invalidateUpcoming()
+			p.invalidateUpcomingFor(snap)
 			p.schedulePrefetchNext()
 			p.updateState()
 		})

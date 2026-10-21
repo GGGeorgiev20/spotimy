@@ -10,6 +10,9 @@ import (
 	librespot "github.com/devgianlu/go-librespot"
 	"github.com/devgianlu/go-librespot/audio"
 	"github.com/devgianlu/go-librespot/player"
+	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
+	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
+	"github.com/devgianlu/go-librespot/tracks"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,4 +50,19 @@ func TestTakeWarm(t *testing.T) {
 func TestThrottledKeyIsNotUnplayable(t *testing.T) {
 	require.False(t, isUnplayableMedia(fmt.Errorf("load: %w", &audio.KeyProviderError{Code: 2})))
 	require.True(t, isUnplayableMedia(fmt.Errorf("load: %w", &audio.KeyProviderError{Code: 1})))
+}
+
+// A queue edit keeps the prefetched stream when its track still plays next.
+func TestInvalidateUpcomingForKeepsSameNext(t *testing.T) {
+	p := newTestAppPlayer(t)
+	id, err := librespot.SpotifyIdFromUri("spotify:track:574y1r7o2tRA009FW0LE7v")
+	require.NoError(t, err)
+	stream := &player.Stream{RequestedId: *id, Media: librespot.NewMediaFromTrack(&metadatapb.Track{Gid: id.Id()})}
+
+	p.secondaryStream = stream
+	p.invalidateUpcomingFor(&tracks.Snapshot{Next: []*connectpb.ProvidedTrack{{Uri: id.Uri()}}})
+	require.Same(t, stream, p.secondaryStream)
+
+	p.invalidateUpcomingFor(&tracks.Snapshot{Next: []*connectpb.ProvidedTrack{{Uri: "spotify:track:1Vej0qeQ3ioKwpI6FUbRv1"}}})
+	require.Nil(t, p.secondaryStream)
 }

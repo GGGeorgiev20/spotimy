@@ -274,6 +274,19 @@ func (p *AppPlayer) invalidateUpcoming() {
 	p.clearUpcoming()
 }
 
+// invalidateUpcomingFor is invalidateUpcoming after the upcoming tracks were
+// edited (a queue change), unless the prefetched stream is still for the
+// track that plays next: then it's kept, rather than spending another audio
+// key (they're rate limited) on the very same track.
+func (p *AppPlayer) invalidateUpcomingFor(snap *tracks.Snapshot) {
+	if p.secondaryStream != nil && snap != nil && len(snap.Next) > 0 {
+		if id, err := librespot.SpotifyIdFromUri(snap.Next[0].Uri); err == nil && p.secondaryStream.Is(*id) {
+			return
+		}
+	}
+	p.invalidateUpcoming()
+}
+
 // clearUpcoming drops the prefetched stream without touching the generation,
 // for callers that have already moved it on themselves.
 func (p *AppPlayer) clearUpcoming() {
