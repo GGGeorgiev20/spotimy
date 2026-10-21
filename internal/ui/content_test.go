@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"math"
 	"testing"
 	"time"
 
@@ -90,37 +91,40 @@ func TestHeaderHeight(t *testing.T) {
 	}
 }
 
-// A wheel glide starts at a steady speed, never slows when another notch comes,
-// lands on its target and follows the wheel when it turns back.
+// A wheel glide follows Chromium: one 120px notch takes 200ms, a second
+// notch keeps the speed, the scroll lands on the summed target, and turning
+// the wheel back returns to where it started.
 func TestGlide(t *testing.T) {
 	t0 := time.Unix(0, 0)
 	at := func(ms int) time.Time { return t0.Add(time.Duration(ms) * time.Millisecond) }
 	var g glide
-	g.add(t0, 150, 1)
-	first := g.step(at(16))
-	if first < 8 || first > 25 {
-		t.Fatalf("first frame scrolled %d px, want a steady start (~13)", first)
+	g.add(t0, 120, 1)
+	if g.dur != 200*time.Millisecond {
+		t.Fatalf("dur %v, want 200ms", g.dur)
 	}
-	sum := first
-	for ms := 32; ms <= 96; ms += 16 {
+	sum := 0
+	for ms := 16; ms <= 96; ms += 16 {
 		sum += g.step(at(ms))
 	}
 	speed := func() float64 { _, s := g.curve(g.frac(at(96))); return float64(g.dist) * s / g.dur.Seconds() }
 	before := speed()
-	g.add(at(96), 150, 1)
-	if after := speed(); after < before-1 {
-		t.Fatalf("speed %v px/s before the second notch, %v after: it slowed down", before, after)
+	g.add(at(96), 120, 1)
+	if after := speed(); math.Abs(after-before) > 1 {
+		t.Fatalf("speed %v px/s before the second notch, %v after", before, after)
 	}
 	for ms := 112; ms < 600; ms += 16 {
 		sum += g.step(at(ms))
 	}
-	if sum != 300 || g.active() {
-		t.Fatalf("scrolled %d px (active=%v), want 300", sum, g.active())
+	if sum != 240 || g.active() {
+		t.Fatalf("scrolled %d px (active=%v), want 240", sum, g.active())
 	}
-	g.add(at(600), 150, 1)
-	g.step(at(616))
-	g.add(at(616), -150, 1)
-	if g.dist != -150 {
-		t.Fatalf("turned back: dist %v, want -150", g.dist)
+	g.add(at(600), 120, 1)
+	back := g.step(at(616))
+	g.add(at(616), -120, 1)
+	for ms := 632; ms < 1200; ms += 16 {
+		back += g.step(at(ms))
+	}
+	if back != 0 {
+		t.Fatalf("down then up ended %d px away, want 0", back)
 	}
 }
