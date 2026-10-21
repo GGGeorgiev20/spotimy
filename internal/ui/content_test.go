@@ -2,7 +2,6 @@ package ui
 
 import (
 	"image"
-	"math"
 	"testing"
 	"time"
 
@@ -91,30 +90,37 @@ func TestHeaderHeight(t *testing.T) {
 	}
 }
 
-// A wheel glide lands exactly on its target, and a second notch mid-way keeps
-// the speed (Chromium's retargeting) instead of restarting from rest.
+// A wheel glide starts at a steady speed, never slows when another notch comes,
+// lands on its target and follows the wheel when it turns back.
 func TestGlide(t *testing.T) {
 	t0 := time.Unix(0, 0)
+	at := func(ms int) time.Time { return t0.Add(time.Duration(ms) * time.Millisecond) }
 	var g glide
-	g.add(t0, 53, 1)
-	if g.dur != 200*time.Millisecond {
-		t.Fatalf("dur %v, want 200ms", g.dur)
+	g.add(t0, 150, 1)
+	first := g.step(at(16))
+	if first < 8 || first > 25 {
+		t.Fatalf("first frame scrolled %d px, want a steady start (~13)", first)
 	}
-	sum := 0
-	for ms := 16; ms <= 96; ms += 16 {
-		sum += g.step(t0.Add(time.Duration(ms) * time.Millisecond))
+	sum := first
+	for ms := 32; ms <= 96; ms += 16 {
+		sum += g.step(at(ms))
 	}
-	now := t0.Add(96 * time.Millisecond)
-	speed := func() float64 { _, s := g.curve(g.frac(now)); return float64(g.dist) * s / g.dur.Seconds() }
+	speed := func() float64 { _, s := g.curve(g.frac(at(96))); return float64(g.dist) * s / g.dur.Seconds() }
 	before := speed()
-	g.add(now, 53, 1)
-	if after := speed(); math.Abs(after-before) > 1 {
-		t.Fatalf("speed %v px/s before the second notch, %v after", before, after)
+	g.add(at(96), 150, 1)
+	if after := speed(); after < before-1 {
+		t.Fatalf("speed %v px/s before the second notch, %v after: it slowed down", before, after)
 	}
-	for ms := 112; ms < 1000; ms += 16 {
-		sum += g.step(t0.Add(time.Duration(ms) * time.Millisecond))
+	for ms := 112; ms < 600; ms += 16 {
+		sum += g.step(at(ms))
 	}
-	if sum != 106 || g.active() {
-		t.Fatalf("scrolled %d px (active=%v), want 106", sum, g.active())
+	if sum != 300 || g.active() {
+		t.Fatalf("scrolled %d px (active=%v), want 300", sum, g.active())
+	}
+	g.add(at(600), 150, 1)
+	g.step(at(616))
+	g.add(at(616), -150, 1)
+	if g.dist != -150 {
+		t.Fatalf("turned back: dist %v, want -150", g.dist)
 	}
 }
