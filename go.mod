@@ -6,6 +6,7 @@ require (
 	gioui.org v0.10.3
 	github.com/devgianlu/go-librespot v0.10.6-0.20261018152319-bd3fa7407eb1
 	github.com/zalando/go-keyring v0.2.8
+	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9
 	golang.org/x/image v0.47.0
 	google.golang.org/protobuf v1.36.11
 )
@@ -36,7 +37,6 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/xlab/vorbis-go v0.0.0-20210911202351-b5b85f1ec645 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
-	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.59.0 // indirect

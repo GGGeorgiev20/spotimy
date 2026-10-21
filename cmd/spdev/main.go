@@ -95,7 +95,11 @@ func main() {
 		cn, err = client.StartConnect(ctx, deviceID, nil)
 		check(err)
 		time.Sleep(2 * time.Second)
-		err = cn.CommandTo(ctx, deviceID, "play", map[string]any{"context": map[string]any{"uri": os.Args[2], "url": "context://" + os.Args[2]}})
+		target := deviceID
+		if len(os.Args) > 3 { // spdev play <uri> [device-id]
+			target = os.Args[3]
+		}
+		err = cn.CommandTo(ctx, target, "play", map[string]any{"context": map[string]any{"uri": os.Args[2], "url": "context://" + os.Args[2]}})
 		cn.Close()
 	case "episodes": // saved episodes, to check the collection call
 		_, err = client.Me(ctx)

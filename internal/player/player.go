@@ -14,6 +14,7 @@ import (
 
 	"github.com/devgianlu/go-librespot/daemon"
 	"github.com/devgianlu/go-librespot/mpris"
+	exprand "golang.org/x/exp/rand"
 )
 
 // State is the login/session state shown by the UI.
@@ -51,6 +52,10 @@ type Player struct {
 }
 
 func New(opts Options) *Player {
+	// go-librespot draws device ids, playback ids and nonces from
+	// golang.org/x/exp/rand, which only its own main() seeds; unseeded, every
+	// install would generate the same "random" device id.
+	seedOnce.Do(func() { exprand.Seed(uint64(time.Now().UnixNano())) })
 	return &Player{opts: opts, store: newStateStore(opts.ConfigDir)}
 }
 
@@ -241,6 +246,8 @@ func (p *Player) Logout() error {
 	p.Start()
 	return err
 }
+
+var seedOnce sync.Once
 
 var ErrNotRunning = errors.New("player not running")
 
