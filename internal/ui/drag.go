@@ -92,14 +92,68 @@ type TrackDrag struct {
 	payload         DragPayload
 }
 
+// dragSource is the row whose drag Gio is transferring from. It has to stay
+// registered until the transfer ends: Gio dereferences the source's handler
+// on every frame of it, and crashes if the row left the screen meanwhile (a
+// song started playing and the queue changed, say). KeepDragSource keeps it.
+var dragSource *TrackDrag
+
 // Handle feeds the drag of row i, rowH px high and as wide as the
 // constraints. ro and move, when set, reorder the list on a drop inside it.
 func (d *TrackDrag) Handle(gtx layout.Context, p DragPayload, ro *Reorder, i, rowH int, move func(from, to int, after bool)) {
+	d.update(gtx, &p, ro, i, rowH, move)
+	// The row's own area (the clip in force may be the whole list's), on top
+	// of the row's links and passing their events through: a press on a
+	// link has to start a drag too.
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	st := clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, rowH)}.Push(gtx.Ops)
+	event.Op(gtx.Ops, d)
+	st.Pop()
+	pass.Pop()
+	if d.pressed {
+		d.everywhere(gtx)
+	}
+	if d.active {
+		d.ghost(gtx)
+	}
+}
+
+// KeepDragSource keeps the drag source registered while Gio transfers from
+// it, whether or not its row is still laid out. Call it once per frame,
+// after everything else.
+func KeepDragSource(gtx layout.Context) {
+	if d := dragSource; d != nil {
+		d.update(gtx, nil, nil, 0, 0, nil)
+		if dragSource == d {
+			d.everywhere(gtx)
+		}
+	}
+}
+
+// everywhere registers the handler over the whole window, on top and passing
+// everything through. Gio makes a drag's source the handler the pointer is
+// over when it first moves, and a quick flick can be past the row by then.
+func (d *TrackDrag) everywhere(gtx layout.Context) {
+	m := op.Record(gtx.Ops)
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	big := clip.Rect{Min: image.Pt(-1<<20, -1<<20), Max: image.Pt(1<<20, 1<<20)}.Push(gtx.Ops)
+	event.Op(gtx.Ops, d)
+	big.Pop()
+	pass.Pop()
+	op.Defer(gtx.Ops, m.Stop())
+}
+
+// update handles the handler's events; p is nil from KeepDragSource.
+func (d *TrackDrag) update(gtx layout.Context, p *DragPayload, ro *Reorder, i, rowH int, move func(from, to int, after bool)) {
 	for {
-		e, ok := gtx.Event(
-			pointer.Filter{Target: d, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel},
-			transfer.SourceFilter{Target: d, Type: TracksMime},
-		)
+		filters := []event.Filter{pointer.Filter{Target: d, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel}}
+		// Only a drag past the click slop offers data: Gio starts a
+		// transfer on the first movement, and a click with a jitter
+		// shouldn't become one.
+		if d.active || dragSource == d {
+			filters = append(filters, transfer.SourceFilter{Target: d, Type: TracksMime})
+		}
+		e, ok := gtx.Event(filters...)
 		if !ok {
 			break
 		}
@@ -111,16 +165,21 @@ func (d *TrackDrag) Handle(gtx layout.Context, p DragPayload, ro *Reorder, i, ro
 				d.start, d.pos = e.Position, e.Position
 				if d.pressed {
 					dragged = nil
-					gtx.Execute(op.InvalidateCmd{}) // to take the whole window, below
+					if dragSource != d {
+						// A drag that never became Gio's transfer gets no
+						// CancelEvent; any real one ended with its release.
+						dragSource = nil
+					}
+					gtx.Execute(op.InvalidateCmd{}) // to take the whole window
 				}
 			case pointer.Drag:
 				if !d.pressed {
 					continue
 				}
 				d.pos = e.Position
-				if !d.active && math.Hypot(float64(d.pos.X-d.start.X), float64(d.pos.Y-d.start.Y)) >= float64(gtx.Dp(4)) {
-					d.active, d.payload = true, p
-					dragged = &d.payload
+				if !d.active && p != nil && math.Hypot(float64(d.pos.X-d.start.X), float64(d.pos.Y-d.start.Y)) >= float64(gtx.Dp(4)) {
+					d.active, d.payload = true, *p
+					dragged, dragSource = &d.payload, d
 				}
 				if d.active && ro != nil && move != nil {
 					rel := e.Position.Y / float32(rowH)
@@ -150,31 +209,12 @@ func (d *TrackDrag) Handle(gtx layout.Context, p DragPayload, ro *Reorder, i, ro
 				uris[k] = t.URI
 			}
 			gtx.Execute(transfer.OfferCmd{Tag: d, Type: e.Type, Data: io.NopCloser(strings.NewReader(strings.Join(uris, "\n")))})
+		case transfer.CancelEvent:
+			// The transfer is over (dropped, or released over no target).
+			if dragSource == d {
+				dragSource = nil
+			}
 		}
-	}
-	// The row's own area (the clip in force may be the whole list's), on top
-	// of the row's links and passing their events through: a press on a
-	// link has to start a drag too.
-	pass := pointer.PassOp{}.Push(gtx.Ops)
-	st := clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, rowH)}.Push(gtx.Ops)
-	event.Op(gtx.Ops, d)
-	st.Pop()
-	pass.Pop()
-	if d.pressed {
-		// Gio makes a drag's source the handler the pointer is over when it
-		// first moves; a quick flick can be past the row by then. While
-		// pressed the handler covers the window instead, on top and passing
-		// everything through.
-		m := op.Record(gtx.Ops)
-		pass := pointer.PassOp{}.Push(gtx.Ops)
-		big := clip.Rect{Min: image.Pt(-1<<20, -1<<20), Max: image.Pt(1<<20, 1<<20)}.Push(gtx.Ops)
-		event.Op(gtx.Ops, d)
-		big.Pop()
-		pass.Pop()
-		op.Defer(gtx.Ops, m.Stop())
-	}
-	if d.active {
-		d.ghost(gtx)
 	}
 }
 

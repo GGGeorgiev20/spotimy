@@ -192,6 +192,7 @@ func Frame(gtx layout.Context) {
 	layoutModal(gtx)
 	layoutMenus(gtx)
 	layoutHoverTip(gtx)
+	KeepDragSource(gtx)
 	flushClipboard(gtx)
 	savePrefs()
 }
