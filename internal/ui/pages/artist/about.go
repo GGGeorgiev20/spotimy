@@ -3,6 +3,7 @@ package artist
 import (
 	"image"
 	"image/color"
+	"net/url"
 	"strings"
 	"time"
 
@@ -96,13 +97,14 @@ func ShowAbout(uri string) {
 // about is the web player's About dialog: the gallery, then the stats and
 // links beside the bio and the artist's verification.
 type about struct {
-	uri   string
-	res   ui.Res[*spotify.ArtistAbout]
-	list  ui.List
-	close ui.Click
-	links []ui.Click
-	learn ui.Click // "Learn more" about verification
-	box   bool
+	uri    string
+	res    ui.Res[*spotify.ArtistAbout]
+	list   ui.List
+	close  ui.Click
+	links  []ui.Click
+	learn  ui.Click // "Learn more" about verification
+	report ui.Click
+	box    bool
 	// contentH is the content's height last frame: the dialog shrinks to it
 	// (up to 70% of the window).
 	contentH int
@@ -115,6 +117,12 @@ type about struct {
 }
 
 const verifiedURL = "https://support.spotify.com/article/verified-by-spotify/"
+
+// reportURL is Spotify's form for reporting uri (the web player's
+// getReportURL, for the desktop app).
+func reportURL(uri string) string {
+	return "https://support.spotify.com/abuse?uri=" + url.QueryEscape(uri) + "&platform=desktop"
+}
 
 func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 	win := gtx.Constraints.Max
@@ -134,6 +142,9 @@ func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 		}
 		if m.learn.Clicked(gtx) {
 			backend.OpenURL(verifiedURL)
+		}
+		if m.report.Clicked(gtx) {
+			backend.OpenURL(reportURL(a.URI))
 		}
 	}
 	// The web player's dialog: 768px wide, at most 70vh tall.
@@ -306,6 +317,7 @@ func (m *about) body(gtx layout.Context, a *spotify.ArtistAbout) layout.Dimensio
 	for i, l := range a.Links {
 		left = append(left, m.linkRow(&m.links[i], l))
 	}
+	left = append(left, ui.Gap(0, 16), m.reportButton)
 
 	var right []layout.Widget
 	block := func(ws ...layout.Widget) {
@@ -415,7 +427,7 @@ func card(gtx layout.Context, bg color.NRGBA, r int, w layout.Widget) layout.Dim
 }
 
 // tailLink lays out l with link appended to its last line, like an inline
-// text link: link (kept on one line) is clickable and underlined on hover.
+// text link: link (kept on one line) is underlined and clickable.
 func tailLink(gtx layout.Context, l ui.Label, link string, c *ui.Click) layout.Dimensions {
 	nbsp := strings.ReplaceAll(link, " ", " ")
 	l.Text += " " + nbsp
@@ -440,14 +452,29 @@ func tailLink(gtx layout.Context, l ui.Label, link string, c *ui.Click) layout.D
 	c.Label = link
 	ui.Offset(gtx, r.Min.X, r.Min.Y, func() {
 		c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			if c.Hovered() {
-				th := max(1, gtx.Sp(unit.Sp(size/12)))
-				ui.FillRect(gtx.Ops, image.Rect(0, asc+th, r.Dx(), asc+2*th), 0, l.Color)
-			}
+			th := max(1, gtx.Sp(unit.Sp(size/12)))
+			ui.FillRect(gtx.Ops, image.Rect(0, asc+th, r.Dx(), asc+2*th), 0, l.Color)
 			return layout.Dimensions{Size: r.Size()}
 		})
 	})
 	return d
+}
+
+// reportButton is the small "Report" text button with a link-out arrow: it
+// opens Spotify's report form in the browser.
+func (m *about) reportButton(gtx layout.Context) layout.Dimensions {
+	m.report.Label = "Report"
+	return m.report.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		c := ui.ColText2
+		if m.report.Hovered() {
+			c = ui.ColText
+		}
+		h, is, gap := ui.Dp(gtx, 32), ui.Dp(gtx, 16), ui.Dp(gtx, 8)
+		var d layout.Dimensions
+		ui.Offset(gtx, 0, (h-ui.Dp(gtx, 20))/2, func() { d = ui.Text(gtx, "Report", 14, ui.Bold, c) })
+		ui.Offset(gtx, d.Size.X+gap, (h-is)/2, func() { ui.IconPx(gtx, "link-out", is, c) })
+		return layout.Dimensions{Size: image.Pt(d.Size.X+gap+is, h)}
+	})
 }
 
 // linkRow is a social link: logo and name, opening in the browser.

@@ -242,7 +242,7 @@ func layoutRemote(gtx layout.Context, device string) {
 // transport is the shuffle/previous/play/next/repeat row and the progress bar.
 type transport struct {
 	shuffle, prev, next, repeat ui.IconButton
-	play                        ui.Click
+	play                        ui.PlayButton
 	prog                        ui.Slider
 }
 
@@ -270,7 +270,7 @@ func (t *transport) controls(gtx layout.Context, playSize float32) layout.Dimens
 	if t.prev.Click.Clicked(gtx) {
 		ui.Prev()
 	}
-	if t.play.Clicked(gtx) {
+	if t.play.Click.Clicked(gtx) {
 		ui.PlayPause()
 	}
 	if t.next.Click.Clicked(gtx) {
@@ -315,23 +315,10 @@ func (t *transport) controls(gtx layout.Context, playSize float32) layout.Dimens
 		if playing {
 			tip, icon = "Pause", "pause"
 		}
-		t.play.Label, t.play.Disabled = tip, !has
+		t.play.Click.Label, t.play.Click.Disabled = tip, !has
 		ui.Offset(gtx, 0, (h-ps)/2, func() {
-			d := t.play.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				bg, draw := ui.ColText, ps
-				switch {
-				case !has:
-					bg = ui.Alpha(bg, .3)
-				case t.play.Hovered():
-					draw = ps * 104 / 100
-				}
-				o := (ps - draw) / 2
-				ui.Offset(gtx, o, o, func() { ui.FillCircle(gtx.Ops, draw, bg) })
-				is := ps / 2
-				ui.Offset(gtx, (ps-is)/2, (ps-is)/2, func() { ui.IconPx(gtx, icon, is, ui.ColBg) })
-				return layout.Dimensions{Size: image.Pt(ps, ps)}
-			})
-			ui.Tip(gtx, &t.play, d, tip, false)
+			d := t.play.Round(gtx, ui.RoundStyle{Size: playSize, Icon: icon, IconScale: .5, Bg: ui.ColText, Fg: ui.ColBg})
+			ui.Tip(gtx, &t.play.Click, d, tip, false)
 		})
 	})
 	x += dp(16)

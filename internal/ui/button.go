@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
@@ -148,27 +149,49 @@ type PlayButton struct {
 	hover Hover
 }
 
-// Layout draws a size-dp green circle with a play or pause icon. On hover it
-// grows 4% and brightens, eased like the web player's transition; the circle
-// is drawn outside the click area's clip so the grown edge isn't cut off.
+// Layout draws a size-dp green circle with a play or pause icon.
 func (b *PlayButton) Layout(gtx layout.Context, size float32, playing bool) layout.Dimensions {
 	b.Click.Label = "Play"
+	name := "play"
 	if playing {
-		b.Click.Label = "Pause"
+		b.Click.Label, name = "Pause", "pause"
 	}
+	return b.Round(gtx, RoundStyle{Size: size, Icon: name, IconScale: 3. / 7, Bg: ColAccent, BgHover: ColAccentHover, Fg: ColBg})
+}
+
+// RoundStyle is a round button's look: a Size dp circle in Bg (BgHover on
+// hover) with Icon in Fg, IconScale of the circle wide.
+type RoundStyle struct {
+	Size        float32
+	Icon        string
+	IconScale   float32
+	Bg, BgHover color.NRGBA
+	Fg          color.NRGBA
+}
+
+// Round draws a round button that grows 4% on hover, eased like the web
+// player's (scale 1.04, 150ms, cubic-bezier(.3, 0, 0, 1)). It's scaled
+// rather than resized so the growth is smooth instead of snapping a pixel at
+// a time, and drawn outside the click area's clip so the edge isn't cut off.
+func (b *PlayButton) Round(gtx layout.Context, s RoundStyle) layout.Dimensions {
 	b.Click.update(gtx) // this frame's hover, not the last one's
 	v := b.hover.Step(gtx, b.Click.Hovered(), 150*time.Millisecond)
-	d := Dp(gtx, size)
-	draw := d + int(float32(d)*.04*v+.5)
-	o := (d - draw) / 2
-	Offset(gtx, o, o, func() { FillCircle(gtx.Ops, draw, Mix(ColAccent, ColAccentHover, v)) })
+	e := 1 - (1-v)*(1-v)*(1-v)
+	d := Dp(gtx, s.Size)
+	bg := s.Bg
+	if s.BgHover != ColNone {
+		bg = Mix(s.Bg, s.BgHover, e)
+	}
+	if b.Click.Disabled {
+		bg = Alpha(s.Bg, .3)
+	}
+	c := float32(d) / 2
+	st := op.Affine(f32.AffineId().Scale(f32.Pt(c, c), f32.Pt(1+.04*e, 1+.04*e))).Push(gtx.Ops)
+	FillCircle(gtx.Ops, d, bg)
+	is := int(float32(d)*s.IconScale + .5)
+	Offset(gtx, (d-is)/2, (d-is)/2, func() { IconPx(gtx, s.Icon, is, s.Fg) })
+	st.Pop()
 	return b.Click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		name := "play"
-		if playing {
-			name = "pause"
-		}
-		is := draw * 3 / 7
-		Offset(gtx, (d-is)/2, (d-is)/2, func() { IconPx(gtx, name, is, ColBg) })
 		return layout.Dimensions{Size: image.Pt(d, d)}
 	})
 }

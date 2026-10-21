@@ -55,3 +55,9 @@ func TestCarouselSlide(t *testing.T) {
 		t.Errorf("slide end at %v, want 0", p)
 	}
 }
+
+func TestReportURL(t *testing.T) {
+	if got, want := reportURL("spotify:artist:06HL4z0CvFAxyc27GXpf02"), "https://support.spotify.com/abuse?uri=spotify%3Aartist%3A06HL4z0CvFAxyc27GXpf02&platform=desktop"; got != want {
+		t.Errorf("reportURL = %q, want %q", got, want)
+	}
+}
