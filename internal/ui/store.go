@@ -170,6 +170,7 @@ func PlayContext(uri string) {
 }
 
 func Play(uri, skipTo string) {
+	showNPVOnPlay()
 	playRequest, playRequestAt = uri, time.Now()
 	playerCall("play", func() error { return B.Play(uri, skipTo) })
 }

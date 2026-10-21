@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"syscall"
 
@@ -56,6 +57,7 @@ func main() {
 		OnState:         ui.OnState,
 	})
 	ui.Log = log
+	ui.StartMinimized = slices.Contains(os.Args[1:], "--minimized") // the autostart entry
 	prefsDir := configDir
 	if harness != "" {
 		prefsDir = filepath.Join(cacheDir, "harness") // don't touch the real prefs

@@ -301,8 +301,8 @@ func Offset(gtx layout.Context, x, y int, f func()) {
 	f()
 }
 
-// strokeRRect outlines r (rounded by radius px) with a line width px wide.
-func strokeRRect(ops *op.Ops, r image.Rectangle, radius, width int, c color.NRGBA) {
+// StrokeRRect outlines r (rounded by radius px) with a line width px wide.
+func StrokeRRect(ops *op.Ops, r image.Rectangle, radius, width int, c color.NRGBA) {
 	in := r.Inset(width / 2)
 	rr := clip.UniformRRect(in, max(0, radius-width/2))
 	defer clip.Stroke{Path: rr.Path(ops), Width: float32(width)}.Op().Push(ops).Pop()

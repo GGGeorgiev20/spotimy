@@ -97,7 +97,7 @@ func FieldBox(gtx layout.Context, in *Input, s InputStyle, h float32) layout.Dim
 	}
 	FillRect(gtx.Ops, image.Rect(0, 0, w, hp), Dp(gtx, 4), bg)
 	if in.Focused() {
-		strokeRRect(gtx.Ops, image.Rect(0, 0, w, hp), Dp(gtx, 4), max(1, Dp(gtx, 1)), RGB(0x535353))
+		StrokeRRect(gtx.Ops, image.Rect(0, 0, w, hp), Dp(gtx, 4), max(1, Dp(gtx, 1)), RGB(0x535353))
 	}
 	Offset(gtx, Dp(gtx, 12), Dp(gtx, 10), func() {
 		g := gtx

@@ -49,6 +49,24 @@ type Player struct {
 	reqs   chan daemon.ApiRequest
 	cancel context.CancelFunc
 	done   chan struct{}
+	// audio is the listening settings, given to every daemon started.
+	audio daemon.ApiAudioOptions
+}
+
+// DefaultAudio is Spotify's defaults: very high quality, autoplay and volume
+// normalisation on, no crossfade.
+var DefaultAudio = daemon.ApiAudioOptions{Bitrate: 320, Autoplay: true, Normalisation: true}
+
+// SetAudio changes the listening settings, at once if the daemon is running.
+func (p *Player) SetAudio(o daemon.ApiAudioOptions) {
+	p.mu.Lock()
+	p.audio = o
+	p.mu.Unlock()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, _ = p.Do(ctx, daemon.ApiRequestTypeSetAudioOptions, o) // a daemon not ready yet gets them once it is
+	}()
 }
 
 func New(opts Options) *Player {
@@ -56,7 +74,7 @@ func New(opts Options) *Player {
 	// golang.org/x/exp/rand, which only its own main() seeds; unseeded, every
 	// install would generate the same "random" device id.
 	seedOnce.Do(func() { exprand.Seed(uint64(time.Now().UnixNano())) })
-	return &Player{opts: opts, store: newStateStore(opts.ConfigDir)}
+	return &Player{opts: opts, store: newStateStore(opts.ConfigDir), audio: DefaultAudio}
 }
 
 // bridge implements daemon.ApiServer over channels.
@@ -95,6 +113,12 @@ func (p *Player) config() *daemon.Config {
 		AudioBufferTime:  500000,
 		AudioPeriodCount: 4,
 	}
+	p.mu.Lock()
+	a := p.audio
+	p.mu.Unlock()
+	cfg.Bitrate, cfg.DisableAutoplay = a.Bitrate, !a.Autoplay
+	cfg.NormalisationDisabled, cfg.NormalisationPregain = !a.Normalisation, a.Pregain
+	cfg.CrossfadeDuration = a.CrossfadeMs
 	cfg.Cache.Enabled = true
 	cfg.Cache.Dir = filepath.Join(p.opts.CacheDir, "audio")
 	cfg.Cache.SizeLimit = 1 << 30
@@ -200,6 +224,10 @@ func (p *Player) waitReady(ctx context.Context) {
 		_, err := p.Do(c, daemon.ApiRequestTypeStatus, nil)
 		cancel()
 		if err == nil {
+			p.mu.Lock()
+			a := p.audio
+			p.mu.Unlock()
+			_, _ = p.Do(ctx, daemon.ApiRequestTypeSetAudioOptions, a) // mono isn't in the config
 			p.setState(StateReady, nil)
 			return
 		}

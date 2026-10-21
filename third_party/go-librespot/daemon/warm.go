@@ -54,7 +54,7 @@ func (p *AppPlayer) warmStream(uri string) {
 		defer close(w.done)
 		ctx, cancel := context.WithTimeout(context.Background(), warmTimeout)
 		defer cancel()
-		w.stream, w.err = p.player.NewStream(ctx, p.app.client, *id, p.app.cfg.Bitrate, 0)
+		w.stream, w.err = p.player.NewStream(ctx, p.app.client, *id, p.app.bitrate(), 0)
 	}()
 	time.AfterFunc(warmTimeout, func() {
 		p.warm.mu.Lock()

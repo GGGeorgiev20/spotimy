@@ -36,8 +36,11 @@ type canvasVideo struct {
 func (p *panel) media(gtx layout.Context, t *backend.NowTrack) layout.Dimensions {
 	w := gtx.Constraints.Max.X
 	h, url := w, ""
-	if p.canvas.Ok() {
+	if p.canvas.Ok() && ui.Settings.Canvas {
 		url = p.canvas.V
+	}
+	if url == "" && p.vid != nil { // Canvas was turned off
+		p.stopVideo()
 	}
 	if url != "" {
 		h = w * 16 / 9

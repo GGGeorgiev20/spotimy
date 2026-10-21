@@ -440,7 +440,7 @@ func keyHints(gtx layout.Context) layout.Dimensions {
 		call := m.Stop()
 		cw, ch := max(Dp(gtx, 20), d.Size.X+Dp(gtx, 8)), Dp(gtx, 20)
 		Offset(gtx, x, 0, func() {
-			strokeRRect(gtx.Ops, image.Rect(0, 0, cw, ch), Dp(gtx, 4), max(1, Dp(gtx, 1)), ColText2)
+			StrokeRRect(gtx.Ops, image.Rect(0, 0, cw, ch), Dp(gtx, 4), max(1, Dp(gtx, 1)), ColText2)
 			Offset(gtx, (cw-d.Size.X)/2, (ch-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
 		})
 		return cw

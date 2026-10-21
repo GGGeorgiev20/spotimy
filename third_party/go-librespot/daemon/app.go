@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	librespot "github.com/devgianlu/go-librespot"
@@ -26,6 +27,9 @@ import (
 type App struct {
 	log librespot.Logger
 	cfg *Config
+	// bitrateSet is the bitrate SetAudioOptions chose (0: cfg.Bitrate). It's
+	// read while opening streams on the loader lane.
+	bitrateSet atomic.Int32
 
 	stateStore librespot.StateStore
 
@@ -735,4 +739,12 @@ func (app *App) withAppPlayer(ctx context.Context, appPlayerFunc func(context.Co
 		setSession(newAppPlayer)
 		return true
 	})
+}
+
+// bitrate is the bitrate streams are opened at.
+func (app *App) bitrate() int {
+	if b := app.bitrateSet.Load(); b > 0 {
+		return int(b)
+	}
+	return app.cfg.Bitrate
 }

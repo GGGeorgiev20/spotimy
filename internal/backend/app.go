@@ -76,6 +76,7 @@ type App struct {
 	coverColors sync.Map
 
 	mu       sync.Mutex
+	settings Settings
 	connect  *spotify.Connect
 	state    player.State
 	stateErr string
@@ -98,6 +99,10 @@ func New(opts Options) *App {
 	a := &App{opts: opts, log: log, state: player.StateConnecting}
 	a.ctx, a.cancel = context.WithCancel(context.Background())
 	a.img = imgcache.New(filepath.Join(cfg.CacheDir, "images"), 300<<20, log)
+	a.settings = a.loadSettings()
+	if cfg.Language == "" {
+		cfg.Language = a.settings.Language
+	}
 	a.player = player.New(player.Options{
 		ConfigDir: cfg.ConfigDir,
 		CacheDir:  cfg.CacheDir,
@@ -134,6 +139,7 @@ func New(opts Options) *App {
 			a.emitState()
 		},
 	})
+	a.player.SetAudio(a.settings.audio())
 
 	id := spotify.DefaultIdentity()
 	id.DeviceID = a.player.DeviceID()

@@ -263,7 +263,7 @@ func (p *Pill) Layout(gtx layout.Context, s PillStyle) layout.Dimensions {
 			if p.Click.Hovered() {
 				bc = ColText
 			}
-			strokeRRect(gtx.Ops, image.Rect(0, 0, w, h), h/2, max(1, Dp(gtx, 1)), bc)
+			StrokeRRect(gtx.Ops, image.Rect(0, 0, w, h), h/2, max(1, Dp(gtx, 1)), bc)
 		}
 		if s.Icon != "" {
 			is := Dp(gtx, 16)

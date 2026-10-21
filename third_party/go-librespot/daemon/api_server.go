@@ -113,6 +113,18 @@ var (
 
 type ApiRequestType string
 
+// ApiAudioOptions are the listening settings set_audio_options changes while
+// the daemon runs: the bitrate of streams opened from now on, autoplay at
+// the end of a context, and the player's AudioOptions.
+type ApiAudioOptions struct {
+	Bitrate       int
+	Autoplay      bool
+	Normalisation bool
+	Pregain       float32
+	CrossfadeMs   int
+	Mono          bool
+}
+
 const (
 	ApiRequestTypeRoot                ApiRequestType = "root"
 	ApiRequestTypeStatus              ApiRequestType = "status"
@@ -133,6 +145,7 @@ const (
 	ApiRequestTypeToken               ApiRequestType = "token"
 	ApiRequestSetDeviceName           ApiRequestType = "set_device_name"
 	ApiRequestTypeReopenOutput        ApiRequestType = "reopen_output"
+	ApiRequestTypeSetAudioOptions     ApiRequestType = "set_audio_options"
 	ApiRequestTypeContextTracks       ApiRequestType = "context_tracks"
 	ApiRequestTypeLibraryPlaylists    ApiRequestType = "library_playlists"
 	ApiRequestTypeLibraryAlbums       ApiRequestType = "library_albums"

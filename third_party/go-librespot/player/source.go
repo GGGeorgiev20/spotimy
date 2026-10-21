@@ -48,6 +48,13 @@ type SwitchingAudioSource struct {
 	fadeTotal        int       // samples of tail at fade start, gain ramp length
 	fadePos          int       // samples of tail already mixed
 	scratch          []float32 // reusable buffer for fill and fade-in reads
+
+	// pendingCrossfade is a crossfade length (samples) to switch to at the
+	// next track change, -1 for none: the ring can't be resized while it
+	// holds the playing track's audio.
+	pendingCrossfade int
+	// mono downmixes the output to the same signal on both channels.
+	mono bool
 }
 
 // NewSwitchingAudioSource creates an audio source that switches seamlessly
@@ -69,15 +76,56 @@ func NewSwitchingAudioSource(crossfadeSamples int) *SwitchingAudioSource {
 		source:           map[bool]librespot.AudioSource{},
 		cond:             sync.NewCond(&sync.Mutex{}),
 		done:             make(chan struct{}, 1),
-		crossfadeSamples: crossfadeSamples,
+		pendingCrossfade: -1,
 	}
-
-	if crossfadeSamples > 0 {
-		s.buf = make([]float32, crossfadeSamples+lookaheadHeadroom)
-		s.scratch = make([]float32, 8*1024)
-	}
+	s.applyCrossfade(crossfadeSamples)
 
 	return s
+}
+
+// applyCrossfade sets the crossfade length; the ring must be empty.
+func (s *SwitchingAudioSource) applyCrossfade(samples int) {
+	s.crossfadeSamples, s.pendingCrossfade = samples, -1
+	s.bufStart, s.bufLen, s.primaryEOF, s.fading = 0, 0, false, false
+	if samples > 0 {
+		s.buf = make([]float32, samples+lookaheadHeadroom)
+		if s.scratch == nil {
+			s.scratch = make([]float32, 8*1024)
+		}
+	} else {
+		s.buf = nil
+	}
+}
+
+// SetCrossfade changes the crossfade length (interleaved samples): at once
+// if nothing is buffered ahead, else from the next track change.
+func (s *SwitchingAudioSource) SetCrossfade(samples int) {
+	samples = max(0, samples-samples%Channels)
+	s.cond.L.Lock()
+	defer s.cond.L.Unlock()
+	switch {
+	case samples == s.crossfadeSamples:
+		s.pendingCrossfade = -1
+	case s.bufLen == 0 && !s.fading:
+		s.applyCrossfade(samples)
+	default:
+		s.pendingCrossfade = samples
+	}
+}
+
+// SetMono makes both channels play the same (downmixed) audio.
+func (s *SwitchingAudioSource) SetMono(mono bool) {
+	s.cond.L.Lock()
+	s.mono = mono
+	s.cond.L.Unlock()
+}
+
+// downmix replaces each frame of p with the mean of its channels.
+func downmix(p []float32) {
+	for i := 0; i+1 < len(p); i += Channels {
+		m := (p[i] + p[i+1]) / 2
+		p[i], p[i+1] = m, m
+	}
 }
 
 func (s *SwitchingAudioSource) SetPrimary(source librespot.AudioSource) {
@@ -92,6 +140,9 @@ func (s *SwitchingAudioSource) SetPrimary(source librespot.AudioSource) {
 		// A genuinely new source replaces whatever was there, including any
 		// in-flight crossfade tail.
 		s.resetCrossfade()
+		if s.pendingCrossfade >= 0 {
+			s.applyCrossfade(s.pendingCrossfade)
+		}
 		s.source[s.which] = source
 	}
 
@@ -122,10 +173,14 @@ func (s *SwitchingAudioSource) Read(p []float32) (n int, err error) {
 	defer s.cond.L.Unlock()
 
 	if s.crossfadeSamples == 0 || s.primaryDeclinesCrossfade() {
-		return s.readDirect(p)
+		n, err = s.readDirect(p)
+	} else {
+		n, err = s.readCrossfade(p)
 	}
-
-	return s.readCrossfade(p)
+	if s.mono {
+		downmix(p[:n])
+	}
+	return n, err
 }
 
 // uncrossfadable is implemented by a source whose tail has to be heard in full.

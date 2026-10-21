@@ -1023,6 +1023,17 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 			return nil, fmt.Errorf("failed reopening output: %w", err)
 		}
 		return nil, nil
+	case ApiRequestTypeSetAudioOptions:
+		o := req.Data.(ApiAudioOptions)
+		if o.Bitrate > 0 {
+			p.app.bitrateSet.Store(int32(o.Bitrate))
+		}
+		p.app.cfg.DisableAutoplay = !o.Autoplay
+		p.player.SetAudioOptions(player.AudioOptions{
+			Normalisation: o.Normalisation, Pregain: o.Pregain,
+			Crossfade: time.Duration(o.CrossfadeMs) * time.Millisecond, Mono: o.Mono,
+		})
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unknown request type: %s", req.Type)
 	}

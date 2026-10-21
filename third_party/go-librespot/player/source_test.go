@@ -740,3 +740,35 @@ func TestConcurrentAccess(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestMonoDownmix(t *testing.T) {
+	s := NewSwitchingAudioSource(0)
+	s.SetPrimary(&fakeSource{samples: []float32{1, 0, .5, .25}})
+	s.SetMono(true)
+	p := make([]float32, 4)
+	n, _ := s.Read(p)
+	if n != 4 || p[0] != .5 || p[1] != .5 || p[2] != .375 || p[3] != .375 {
+		t.Fatalf("downmixed %v (%d)", p, n)
+	}
+}
+
+func TestSetCrossfadeWaitsForTrackChange(t *testing.T) {
+	s := NewSwitchingAudioSource(0)
+	s.SetPrimary(constSource(100000, .1, 0))
+	s.SetCrossfade(1000) // nothing buffered ahead: at once
+	if s.crossfadeSamples != 1000 {
+		t.Fatalf("crossfade %d, want 1000 at once", s.crossfadeSamples)
+	}
+	p := make([]float32, 512)
+	if _, err := s.Read(p); err != nil {
+		t.Fatal(err)
+	}
+	s.SetCrossfade(0) // the ring holds this track's audio: later
+	if s.crossfadeSamples != 1000 || s.pendingCrossfade != 0 {
+		t.Fatalf("crossfade %d pending %d, want 1000 and 0", s.crossfadeSamples, s.pendingCrossfade)
+	}
+	s.SetPrimary(constSource(1000, .2, 0))
+	if s.crossfadeSamples != 0 || s.pendingCrossfade != -1 || s.buf != nil {
+		t.Fatalf("after the track change: crossfade %d pending %d", s.crossfadeSamples, s.pendingCrossfade)
+	}
+}

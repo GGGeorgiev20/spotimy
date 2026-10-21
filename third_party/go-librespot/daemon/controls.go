@@ -90,7 +90,7 @@ func (p *AppPlayer) submitPrefetch(uri string, metadata map[string]string) {
 		class: classPrefetch,
 		gen:   p.prefetchGen,
 		run: func(ctx context.Context) loaderResult {
-			stream, err := p.player.NewStream(ctx, p.app.client, *nextId, p.app.cfg.Bitrate, 0)
+			stream, err := p.player.NewStream(ctx, p.app.client, *nextId, p.app.bitrate(), 0)
 			if err != nil {
 				return loaderResult{err: fmt.Errorf("failed prefetching %s stream: %w", nextId.Type(), err)}
 			}
@@ -970,7 +970,7 @@ func (p *AppPlayer) fetchTrack(ctx context.Context, spotId librespot.SpotifyId, 
 	}
 	if stream == nil {
 		var err error
-		if stream, err = p.player.NewStream(ctx, p.app.client, spotId, p.app.cfg.Bitrate, opts.position); err != nil {
+		if stream, err = p.player.NewStream(ctx, p.app.client, spotId, p.app.bitrate(), opts.position); err != nil {
 			return nil, 0, fmt.Errorf("failed creating stream for %s: %w", spotId, err)
 		}
 	} else if !opts.fromStart {

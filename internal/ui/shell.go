@@ -108,6 +108,7 @@ var appState = backend.AppState{State: player.StateConnecting}
 func Init(b *backend.App, configDir string) {
 	B = b
 	loadPrefs(configDir)
+	Settings = b.Settings()
 }
 
 // OnState and OnPlayer are the backend callbacks (any goroutine).
@@ -134,6 +135,9 @@ func Run() {
 		app.Size(unit.Dp(1280), unit.Dp(800)),
 		app.MinSize(unit.Dp(800), unit.Dp(600)),
 	)
+	if StartMinimized {
+		w.Option(app.Minimized.Option())
+	}
 	inv := w.Invalidate
 	invalidate.Store(&inv)
 	// Re-sync playback occasionally so drift and missed events can't pile up.
@@ -168,6 +172,9 @@ var WindowSize image.Point
 
 // Frame lays out the whole window.
 func Frame(gtx layout.Context) {
+	z := zoom()
+	gtx.Metric.PxPerDp *= z
+	gtx.Metric.PxPerSp *= z
 	WindowSize = gtx.Constraints.Max
 	runPosted()
 	clickDepth = 0
@@ -429,6 +436,7 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 					Navigate("/user/" + Me.Username)
 				}
 			}},
+			{Label: "Settings", Action: func() { Navigate("/preferences") }},
 			{Divider: true},
 			{Label: "Log out", Action: func() {
 				Go("Couldn't log out", B.Logout, func() { Me, Prefs.History = nil, nil })
@@ -514,11 +522,16 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 		}
 		Tip(gtx, &avatarBtn, d, name, true)
 	})
-	Offset(gtx, ax-Dp(gtx, 8)-Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
-		d := friendsBtn.Layout(gtx, IconStyle{Icon: "friends", Label: "Friend Activity", Active: RightPanel() == "friends"})
-		Tip(gtx, &friendsBtn.Click, d, "Friend Activity", true)
-	})
-	Offset(gtx, ax-2*Dp(gtx, 8)-2*Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
+	bellX := ax - 2*Dp(gtx, 8) - 2*Dp(gtx, 32)
+	if Settings.FriendFeed {
+		Offset(gtx, ax-Dp(gtx, 8)-Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
+			d := friendsBtn.Layout(gtx, IconStyle{Icon: "friends", Label: "Friend Activity", Active: RightPanel() == "friends"})
+			Tip(gtx, &friendsBtn.Click, d, "Friend Activity", true)
+		})
+	} else {
+		bellX = ax - Dp(gtx, 8) - Dp(gtx, 32)
+	}
+	Offset(gtx, bellX, (h-Dp(gtx, 32))/2, func() {
 		d := bellBtn.Layout(gtx, IconStyle{Icon: "bell", Label: "What's New", Active: Current().Path == "/content-feed"})
 		Tip(gtx, &bellBtn.Click, d, "What's New", true)
 	})
@@ -611,9 +624,9 @@ func layoutSearchBox(gtx layout.Context, w int) {
 		FillRect(gtx.Ops, r, h/2, bg)
 		switch {
 		case focused:
-			strokeRRect(gtx.Ops, r, h/2, Dp(gtx, 2), ColText)
+			StrokeRRect(gtx.Ops, r, h/2, Dp(gtx, 2), ColText)
 		case searchBox.Hovered():
-			strokeRRect(gtx.Ops, r, h/2, max(1, Dp(gtx, 1)), Alpha(ColText, .1))
+			StrokeRRect(gtx.Ops, r, h/2, max(1, Dp(gtx, 1)), Alpha(ColText, .1))
 		}
 		ic := ColText2
 		if focused {

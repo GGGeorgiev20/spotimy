@@ -56,6 +56,12 @@ type Player struct {
 	normalisationPregain      float32
 	countryCode               func() string
 
+	// optsMu guards the normalisation settings, which SetAudioOptions
+	// changes while streams are being opened.
+	optsMu sync.Mutex
+	// source is the output's source, made with the player.
+	source *SwitchingAudioSource
+
 	sp       *spclient.Spclient
 	audioKey *audio.KeyProvider
 	events   EventManager
@@ -246,9 +252,28 @@ func NewPlayer(opts *Options) (*Player, error) {
 		closed: make(chan struct{}),
 	}
 
+	p.source = NewSwitchingAudioSource(p.crossfadeSamples)
 	go p.manageLoop()
 
 	return p, nil
+}
+
+// AudioOptions are the listening settings that can change during playback.
+type AudioOptions struct {
+	Normalisation bool
+	Pregain       float32
+	Crossfade     time.Duration
+	Mono          bool
+}
+
+// SetAudioOptions applies o: normalisation from the next stream opened,
+// mono at once, crossfade at once or from the next track change.
+func (p *Player) SetAudioOptions(o AudioOptions) {
+	p.optsMu.Lock()
+	p.normalisationEnabled, p.normalisationPregain = o.Normalisation, o.Pregain
+	p.optsMu.Unlock()
+	p.source.SetCrossfade(int(o.Crossfade*SampleRate/time.Second) * Channels)
+	p.source.SetMono(o.Mono)
 }
 
 func (p *Player) manageLoop() {
@@ -265,8 +290,10 @@ func (p *Player) manageLoop() {
 	// current output device; can be changed at runtime via playerCmdReopenOutput
 	device := p.defaultAudioDevice
 
-	// init main source
-	source := NewSwitchingAudioSource(p.crossfadeSamples)
+	source := p.source
+	if source == nil { // a Player made without NewPlayer (tests)
+		source = NewSwitchingAudioSource(p.crossfadeSamples)
+	}
 
 loop:
 	for {
@@ -838,7 +865,10 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 			return nil, librespot.ErrNoSupportedFormats
 		}
 
-		if p.normalisationEnabled {
+		p.optsMu.Lock()
+		normalise, pregain := p.normalisationEnabled, p.normalisationPregain
+		p.optsMu.Unlock()
+		if normalise {
 			var params *audiofilespb.NormalizationParams
 			if p.normalisationUseAlbumGain {
 				params = audioFilesResp.DefaultAlbumNormalizationParams
@@ -847,7 +877,7 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 			}
 
 			if params != nil {
-				normalisationFactor = calculateNormalisationFactor(params, p.normalisationPregain)
+				normalisationFactor = calculateNormalisationFactor(params, pregain)
 			} else {
 				normalisationFactor = 1
 			}
