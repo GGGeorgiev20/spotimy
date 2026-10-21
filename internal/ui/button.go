@@ -6,8 +6,11 @@ import (
 	"time"
 
 	"gioui.org/font"
+	"gioui.org/io/event"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui/icon"
@@ -218,3 +221,31 @@ func (p *Pill) Layout(gtx layout.Context, s PillStyle) layout.Dimensions {
 		return layout.Dimensions{Size: image.Pt(w, h)}
 	})
 }
+
+// HoverArea tracks whether the pointer is over an area without taking any
+// events from the widgets in it: add it after them, on top, and it passes
+// everything through.
+type HoverArea struct{ in bool }
+
+// Add registers the area (size from the origin) and reports whether the
+// pointer is over it.
+func (h *HoverArea) Add(gtx layout.Context, size image.Point) bool {
+	for {
+		e, ok := gtx.Event(pointer.Filter{Target: h, Kinds: pointer.Enter | pointer.Leave | pointer.Cancel})
+		if !ok {
+			break
+		}
+		if pe, ok := e.(pointer.Event); ok {
+			h.in = pe.Kind == pointer.Enter
+		}
+	}
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	st := clip.Rect{Max: size}.Push(gtx.Ops)
+	event.Op(gtx.Ops, h)
+	st.Pop()
+	pass.Pop()
+	return h.in
+}
+
+// Hovered reports what the last Add saw.
+func (h *HoverArea) Hovered() bool { return h.in }

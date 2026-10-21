@@ -11,6 +11,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	"golang.org/x/image/math/fixed"
 )
 
 // Label is a run of text. Size is in sp (= CSS px at 1x). MaxLines 0 means 1;
@@ -24,6 +25,8 @@ type Label struct {
 	Align    text.Alignment
 	// LineHeight in sp; 0 uses the font's default (about 1.2×).
 	LineHeight float32
+	// Underline draws a line under every wrapped line of the text.
+	Underline bool
 }
 
 func (l Label) Layout(gtx layout.Context) layout.Dimensions {
@@ -44,7 +47,37 @@ func (l Label) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	gtx.Constraints.Min = image.Point{}
 	w := widget.Label{MaxLines: lines, Truncator: "…", Alignment: l.Align, LineHeight: unit.Sp(l.LineHeight), WrapPolicy: text.WrapWords}
-	return w.Layout(gtx, Shaper, font.Font{Typeface: "Figtree", Weight: l.Weight}, unit.Sp(size), l.Text, Material(gtx, c))
+	f := font.Font{Typeface: "Figtree", Weight: l.Weight}
+	d := w.Layout(gtx, Shaper, f, unit.Sp(size), l.Text, Material(gtx, c))
+	if l.Underline {
+		// Shape again to find each line's extent and baseline, as widget.Label
+		// placed them, and rule under it (about size/12 thick, like CSS's auto).
+		Shaper.LayoutString(text.Parameters{
+			Font: f, PxPerEm: fixed.I(gtx.Sp(unit.Sp(size))), MaxLines: lines, Truncator: "…", Alignment: l.Align,
+			WrapPolicy: text.WrapWords, MaxWidth: gtx.Constraints.Max.X, Locale: gtx.Locale, LineHeight: fixed.I(gtx.Sp(unit.Sp(l.LineHeight))),
+		}, l.Text)
+		th := max(1, gtx.Sp(unit.Sp(size/12)))
+		rule := func(x0, x1 fixed.Int26_6, y int32) {
+			ry := int(y) + th
+			FillRect(gtx.Ops, image.Rect(x0.Floor(), ry, x1.Ceil(), ry+th), 0, c)
+		}
+		var x0, x1 fixed.Int26_6
+		y, have := int32(0), false
+		for g, ok := Shaper.NextGlyph(); ok; g, ok = Shaper.NextGlyph() {
+			if have && g.Y != y {
+				rule(x0, x1, y)
+				have = false
+			}
+			if !have {
+				x0, x1, y, have = g.X, g.X, g.Y, true
+			}
+			x0, x1 = min(x0, g.X), max(x1, g.X+g.Advance)
+		}
+		if have {
+			rule(x0, x1, y)
+		}
+	}
+	return d
 }
 
 // Material records a paint color for text.

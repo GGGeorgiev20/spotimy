@@ -181,14 +181,13 @@ func PlayTrack(context string, t spotify.Track) {
 	if t.Album != nil {
 		nt.AlbumURI, nt.AlbumName, nt.Images = t.Album.URI, t.Album.Name, t.Album.Images
 	}
-	starting.track, starting.at = nt, time.Now()
+	ctx := context
+	if ctx == "" {
+		ctx = t.URI
+	}
+	starting.track, starting.context, starting.at = nt, ctx, time.Now()
 	if s := Player.Status; s != nil {
-		s.Track, s.PositionMs, s.Playing, s.Buffering = nt, 0, true, true
-		if context != "" {
-			s.ContextURI = context
-		} else {
-			s.ContextURI = t.URI
-		}
+		s.Track, s.PositionMs, s.Playing, s.Buffering, s.ContextURI = nt, 0, true, true, ctx
 		Player.FetchedAt = time.Now()
 		Player.Version++
 	}
@@ -202,24 +201,39 @@ func PlayTrack(context string, t spotify.Track) {
 // starting is the track PlayTrack started, shown until the player reports
 // it: while a track loads the player reports none.
 var starting struct {
-	track *backend.NowTrack
-	at    time.Time
+	track   *backend.NowTrack
+	context string
+	at      time.Time
 }
 
 // loadingTrack fills in the track of a status taken mid-load: the one just
 // started, else the one on its way out, rather than an empty player bar.
 func loadingTrack(s, prev *backend.PlayerStatus, now time.Time) {
-	switch {
-	case s.Track != nil && !s.Buffering:
-		starting.track = nil
-	case s.Track != nil:
-	case !s.Buffering:
-	case starting.track != nil && now.Sub(starting.at) < 15*time.Second:
-		s.Track = starting.track
-	case prev != nil:
+	if st := starting.track; st != nil {
+		age := now.Sub(starting.at)
+		switch {
+		case s.Track != nil && s.Track.URI == st.URI && !s.Buffering:
+			starting.track = nil // it's playing
+			return
+		case age < 15*time.Second && (s.Buffering || age < startingGrace):
+			// On its way: until then the player still reports the outgoing
+			// track, and showing that would flash it between the click and
+			// the new one.
+			s.Track, s.PositionMs, s.ContextURI = st, 0, starting.context
+			s.Playing, s.Buffering = true, true
+			return
+		default:
+			starting.track = nil // something else plays: it failed or was replaced
+		}
+	}
+	if s.Track == nil && s.Buffering && prev != nil {
 		s.Track, s.PositionMs = prev.Track, prev.PositionMs
 	}
 }
+
+// startingGrace is how long a started track is shown before the player has
+// begun loading it (until then it reports the outgoing track as playing).
+const startingGrace = 2 * time.Second
 
 // The player may report a context under another URI than the one we asked
 // it to play: Spotify resolves some playlists to other contexts (the "Liked
