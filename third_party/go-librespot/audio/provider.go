@@ -22,6 +22,15 @@ func (e KeyProviderError) Error() string {
 	return fmt.Sprintf("failed retrieving aes key with code %d", e.Code)
 }
 
+// Throttled reports a refusal of every key for a while (code 2): the account
+// asked for too many in a short time. Unlike a refusal of one track's key
+// (code 1), no other track will fare better until it passes.
+func (e KeyProviderError) Throttled() bool { return e.Code == 2 }
+
+// keyCooldown is how long keys are not asked for after a throttled refusal:
+// asking again at once only prolongs it.
+const keyCooldown = 15 * time.Second
+
 type KeyProvider struct {
 	ap  *ap.Accesspoint
 	log librespot.Logger
@@ -29,6 +38,9 @@ type KeyProvider struct {
 	recvLoopOnce sync.Once
 
 	reqChan chan keyRequest
+
+	mu             sync.Mutex
+	throttledUntil time.Time
 }
 
 type keyRequest struct {
@@ -124,6 +136,13 @@ func (p *KeyProvider) recvLoop() {
 }
 
 func (p *KeyProvider) Request(ctx context.Context, gid []byte, fileId []byte) ([]byte, error) {
+	p.mu.Lock()
+	throttled := time.Now().Before(p.throttledUntil)
+	p.mu.Unlock()
+	if throttled {
+		return nil, &KeyProviderError{Code: 2}
+	}
+
 	done := p.ap.Done()
 
 	p.startReceiving()
@@ -148,6 +167,12 @@ func (p *KeyProvider) Request(ctx context.Context, gid []byte, fileId []byte) ([
 	}
 
 	if resp.err != nil {
+		if ke, ok := resp.err.(*KeyProviderError); ok && ke.Throttled() {
+			p.mu.Lock()
+			p.throttledUntil = time.Now().Add(keyCooldown)
+			p.mu.Unlock()
+			p.log.Warnf("Spotify is refusing audio keys for now (code 2), not asking again for %s", keyCooldown)
+		}
 		return nil, resp.err
 	}
 

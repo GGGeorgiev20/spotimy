@@ -4,6 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/layout"
+	"gioui.org/op"
+
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 )
 
@@ -50,5 +53,22 @@ func TestLoadingTrack(t *testing.T) {
 	loadingTrack(s, old, now)
 	if starting.track != nil || s.Track.URI != "spotify:track:new" {
 		t.Fatalf("after load: %+v, starting %+v", s.Track, starting.track)
+	}
+}
+
+func TestSettled(t *testing.T) {
+	defer func() { Player.Status = nil }()
+	gtx := layout.Context{Ops: new(op.Ops), Now: time.Now()}
+	Player.Status = &backend.PlayerStatus{Track: &backend.NowTrack{URI: "spotify:track:a"}}
+	if Settled(gtx) {
+		t.Fatal("a track that just started isn't settled")
+	}
+	gtx.Now = gtx.Now.Add(settleDelay)
+	if !Settled(gtx) {
+		t.Fatal("settled after the delay")
+	}
+	Player.Status.Track = &backend.NowTrack{URI: "spotify:track:b"}
+	if Settled(gtx) {
+		t.Fatal("a skip starts the wait over")
 	}
 }

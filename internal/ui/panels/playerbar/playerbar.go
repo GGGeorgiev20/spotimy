@@ -76,7 +76,7 @@ func layoutLeft(gtx layout.Context) {
 	}
 	dp := dpf(gtx)
 	w, h := gtx.Constraints.Max.X, gtx.Constraints.Max.Y
-	if bar.liked != t.URI {
+	if bar.liked != t.URI && ui.Settled(gtx) {
 		bar.liked = t.URI
 		ui.LoadSaved([]string{t.URI})
 		ui.LoadInPlaylists()
@@ -166,7 +166,7 @@ func layoutRight(gtx layout.Context) {
 	b := dp(32)
 	onLyrics := ui.Current().Path == "/lyrics"
 
-	noLyrics := t == nil || !ui.HasLyrics(t.URI)
+	noLyrics := t == nil || (ui.Settled(gtx) && !ui.HasLyrics(t.URI))
 	if bar.lyrics.Click.Clicked(gtx) && !noLyrics {
 		if onLyrics {
 			ui.Back()

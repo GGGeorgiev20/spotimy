@@ -4,9 +4,11 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	librespot "github.com/devgianlu/go-librespot"
+	"github.com/devgianlu/go-librespot/audio"
 	"github.com/devgianlu/go-librespot/player"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +25,26 @@ func TestTakeWarm(t *testing.T) {
 	close(w.done)
 	p.warm.cur = w
 
-	require.Nil(t, p.takeWarm(context.Background(), *other), "another track's load leaves it")
-	require.Same(t, w.stream, p.takeWarm(context.Background(), *want))
-	require.Nil(t, p.takeWarm(context.Background(), *want), "taken once")
+	take := func(id *librespot.SpotifyId) (*player.Stream, error) { return p.takeWarm(context.Background(), *id) }
+	s, err := take(other)
+	require.NoError(t, err)
+	require.Nil(t, s, "another track's load leaves it")
+	s, _ = take(want)
+	require.Same(t, w.stream, s)
+	s, _ = take(want)
+	require.Nil(t, s, "taken once")
+
+	// A refused key is passed on rather than asked for again.
+	refused := &warmStream{uri: want.Uri(), done: make(chan struct{}), err: &audio.KeyProviderError{Code: 2}}
+	close(refused.done)
+	p.warm.cur = refused
+	_, err = take(want)
+	require.Error(t, err)
+}
+
+// A throttled key refusal stops playback instead of skipping through the
+// context, which would ask for a key per track.
+func TestThrottledKeyIsNotUnplayable(t *testing.T) {
+	require.False(t, isUnplayableMedia(fmt.Errorf("load: %w", &audio.KeyProviderError{Code: 2})))
+	require.True(t, isUnplayableMedia(fmt.Errorf("load: %w", &audio.KeyProviderError{Code: 1})))
 }

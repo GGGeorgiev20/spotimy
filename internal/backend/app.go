@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,6 +57,9 @@ type Options struct {
 	// OnPlayer runs (off the UI goroutine) whenever playback, queue or
 	// devices may have changed.
 	OnPlayer func()
+	// OnPlaybackError runs (off the UI goroutine) with a message for the user
+	// when a track couldn't be played.
+	OnPlaybackError func(string)
 	// OnState runs when the login/session state changes.
 	OnState func(AppState)
 }
@@ -101,7 +105,14 @@ func New(opts Options) *App {
 		ClientToken: func(ctx context.Context) (string, error) {
 			return a.sp.ClientToken(ctx)
 		},
-		OnEvent: func(*daemon.ApiEvent) { a.emitPlayer() },
+		OnEvent: func(ev *daemon.ApiEvent) {
+			if ev.Type == daemon.ApiEventTypePlaybackError && a.opts.OnPlaybackError != nil {
+				if d, ok := ev.Data.(daemon.ApiEventDataPlaybackError); ok {
+					a.opts.OnPlaybackError(playbackErrorText(d))
+				}
+			}
+			a.emitPlayer()
+		},
 		OnState: func(s player.State, err error) {
 			a.mu.Lock()
 			a.state, a.stateErr = s, ""
@@ -142,6 +153,15 @@ func New(opts Options) *App {
 	}
 	a.sp = spotify.New(id, token, log, filepath.Join(cfg.ConfigDir, "operations.json"))
 	return a
+}
+
+// playbackErrorText words a failed play for the user.
+func playbackErrorText(d daemon.ApiEventDataPlaybackError) string {
+	// ponytail: matched on go-librespot's message; its KeyProviderError isn't in the event.
+	if strings.Contains(d.Message, "aes key with code 2") {
+		return "Spotify is refusing playback for a moment (too many requests). Try again in a minute."
+	}
+	return "Couldn't play this song"
 }
 
 func (a *App) emitPlayer() {

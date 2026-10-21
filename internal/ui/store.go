@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"gioui.org/layout"
+	"gioui.org/op"
+
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 )
@@ -48,6 +51,34 @@ func RefreshPlayer() {
 			})
 		})
 	})
+}
+
+// settle tracks how long the playing track has been the same one.
+var settle struct {
+	uri   string
+	since time.Time
+}
+
+// settleDelay is how long a track must stay before its lookups run.
+const settleDelay = 600 * time.Millisecond
+
+// Settled reports whether the playing track has stayed for a moment. Lookups
+// made per track (lyrics, Now Playing details, saved state) wait for it, so a
+// run of quick skips doesn't send a burst of requests for tracks only passed
+// through; Spotify rate limits those.
+func Settled(gtx layout.Context) bool {
+	uri := ""
+	if t := NowTrack(); t != nil {
+		uri = t.URI
+	}
+	if uri != settle.uri {
+		settle.uri, settle.since = uri, gtx.Now
+	}
+	if at := settle.since.Add(settleDelay); gtx.Now.Before(at) {
+		gtx.Execute(op.InvalidateCmd{At: at})
+		return false
+	}
+	return true
 }
 
 // Track is the playing track, or nil.

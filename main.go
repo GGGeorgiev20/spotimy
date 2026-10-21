@@ -48,11 +48,12 @@ func main() {
 		return
 	}
 	b := backend.New(backend.Options{
-		Config:   backend.LoadConfig(configDir, cacheDir, log),
-		Log:      log,
-		Sandbox:  harness != "",
-		OnPlayer: ui.OnPlayer,
-		OnState:  ui.OnState,
+		Config:          backend.LoadConfig(configDir, cacheDir, log),
+		Log:             log,
+		Sandbox:         harness != "",
+		OnPlayer:        ui.OnPlayer,
+		OnPlaybackError: func(msg string) { ui.Post(func() { ui.Toast(msg) }) },
+		OnState:         ui.OnState,
 	})
 	ui.Log = log
 	prefsDir := configDir

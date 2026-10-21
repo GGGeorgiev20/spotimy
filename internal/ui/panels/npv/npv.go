@@ -45,13 +45,13 @@ type panel struct {
 }
 
 // track switches to the playing track's data when it changed.
-func (p *panel) track() *backend.NowTrack {
+func (p *panel) track(gtx layout.Context) *backend.NowTrack {
 	t := ui.NowTrack()
 	uri := ""
 	if t != nil {
 		uri = t.URI
 	}
-	if uri != p.uri || p.info == nil {
+	if p.info == nil || (uri != p.uri && ui.Settled(gtx)) {
 		p.uri = uri
 		p.stopVideo()
 		p.list.ScrollToTop()
@@ -74,7 +74,7 @@ func (p *panel) track() *backend.NowTrack {
 			p.info.Load(func() (*spotify.NowPlayingInfo, error) { return ui.B.NowPlaying(uri, artist) })
 		}
 	}
-	if p.qVersion != ui.Player.Version {
+	if p.qVersion != ui.Player.Version && (p.qVersion == 0 || ui.Settled(gtx)) {
 		p.qVersion = ui.Player.Version
 		p.queue.Load(ui.B.Queue)
 	}
@@ -82,7 +82,7 @@ func (p *panel) track() *backend.NowTrack {
 }
 
 func (p *panel) layout(gtx layout.Context) layout.Dimensions {
-	t := p.track()
+	t := p.track(gtx)
 	var ctxURI, ctxName string
 	if s := ui.Player.Status; s != nil && t != nil {
 		ctxURI, ctxName = s.ContextURI, p.ctx.Get(s.ContextURI)

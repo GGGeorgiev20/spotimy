@@ -60,7 +60,7 @@ type item struct {
 }
 
 func (p *panel) layout(gtx layout.Context) layout.Dimensions {
-	if p.version != ui.Player.Version+1 {
+	if p.version != ui.Player.Version+1 && (p.version == 0 || ui.Settled(gtx)) {
 		p.version = ui.Player.Version + 1
 		p.res.Load(ui.B.Queue)
 	}

@@ -80,7 +80,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	if t != nil {
 		uri = t.URI
 	}
-	if p.res == nil || uri != p.uri {
+	if p.res == nil || (uri != p.uri && ui.Settled(gtx)) {
 		var imgs []spotify.Image
 		if t != nil {
 			imgs = t.Images

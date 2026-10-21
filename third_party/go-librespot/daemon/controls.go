@@ -159,8 +159,11 @@ func (p *AppPlayer) schedulePrefetchNext() {
 	}
 }
 
-// earlyPrefetchDelay is how long after a track starts the next one is readied.
-const earlyPrefetchDelay = 2 * time.Second
+// earlyPrefetchDelay is how long after a track starts the next one is readied:
+// long enough that a track you click away from at once costs no key for its
+// successor (keys are rate limited), short enough that a skip usually finds
+// the next track ready.
+const earlyPrefetchDelay = 10 * time.Second
 
 func (p *AppPlayer) emitMprisUpdate(playbackStatus mpris.PlaybackStatus) {
 	// p.state, p.state.player, p.state.device, p.state.player.Options are assumed to always be non-nil here
@@ -747,8 +750,15 @@ func resolveContext(ctx context.Context, log librespot.Logger, sp *spclient.Spcl
 // isUnplayableMedia reports whether a load failed for a reason that skipping
 // forward can get past: media the account may not play, media in no format the
 // daemon supports, or a track whose audio key Spotify refused.
+//
+// A throttled key refusal (code 2) is not one: it refuses every track for a
+// while, so walking forward would only burn through the context asking for
+// more keys and keep the refusal going.
 func isUnplayableMedia(err error) bool {
 	var keyErr *audio.KeyProviderError
+	if errors.As(err, &keyErr) && keyErr.Throttled() {
+		return false
+	}
 	return errors.Is(err, librespot.ErrMediaRestricted) ||
 		errors.Is(err, librespot.ErrNoSupportedFormats) ||
 		errors.As(err, &keyErr)
@@ -953,7 +963,10 @@ func (p *AppPlayer) fetchTrack(ctx context.Context, spotId librespot.SpotifyId, 
 
 	stream := opts.prefetchedStream
 	if stream == nil && opts.position == 0 {
-		stream = p.takeWarm(ctx, spotId)
+		var err error
+		if stream, err = p.takeWarm(ctx, spotId); err != nil {
+			return nil, 0, fmt.Errorf("failed creating stream for %s: %w", spotId, err)
+		}
 	}
 	if stream == nil {
 		var err error

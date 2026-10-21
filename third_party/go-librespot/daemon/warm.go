@@ -2,11 +2,13 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync"
 	"time"
 
 	librespot "github.com/devgianlu/go-librespot"
+	"github.com/devgianlu/go-librespot/audio"
 	"github.com/devgianlu/go-librespot/player"
 )
 
@@ -37,6 +39,9 @@ func (p *AppPlayer) warmStream(uri string) {
 	if err != nil || id.Type() != librespot.SpotifyIdTypeTrack {
 		return
 	}
+	if p.secondaryStream != nil && p.secondaryStream.Is(*id) {
+		return // already prefetched: warming it again would spend another key
+	}
 	w := &warmStream{uri: id.Uri(), done: make(chan struct{})}
 	p.warm.mu.Lock()
 	old := p.warm.cur
@@ -65,13 +70,15 @@ func (p *AppPlayer) warmStream(uri string) {
 }
 
 // takeWarm returns the warm stream for id once it is ready, or nil when there
-// is none for it or it failed (the caller then creates the stream itself).
-func (p *AppPlayer) takeWarm(ctx context.Context, id librespot.SpotifyId) *player.Stream {
+// is none for it (the caller then creates the stream itself). A warm stream
+// whose audio key was refused returns that error: asking for the key again
+// at once would be refused too, and keys are rate limited.
+func (p *AppPlayer) takeWarm(ctx context.Context, id librespot.SpotifyId) (*player.Stream, error) {
 	p.warm.mu.Lock()
 	w := p.warm.cur
 	if w == nil || w.uri != id.Uri() {
 		p.warm.mu.Unlock()
-		return nil
+		return nil, nil
 	}
 	p.warm.cur = nil
 	p.warm.mu.Unlock()
@@ -80,14 +87,18 @@ func (p *AppPlayer) takeWarm(ctx context.Context, id librespot.SpotifyId) *playe
 	case <-w.done:
 	case <-ctx.Done():
 		go w.discard()
-		return nil
+		return nil, nil
 	}
 	if w.err != nil {
+		var keyErr *audio.KeyProviderError
+		if errors.As(w.err, &keyErr) {
+			return nil, w.err
+		}
 		p.app.log.WithError(w.err).WithField("uri", w.uri).Debugf("warm stream failed, loading again")
-		return nil
+		return nil, nil
 	}
 	p.app.log.WithField("uri", w.uri).Debugf("using the stream warmed while the context resolved")
-	return w.stream
+	return w.stream, nil
 }
 
 // discard closes a warm stream nobody took, once it is done being created.
