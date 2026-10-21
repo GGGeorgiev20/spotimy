@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -51,7 +52,8 @@ func playlistTracks(items []gqlPlaylistItem) []Track {
 	for _, it := range items {
 		t := it.ItemV2.Data.track()
 		t.UID = it.UID
-		if it.AddedAt != nil {
+		// Generated playlists (Daily Mix…) report the Unix epoch: no date.
+		if it.AddedAt != nil && !strings.HasPrefix(it.AddedAt.ISOString, "1970-01-01") {
 			t.AddedAt = it.AddedAt.ISOString
 		}
 		if it.AddedBy != nil && it.AddedBy.Data.URI != "" {

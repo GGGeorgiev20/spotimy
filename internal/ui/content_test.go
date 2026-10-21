@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"math"
 	"testing"
 	"time"
 
@@ -87,5 +88,33 @@ func TestHeaderHeight(t *testing.T) {
 		if got := headerHeightDp(c.w, c.vh); got < c.want-.5 || got > c.want+.5 {
 			t.Errorf("headerHeightDp(%v, %v) = %v, want %v", c.w, c.vh, got, c.want)
 		}
+	}
+}
+
+// A wheel glide lands exactly on its target, and a second notch mid-way keeps
+// the speed (Chromium's retargeting) instead of restarting from rest.
+func TestGlide(t *testing.T) {
+	t0 := time.Unix(0, 0)
+	var g glide
+	g.add(t0, 53, 1)
+	if g.dur != 200*time.Millisecond {
+		t.Fatalf("dur %v, want 200ms", g.dur)
+	}
+	sum := 0
+	for ms := 16; ms <= 96; ms += 16 {
+		sum += g.step(t0.Add(time.Duration(ms) * time.Millisecond))
+	}
+	now := t0.Add(96 * time.Millisecond)
+	speed := func() float64 { _, s := g.curve(g.frac(now)); return float64(g.dist) * s / g.dur.Seconds() }
+	before := speed()
+	g.add(now, 53, 1)
+	if after := speed(); math.Abs(after-before) > 1 {
+		t.Fatalf("speed %v px/s before the second notch, %v after", before, after)
+	}
+	for ms := 112; ms < 1000; ms += 16 {
+		sum += g.step(t0.Add(time.Duration(ms) * time.Millisecond))
+	}
+	if sum != 106 || g.active() {
+		t.Fatalf("scrolled %d px (active=%v), want 106", sum, g.active())
 	}
 }

@@ -99,6 +99,8 @@ type TrackTable struct {
 	OnPlayed func(spotify.Track)
 	// OnMove enables drag-reorder: row from was dropped above/below row to.
 	OnMove func(from, to int, after bool)
+	// NoAdded drops the date added column (generated playlists have no dates).
+	NoAdded bool
 
 	Selected int
 	rows     map[int]*trackRow
@@ -152,7 +154,7 @@ func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 		if main >= 600 {
 			vars = 1
 		}
-		if main >= 750 {
+		if main >= 750 && !tt.NoAdded {
 			vars = 2
 		}
 	}

@@ -115,12 +115,15 @@ func start(ctx context.Context, path string, maxW, maxH int, onFrame func()) (*P
 		return nil, errors.New("video: could not read video size")
 	}
 	w, h := fit(sw, sh, maxW, maxH)
+	if path, err = shrink(ctx, path, w, h); err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	// -re paces output at the native frame rate; -stream_loop -1 loops forever.
 	cmd := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin",
 		"-threads", "1", "-re", "-stream_loop", "-1", "-i", path, "-an",
-		"-vf", fmt.Sprintf("scale=%d:%d:flags=area", w, h), "-pix_fmt", "rgba", "-f", "rawvideo", "-")
+		"-pix_fmt", "rgba", "-f", "rawvideo", "-")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	stdout, err := cmd.StdoutPipe()
@@ -167,6 +170,24 @@ func start(ctx context.Context, path string, maxW, maxH int, onFrame func()) (*P
 		}
 	}()
 	return p, nil
+}
+
+// shrink re-encodes path at w×h next to it (once) and returns the copy's path.
+// Canvases are 1080×1920 H.264, which costs ~40% of a core to decode in
+// software; an MPEG-4 copy at panel size loops for ~4%.
+func shrink(ctx context.Context, path string, w, h int) (string, error) {
+	out := fmt.Sprintf("%s-%dx%d.mkv", strings.TrimSuffix(path, filepath.Ext(path)), w, h)
+	if _, err := os.Stat(out); err == nil {
+		return out, nil
+	}
+	tmp := out + ".tmp"
+	defer os.Remove(tmp) // no-op after a successful rename
+	if b, err := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+		"-i", path, "-an", "-vf", fmt.Sprintf("scale=%d:%d:flags=area", w, h),
+		"-c:v", "mpeg4", "-q:v", "2", "-f", "matroska", tmp).CombinedOutput(); err != nil {
+		return "", fmt.Errorf("video: ffmpeg shrink: %v: %s", err, bytes.TrimSpace(b))
+	}
+	return out, os.Rename(tmp, out)
 }
 
 // fit scales sw×sh to fit in maxW×maxH, never upscaling, with even dimensions.

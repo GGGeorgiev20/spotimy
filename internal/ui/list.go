@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"math"
 	"time"
 
 	"gioui.org/gesture"
@@ -32,18 +33,17 @@ type List struct {
 	// NoBar hides the overlay scrollbar (the library's icon rail).
 	NoBar bool
 
-	// Mouse-wheel notches glide instead of jumping: wheel is the distance
-	// still to scroll, reached linearly by wheelEnd.
-	wheel             float32
-	wheelAt, wheelEnd time.Time
+	// Mouse-wheel notches glide instead of jumping.
+	wheel glide
 }
 
-// wheelGlide is how long one wheel notch takes to scroll, like Chromium's
-// smooth scrolling.
-const wheelGlide = 150 * time.Millisecond
+// wheelNotch is the smallest wheel delta seen, taken as one notch: Gio
+// reports ten times the compositor's value (100px on GNOME, 150px on KDE).
+var wheelNotch float32
 
 // scrollWheel applies wheel and touchpad scrolling. Touchpads already send
-// small, continuous deltas, so only big (wheel notch) deltas are animated.
+// small, continuous deltas, so only wheel notches are animated, each one 53dp
+// like Chromium on Linux.
 func (l *List) scrollWheel(gtx layout.Context) {
 	for {
 		e, ok := gtx.Event(pointer.Filter{Target: &l.wheel, Kinds: pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1e6, Max: 1e6}})
@@ -51,40 +51,104 @@ func (l *List) scrollWheel(gtx layout.Context) {
 			break
 		}
 		dy := e.(pointer.Event).Scroll.Y
-		if dy > -float32(Dp(gtx, 40)) && dy < float32(Dp(gtx, 40)) {
+		ady := max(dy, -dy)
+		if ady < float32(Dp(gtx, 40)) {
 			l.Position.Offset += int(dy)
 			l.Position.BeforeEnd = true
 			continue
 		}
-		if l.wheel == 0 {
-			l.wheelAt = gtx.Now
+		if wheelNotch == 0 || ady < wheelNotch {
+			wheelNotch = ady
 		}
-		l.wheel += dy
-		l.wheelEnd = gtx.Now.Add(wheelGlide)
+		l.wheel.add(gtx.Now, dy/wheelNotch*53*gtx.Metric.PxPerDp, gtx.Metric.PxPerDp)
 	}
-	if l.wheel == 0 {
+	if !l.wheel.active() {
 		return
 	}
 	atTop := l.Position.First == 0 && l.Position.Offset <= 0
 	atEnd := !l.Position.BeforeEnd && l.Position.First+l.Position.Count >= l.n
-	if l.wheel < 0 && atTop || l.wheel > 0 && atEnd {
-		l.wheel = 0
+	if l.wheel.dist < 0 && atTop || l.wheel.dist > 0 && atEnd {
+		l.wheel = glide{}
 		return
 	}
-	step := l.wheel
-	if left := l.wheelEnd.Sub(l.wheelAt); left > 0 && gtx.Now.Before(l.wheelEnd) {
-		step *= float32(gtx.Now.Sub(l.wheelAt)) / float32(left)
-	}
-	l.wheelAt = gtx.Now
-	px := int(step)
-	l.Position.Offset += px
+	l.Position.Offset += l.wheel.step(gtx.Now)
 	l.Position.BeforeEnd = true
-	l.wheel -= float32(px)
-	if l.wheel > -1 && l.wheel < 1 {
-		l.wheel = 0
-	} else {
+	if l.wheel.active() {
 		gtx.Execute(op.InvalidateCmd{})
 	}
+}
+
+// glide is one wheel scroll animation, after Chromium's smooth scrolling
+// (cc/animation/scroll_offset_animation_curve.cc): an ease-in-out curve over
+// 100–200ms, shorter for longer distances, which keeps its speed when another
+// notch moves the target.
+type glide struct {
+	dist, done float32 // px to scroll and px scrolled so far
+	start      time.Time
+	dur        time.Duration
+	slope      float64 // the curve's initial slope (0: plain ease-in-out)
+}
+
+func (g *glide) active() bool { return g.dist != 0 }
+
+// glideDuration is Chromium's inverse-delta duration for a distance in dp.
+func glideDuration(dp float64) time.Duration {
+	frames := min(12, max(6, 12+(dp-120)*(6-12)/(480-120))) // at 60 fps
+	return time.Duration(frames / 60 * float64(time.Second))
+}
+
+// add moves the target by d px, keeping the current speed.
+func (g *glide) add(now time.Time, d, pxPerDp float32) {
+	v := 0.0 // px/s
+	if g.active() {
+		_, s := g.curve(g.frac(now))
+		v = float64(g.dist) * s / g.dur.Seconds()
+	}
+	rem := g.dist - g.done + d
+	dur := glideDuration(math.Abs(float64(rem / pxPerDp)))
+	slope := 0.0
+	if rem != 0 {
+		slope = min(1000, max(-1000, v*dur.Seconds()/float64(rem)))
+	}
+	*g = glide{dist: rem, start: now, dur: dur, slope: slope}
+}
+
+// step returns the whole px to scroll this frame.
+func (g *glide) step(now time.Time) int {
+	x := g.frac(now)
+	y, _ := g.curve(x)
+	px := int(g.dist*float32(y) - g.done)
+	g.done += float32(px)
+	if x >= 1 {
+		px += int(math.Round(float64(g.dist - g.done)))
+		*g = glide{}
+	}
+	return px
+}
+
+func (g *glide) frac(now time.Time) float64 {
+	return min(1, max(0, now.Sub(g.start).Seconds()/g.dur.Seconds()))
+}
+
+// curve evaluates cubic-bezier(.42, .42*slope, .58, 1) at x: the progress and
+// its slope.
+func (g *glide) curve(x float64) (y, dydx float64) {
+	x1, y1, x2, y2 := .42, .42*g.slope, .58, 1.0
+	bez := func(u, a, b float64) float64 { return 3*(1-u)*(1-u)*u*a + 3*(1-u)*u*u*b + u*u*u }
+	der := func(u, a, b float64) float64 { return 3*(1-u)*(1-u)*a + 6*(1-u)*u*(b-a) + 3*u*u*(1-b) }
+	lo, hi := 0.0, 1.0 // x(u) is monotonic: bisect for u
+	for range 30 {
+		if bez((lo+hi)/2, x1, x2) < x {
+			lo = (lo + hi) / 2
+		} else {
+			hi = (lo + hi) / 2
+		}
+	}
+	u := (lo + hi) / 2
+	if dx := der(u, x1, x2); dx > 1e-9 {
+		dydx = der(u, y1, y2) / dx
+	}
+	return bez(u, y1, y2), dydx
 }
 
 func (l *List) height(i, avg int) int {

@@ -84,7 +84,13 @@ func (p *page) setup(pl *spotify.Playlist) {
 	}, pageSize)
 	p.tracks.Seed(pl.Tracks)
 	p.lengthG = -1
-	p.table = ui.TrackTable{Variant: "playlist", ContextURI: p.uri, PlaylistURI: p.uri, CanEdit: pl.CanEdit}
+	p.table = ui.TrackTable{Variant: "playlist", ContextURI: p.uri, PlaylistURI: p.uri, CanEdit: pl.CanEdit, NoAdded: true}
+	for _, t := range pl.Tracks.Items {
+		if t.AddedAt != "" {
+			p.table.NoAdded = false
+			break
+		}
+	}
 	ui.LoadTasteExcluded(p.uri)
 	if pl.CanEdit && !p.recs.res.Done {
 		p.recs.fetch(p.uri, p.haveURIs())

@@ -25,6 +25,8 @@ func main() {
 	// Trade a little CPU for a smaller heap; the app is mostly idle.
 	debug.SetGCPercent(50)
 
+	setCursorTheme()
+
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		log.Error("no config dir", "err", err)
