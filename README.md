@@ -40,7 +40,8 @@ go-librespot is vendored in `third_party/go-librespot` (go.mod replaces the modu
 - a play request's track starts loading while its context resolves;
 - the next track is readied ten seconds into the current one rather than 30 seconds before its end, so skipping plays at once;
 - when Spotify throttles audio keys (code 2) playback stops and keys aren't asked for again for 15 seconds, instead of skipping through the whole context asking for a key per track;
-- status reports the track that is loading when its metadata is known.
+- status reports the track that is loading when its metadata is known;
+- set_queue reorders the upcoming context tracks too (moving songs around "Next from", and between it and the queue), not just the queue.
 
 Its own tests run with `cd third_party/go-librespot && go test -tags test_unit ./...`.
 
