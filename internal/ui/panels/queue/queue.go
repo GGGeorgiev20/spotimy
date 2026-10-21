@@ -4,10 +4,9 @@ package queue
 
 import (
 	"image"
-	"math"
+	"strconv"
+	"time"
 
-	"gioui.org/gesture"
-	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -32,9 +31,10 @@ type panel struct {
 	clear, ctxLink ui.Link
 	find           ui.Pill
 
-	// Reordering the user queue: queue index `from` is dragged dy px.
-	dragging bool
-	from, dy int
+	// drop takes tracks dragged onto the empty panel; heads onto the
+	// headings and the space below the last row (the rows have their own).
+	drop  ui.DropTarget
+	heads []ui.DropTarget
 
 	// The "Recently played" tab.
 	recent           bool
@@ -122,6 +122,7 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 		if !p.res.Done {
 			return ui.Loading(gtx)
 		}
+		p.dropOn(gtx, next, queued)
 		return p.empty(gtx)
 	}
 	if len(p.rows) < len(items) {
@@ -137,58 +138,155 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 	if p.ctxLink.Click.Clicked(gtx) && ctxURI != "" {
 		ui.OpenURI(ctxURI)
 	}
-	return p.list.Layout(gtx, len(items), func(gtx layout.Context, n int) layout.Dimensions {
-		return ui.Pad(gtx, 0, 8, 0, 8, func(gtx layout.Context) layout.Dimensions {
-			switch it := items[n]; it.kind {
-			case itemNowHead:
-				return heading(gtx, func(gtx layout.Context) layout.Dimensions {
-					return ui.Text(gtx, "Now playing", 16, ui.Bold, ui.ColText)
-				}, nil)
-			case itemNow:
-				return p.rows[n].layout(gtx, ui.TrackOf(t), true, nil)
-			case itemQueuedHead:
-				return heading(gtx, func(gtx layout.Context) layout.Dimensions {
-					return ui.Text(gtx, "Next in queue", 16, ui.Bold, ui.ColText)
-				}, func(gtx layout.Context) layout.Dimensions {
-					return p.clear.Layout(gtx, "Clear queue", 14, ui.Bold, ui.ColText2, ui.ColText)
-				})
-			case itemNextHead:
-				return heading(gtx, func(gtx layout.Context) layout.Dimensions {
-					if ctxName == "" {
-						return ui.Text(gtx, "Next up", 16, ui.Bold, ui.ColText)
-					}
-					return ui.Inline(gtx, 16, ui.Bold, ui.ColText, ui.ColText,
-						ui.Seg{Text: "Next from: "}, ui.Seg{Text: ctxName, Link: &p.ctxLink})
-				}, nil)
-			default:
-				q := next[it.i]
-				if q.Provider != "queue" {
-					return p.rows[n].layout(gtx, q.Track, false, nil)
-				}
-				rowPx := ui.Dp(gtx, rowDp)
-				to := dropIndex(p.from, p.dy, rowPx, queued)
-				h := &hooks{
-					remove: func() { p.set(removeAt(next, it.i)) },
-					move:   func(dy int) { p.dragging, p.from, p.dy = true, it.i, dy },
-					drop: func() {
-						if to := dropIndex(p.from, p.dy, rowPx, queued); p.dragging && to != p.from {
-							p.set(moveTo(next, p.from, to))
-						}
-						p.dragging = false
-					},
-					dim: p.dragging && p.from == it.i,
-				}
-				if p.dragging && to != p.from && to == it.i {
-					h.marker = 1
-					if to < p.from {
-						h.marker = -1
-					}
-				}
-				return p.rows[n].layout(gtx, q.Track, false, h)
+	if len(p.heads) < len(items)+1 {
+		p.heads = make([]ui.DropTarget, len(items)+1)
+	}
+	// A heading or the space below the list takes a drop at the start of the
+	// user queue (the headings above it) or at its end.
+	headDrop := func(gtx layout.Context, n int, d layout.Dimensions, spot int) layout.Dimensions {
+		p.heads[n].Group = queueGroup
+		if pl, at := p.heads[n].Add(gtx, d.Size, spot); pl != nil {
+			p.dropAt(pl, at, next, queued)
+		}
+		return d
+	}
+	return p.list.Layout(gtx, len(items)+1, func(gtx layout.Context, n int) layout.Dimensions {
+		if n == len(items) {
+			// Some room under the last row to drop onto.
+			return headDrop(gtx, n, layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, ui.Dp(gtx, 80))}, queued)
+		}
+		if k := items[n].kind; k != itemTrack {
+			spot := 0
+			if k == itemNextHead {
+				spot = queued
 			}
-		})
+			return headDrop(gtx, n, p.item(gtx, n, items, next, t, queued, ctxName), spot)
+		}
+		return p.item(gtx, n, items, next, t, queued, ctxName)
 	})
 }
+
+// item lays out list item n.
+func (p *panel) item(gtx layout.Context, n int, items []item, next []backend.QueueTrack, t *backend.NowTrack, queued int, ctxName string) layout.Dimensions {
+	return ui.Pad(gtx, 0, 8, 0, 8, func(gtx layout.Context) layout.Dimensions {
+		switch it := items[n]; it.kind {
+		case itemNowHead:
+			return heading(gtx, func(gtx layout.Context) layout.Dimensions {
+				return ui.Text(gtx, "Now playing", 16, ui.Bold, ui.ColText)
+			}, nil)
+		case itemNow:
+			return p.rows[n].layout(gtx, ui.TrackOf(t), true, nil)
+		case itemQueuedHead:
+			return heading(gtx, func(gtx layout.Context) layout.Dimensions {
+				return ui.Text(gtx, "Next in queue", 16, ui.Bold, ui.ColText)
+			}, func(gtx layout.Context) layout.Dimensions {
+				return p.clear.Layout(gtx, "Clear queue", 14, ui.Bold, ui.ColText2, ui.ColText)
+			})
+		case itemNextHead:
+			return heading(gtx, func(gtx layout.Context) layout.Dimensions {
+				if ctxName == "" {
+					return ui.Text(gtx, "Next up", 16, ui.Bold, ui.ColText)
+				}
+				return ui.Inline(gtx, 16, ui.Bold, ui.ColText, ui.ColText,
+					ui.Seg{Text: "Next from: "}, ui.Seg{Text: ctxName, Link: &p.ctxLink})
+			}, nil)
+		default:
+			q := next[it.i]
+			// The drop line goes where a drop would land: over a row of
+			// the queue, or at its end for anything below it.
+			line := 0
+			if spot, ok := ui.DropHover(queueGroup); ok {
+				switch at := min(spot, queued); {
+				case at == it.i:
+					line = -1
+				case at == it.i+1 && it.i+1 == len(next):
+					line = 1
+				}
+			}
+			h := &hooks{
+				index: it.i,
+				line:  line,
+				onDrop: func(pl *ui.DragPayload, spot int) {
+					p.dropAt(pl, spot, next, queued)
+				},
+			}
+			if q.Provider == "queue" {
+				h.remove = func() { p.set(removeAt(next, it.i)) }
+			}
+			return p.rows[n].layout(gtx, q.Track, false, h)
+		}
+	})
+}
+
+const queueGroup = "queue"
+
+// dropOn makes the empty panel a drop target (the queue's start). It goes
+// under the content: on top it would take the button's clicks.
+func (p *panel) dropOn(gtx layout.Context, next []backend.QueueTrack, queued int) {
+	p.drop.Group = queueGroup
+	if pl, spot := p.drop.Add(gtx, gtx.Constraints.Max, queued); pl != nil {
+		p.dropAt(pl, spot, next, queued)
+	}
+}
+
+// dropAt applies a drop before upcoming track spot.
+func (p *panel) dropAt(pl *ui.DragPayload, spot int, next []backend.QueueTrack, queued int) {
+	if p.res.V == nil {
+		ui.Go("Couldn't add to queue", func() error { return ui.B.AddToQueue(uris(pl.Tracks)) }, nil)
+		return
+	}
+	out, appended := dropInto(next, queued, pl.Tracks, pl.QueueIndex, spot, newUID)
+	switch {
+	case out == nil:
+	case appended:
+		// Plain adds at the end go through add_to_queue, which any device
+		// takes, remote ones included.
+		p.res.V.Next = out
+		ui.Go("Couldn't add to queue", func() error { return ui.B.AddToQueue(uris(pl.Tracks)) }, nil)
+	default:
+		p.set(out)
+	}
+}
+
+// dropInto is the upcoming list after dropping tracks before spot, where the
+// first queued entries are the user queue. Drops land within the user queue
+// (anywhere past it means its end). A track moved from the user queue moves;
+// one from the rest of the upcoming list, or from elsewhere, is queued there.
+// appended reports a plain add at the end; out is nil when nothing changes.
+func dropInto(next []backend.QueueTrack, queued int, tracks []spotify.Track, from, spot int, uid func() string) (out []backend.QueueTrack, appended bool) {
+	at := max(0, min(spot, queued))
+	if from >= 0 && from < queued {
+		if at > from {
+			at--
+		}
+		if at == from {
+			return nil, false
+		}
+		return moveTo(next, from, at), false
+	}
+	add := make([]backend.QueueTrack, len(tracks))
+	for i, t := range tracks {
+		t.UID = uid()
+		add[i] = backend.QueueTrack{Track: t, Provider: "queue"}
+	}
+	out = make([]backend.QueueTrack, 0, len(next)+len(add))
+	out = append(out, next[:at]...)
+	out = append(out, add...)
+	out = append(out, next[at:]...)
+	return out, at == queued && from < 0
+}
+
+func uris(ts []spotify.Track) []string {
+	out := make([]string, len(ts))
+	for i, t := range ts {
+		out[i] = t.URI
+	}
+	return out
+}
+
+// newUID names a track queued here (the cluster tells queue entries apart
+// by uid).
+func newUID() string { return "q" + strconv.FormatInt(time.Now().UnixNano(), 36) }
 
 func (p *panel) recentBody(gtx layout.Context) layout.Dimensions {
 	switch {
@@ -233,11 +331,6 @@ func layoutItems(playing bool, next []backend.QueueTrack) []item {
 func (p *panel) set(next []backend.QueueTrack) {
 	p.res.V.Next = next
 	ui.Go("Couldn't update queue", func() error { return ui.B.SetQueue(queueItems(next)) }, nil)
-}
-
-// dropIndex is where row `from` of the user queue lands when dragged dy px.
-func dropIndex(from, dy, rowPx, queued int) int {
-	return max(0, min(queued-1, from+int(math.Round(float64(dy)/float64(rowPx)))))
 }
 
 func moveTo(next []backend.QueueTrack, from, to int) []backend.QueueTrack {
@@ -323,37 +416,24 @@ type row struct {
 	click, play ui.Click
 	title       ui.Link
 	artists     []ui.Link
-	drag        gesture.Drag
-	y0          float32
+	drag        ui.TrackDrag
+	// above and below take drops on the row's halves: before it, after it.
+	above, below ui.DropTarget
 }
 
-// hooks make a row of the user queue removable and draggable.
+// hooks make an upcoming row draggable (to reorder the queue) and a drop
+// target, and a row of the user queue removable.
 type hooks struct {
+	index  int // in the upcoming tracks
 	remove func()
-	move   func(dy int) // while dragging, dy px from where it was grabbed
-	drop   func()
-	dim    bool // this row is the one being dragged
-	marker int  // draw the drop line above (-1) or below (1) this row
+	line   int // draw the drop line above (-1) or below (1) this row
+	onDrop func(pl *ui.DragPayload, spot int)
 }
 
 func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks) layout.Dimensions {
 	var remove func()
 	if h != nil {
 		remove = h.remove
-		for {
-			e, ok := r.drag.Update(gtx.Metric, gtx.Source, gesture.Vertical)
-			if !ok {
-				break
-			}
-			switch e.Kind {
-			case pointer.Press:
-				r.y0 = e.Position.Y
-			case pointer.Drag:
-				h.move(int(e.Position.Y - r.y0))
-			case pointer.Release, pointer.Cancel:
-				h.drop()
-			}
-		}
 	}
 	if r.play.Clicked(gtx) || r.click.DoubleClicked(gtx) {
 		playTrack(t, current)
@@ -376,11 +456,8 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 	w, rh := gtx.Constraints.Max.X, ui.Dp(gtx, rowDp)
 	r.click.Label, r.click.Arrow = t.Name, true
 	return r.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		if h != nil {
-			r.drag.Add(gtx.Ops)
-		}
 		hov := r.click.Hovered() || r.play.Hovered()
-		if hov || h != nil && h.dim {
+		if hov {
 			ui.FillRect(gtx.Ops, image.Rect(0, 0, w, rh), ui.Dp(gtx, 4), ui.ColRowHover)
 		}
 		is, pad := ui.Dp(gtx, 40), ui.Dp(gtx, 8)
@@ -410,13 +487,30 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		d := r.text(g, t, current)
 		call := m.Stop()
 		ui.Offset(gtx, tx, (rh-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
-		if h != nil && h.marker != 0 {
+		if h != nil && h.line != 0 {
 			lh := ui.Dp(gtx, 2)
 			y := 0
-			if h.marker > 0 {
+			if h.line > 0 {
 				y = rh - lh
 			}
 			ui.FillRect(gtx.Ops, image.Rect(0, y, w, y+lh), 0, ui.ColAccent)
+		}
+		pl := ui.TrackPayload(t)
+		if h != nil {
+			pl.QueueIndex = h.index
+		}
+		r.drag.Handle(gtx, pl, nil, 0, rh, nil)
+		if h != nil {
+			r.above.Group, r.below.Group = queueGroup, queueGroup
+			half := rh / 2
+			if pl, spot := r.above.Add(gtx, image.Pt(w, half), h.index); pl != nil {
+				h.onDrop(pl, spot)
+			}
+			ui.Offset(gtx, 0, half, func() {
+				if pl, spot := r.below.Add(gtx, image.Pt(w, rh-half), h.index+1); pl != nil {
+					h.onDrop(pl, spot)
+				}
+			})
 		}
 		return layout.Dimensions{Size: image.Pt(w, rh)}
 	})

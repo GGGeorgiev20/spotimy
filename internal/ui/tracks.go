@@ -117,7 +117,7 @@ type TrackTable struct {
 
 type trackRow struct {
 	row, play, save, more Click
-	drag                  RowDrag
+	drag                  TrackDrag
 	artists               []Link
 	album                 Link
 }
@@ -383,9 +383,6 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 	return Pad(gtx, 0, float32(pad)/gtx.Metric.PxPerDp, 0, float32(pad)/gtx.Metric.PxPerDp, func(gtx layout.Context) layout.Dimensions {
 		rw := w - 2*pad
 		return r.row.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			if tt.OnMove != nil && t.UID != "" {
-				r.drag.Handle(gtx, &tt.reorder, i, h, tt.OnMove)
-			}
 			hov := r.row.Hovered()
 			switch {
 			case tt.reorder.Active && tt.reorder.From == i:
@@ -559,6 +556,12 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 					})
 				}
 			})
+			var ro *Reorder
+			var move func(from, to int, after bool)
+			if tt.OnMove != nil && t.UID != "" {
+				ro, move = &tt.reorder, tt.OnMove
+			}
+			r.drag.Handle(gtx, TrackPayload(tr), ro, i, h, move)
 			if d := tt.reorder.DropLine(i); d != 0 {
 				ly := 0
 				if d > 0 {

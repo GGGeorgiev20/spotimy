@@ -31,6 +31,7 @@ import (
 //	/wait                          wait until loads settle
 //	/click?x=&y=[&button=right][&double=1]
 //	/drag?x=&y=&x2=&y2=[&hold=1]  press at (x,y), move to (x2,y2), release (unless hold)
+//	/release?x=&y=                 release the button held by /drag?hold=1
 //	/clicktext?text=Show all[&n=0][&button=right]   click the n-th element whose label contains text
 //	/move?x=&y=                    hover
 //	/scroll?x=&y=&dy=              wheel scroll (px, positive = down)
@@ -288,6 +289,12 @@ func (hr *harness) mux() *http.ServeMux {
 		if r.URL.Query().Get("hold") != "1" {
 			hr.do(func() { hr.pointer(pointer.Release, to, 0) })
 		}
+		hr.settle(5 * time.Second)
+		ok(w, "ok")
+	})
+	m.HandleFunc("/release", func(w http.ResponseWriter, r *http.Request) { // ends a /drag?hold=1
+		at := f32.Pt(num(r, "x"), num(r, "y"))
+		hr.do(func() { hr.pointer(pointer.Release, at, 0) })
 		hr.settle(5 * time.Second)
 		ok(w, "ok")
 	})

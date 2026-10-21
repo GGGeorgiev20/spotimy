@@ -120,6 +120,7 @@ func (tt *TrackTable) compactRow(gtx layout.Context, i int, tr spotify.Track, r 
 		call := m.Stop()
 		th := nd.Size.Y + Dp(gtx, 2) + ad.Size.Y
 		Offset(gtx, x, (h-th)/2, func() { call.Add(gtx.Ops) })
+		r.drag.Handle(gtx, TrackPayload(tr), nil, i, h, nil)
 		return layout.Dimensions{Size: image.Pt(w, h)}
 	})
 }
