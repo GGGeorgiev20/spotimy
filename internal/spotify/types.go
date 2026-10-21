@@ -93,6 +93,9 @@ type Card struct {
 	Type     string  `json:"type"` // playlist, album, artist, show, episode, user, collection, folder
 	Name     string  `json:"name"`
 	Subtitle string  `json:"subtitle"`
+	// Detail is the web player's "Type • Who" line ("Song • Radiohead"),
+	// used where items of mixed types are listed (recent searches).
+	Detail string `json:"detail,omitempty"`
 	Images   []Image `json:"images"`
 }
 

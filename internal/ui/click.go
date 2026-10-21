@@ -190,7 +190,7 @@ func trackPointer(gtx layout.Context, tag event.Tag) {
 			pointerPos = pe.Position
 			// A press anywhere drops keyboard focus, like the browser; a text
 			// field that was hit takes focus again later in this frame.
-			if pe.Kind == pointer.Press {
+			if pe.Kind == pointer.Press && !inSearchDropdown(pe.Position.Round()) {
 				gtx.Execute(key.FocusCmd{})
 			}
 		}

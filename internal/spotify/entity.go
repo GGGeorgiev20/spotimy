@@ -94,12 +94,18 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 	case "Playlist":
 		c.Images = e.Images.first()
 		c.Subtitle = stripHTML(e.Description)
-		if c.Subtitle == "" && e.OwnerV2 != nil {
-			c.Subtitle = "By " + e.OwnerV2.Data.user().Name
+		c.Detail = "Playlist"
+		if e.OwnerV2 != nil {
+			owner := e.OwnerV2.Data.user().Name
+			c.Detail += " • " + owner
+			if c.Subtitle == "" {
+				c.Subtitle = "By " + owner
+			}
 		}
 	case "Album":
 		c.Images = e.CoverArt.images()
 		c.Subtitle = e.Artists.names()
+		c.Detail = joinDot(albumTypeLabel(e.AlbumType, e.Type), c.Subtitle)
 		if e.Date != nil && e.Date.year() != "" {
 			c.Subtitle = e.Date.year() + " • " + albumTypeLabel(e.AlbumType, e.Type)
 		}
@@ -110,17 +116,19 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		if e.Visuals != nil {
 			c.Images = e.Visuals.AvatarImage.images()
 		}
-		c.Subtitle = "Artist"
+		c.Subtitle, c.Detail = "Artist", "Artist"
 	case "Podcast", "Audiobook":
 		c.Images = e.CoverArt.images()
 		if e.Publisher != nil {
 			c.Subtitle = e.Publisher.Name
 		}
+		c.Detail = joinDot(e.Typename, c.Subtitle)
 	case "Episode":
 		c.Images = e.CoverArt.images()
 		if e.PodcastV2 != nil {
 			c.Subtitle = e.PodcastV2.Data.Name
 		}
+		c.Detail = joinDot("Episode", c.Subtitle)
 	case "Genre":
 		c.Images = e.Image.images()
 	case "Track":
@@ -128,13 +136,14 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 			c.Images = e.AlbumOfTrack.CoverArt.images()
 		}
 		c.Subtitle = e.Artists.names()
+		c.Detail = joinDot("Song", c.Subtitle)
 	case "User":
 		c.Name = e.DisplayName
 		if c.Name == "" {
 			c.Name = e.Name
 		}
 		c.Images = e.Avatar.images()
-		c.Subtitle = "Profile"
+		c.Subtitle, c.Detail = "Profile", "Profile"
 	case "Entity":
 		if e.IdentityTrait == nil {
 			return c, false
@@ -150,6 +159,21 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		return c, false
 	}
 	return c, c.URI != "" && c.Name != ""
+}
+
+// joinDot joins the non-empty parts with " • ".
+func joinDot(parts ...string) string {
+	out := ""
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		if out != "" {
+			out += " • "
+		}
+		out += p
+	}
+	return out
 }
 
 func albumTypeLabel(types ...string) string {

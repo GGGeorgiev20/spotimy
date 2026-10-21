@@ -22,6 +22,7 @@ import (
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/player"
+	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 )
 
 // Slots filled by the panel packages in init.
@@ -134,6 +135,9 @@ func Run() {
 
 var rootTag = new(int)
 
+// searchBoxRect is the top bar's search box in window px.
+var searchBoxRect image.Rectangle
+
 // WindowSize is the window's size in px (CSS vh/vw sizes derive from it).
 var WindowSize image.Point
 
@@ -157,6 +161,7 @@ func Frame(gtx layout.Context) {
 		layoutLogin(gtx)
 	} else if FullScreen == nil || !FullScreen(gtx) {
 		layoutApp(gtx)
+		layoutSearchDropdown(gtx, searchBoxRect)
 	}
 	layoutToasts(gtx, Dp(gtx, 108))
 	layoutModal(gtx)
@@ -452,6 +457,8 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 		})
 		Tip(gtx, &homeBtn.Click, d, "Home", true)
 		Offset(gtx, Dp(gtx, 56), 0, func() { layoutSearchBox(gtx, searchW) })
+		x0, y0 := cx+Dp(gtx, 56), (h-Dp(gtx, 48))/2
+		searchBoxRect = image.Rect(x0, y0, x0+searchW, y0+Dp(gtx, 48))
 	})
 
 	// Right: friends + avatar.
@@ -532,13 +539,8 @@ func layoutSearchBox(gtx layout.Context, w int) {
 	h := Dp(gtx, 48)
 	changed, _ := SearchQuery.Poll(gtx)
 	focused := gtx.Focused(&SearchQuery.Editor)
-	if focused && !searchFocused && !strings.HasPrefix(Current().Path, "/search") {
-		q := strings.TrimSpace(SearchQuery.Text())
-		if q != "" {
-			Navigate("/search/" + url.PathEscape(q))
-		} else {
-			Navigate("/search")
-		}
+	if focused && !searchFocused {
+		drop.res = Res[[]spotify.Card]{} // fresh recent searches each time it opens
 	}
 	searchFocused = focused
 	// Like the web player, the box empties when you leave search (going back
