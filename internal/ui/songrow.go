@@ -73,7 +73,7 @@ func (tt *TrackTable) compactRow(gtx layout.Context, i int, tr spotify.Track, r 
 				})
 			})
 		})
-		saved := Saved[LikeKey(tr)]
+		saved := Added(LikeKey(tr))
 		Offset(gtx, end-bs, (h-bs)/2, func() {
 			icon, col := "plus-circle", ColText2
 			if saved {
@@ -83,7 +83,7 @@ func (tt *TrackTable) compactRow(gtx layout.Context, i int, tr spotify.Track, r 
 			}
 			r.save.Label = "Save to Liked Songs"
 			if saved {
-				r.save.Label = "Remove from Liked Songs"
+				r.save.Label = "Add to playlist"
 			}
 			r.save.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return IconPx(gtx, icon, bs, col) })
 		})

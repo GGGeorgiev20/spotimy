@@ -38,6 +38,7 @@ var drop struct {
 
 type dropRow struct {
 	click  Click
+	play   Click
 	remove IconButton
 	follow Pill
 	save   IconButton
@@ -146,11 +147,36 @@ func openSuggestion(gtx layout.Context, s spotify.Suggestion) {
 	}
 	SearchQuery.Blur(gtx)
 	RememberSearch(s.Card.URI)
+	uri := s.Card.URI
 	if s.Card.Type == "track" {
-		Play(s.Card.URI, "") // there's no song page: play it, like the search page's rows
-		return
+		if s.Card.AlbumURI == "" {
+			Play(uri, "") // no album to open
+			return
+		}
+		uri = s.Card.AlbumURI // a song opens its album
 	}
-	OpenURI(s.Card.URI)
+	OpenURI(uri)
+}
+
+// playSuggestion is a row's Play button: songs play on their own, the rest
+// as a context.
+func playSuggestion(gtx layout.Context, c spotify.Card) {
+	SearchQuery.Blur(gtx)
+	RememberSearch(c.URI)
+	if c.Type == "track" {
+		Play(c.URI, "")
+	} else {
+		PlayContext(c.URI)
+	}
+}
+
+// playable is whether a row gets a Play button on its picture.
+func playable(typ string) bool {
+	switch typ {
+	case "track", "album", "artist", "playlist", "show", "episode", "collection":
+		return true
+	}
+	return false
 }
 
 // dropItem is one row of the dropdown and its height in dp.
@@ -208,8 +234,13 @@ func layoutSearchDropdown(gtx layout.Context, box image.Rectangle) {
 		Offset(gtx, pad, pad, func() {
 			g := gtx
 			g.Constraints = layout.Exact(image.Pt(w-2*pad, h-2*pad))
+			scrolls := contentH+16 > maxH
 			drop.list.Layout(g, len(items), func(gtx layout.Context, i int) layout.Dimensions {
 				gtx.Constraints.Max.Y = Dp(gtx, items[i].h)
+				if scrolls { // rows end where the scrollbar starts
+					gtx.Constraints.Max.X -= Dp(gtx, 12)
+					gtx.Constraints.Min.X = gtx.Constraints.Max.X
+				}
 				items[i].w(gtx)
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, Dp(gtx, items[i].h))}
 			})
@@ -238,7 +269,7 @@ func scrollIntoView(gtx layout.Context, items []dropItem, i, viewH int) {
 }
 
 func (r *dropRow) hovered() bool {
-	return r.click.Hovered() || r.remove.Click.Hovered() || r.follow.Click.Hovered() || r.save.Click.Hovered()
+	return r.click.Hovered() || r.play.Hovered() || r.remove.Click.Hovered() || r.follow.Click.Hovered() || r.save.Click.Hovered()
 }
 
 func dropRows(n int) {
@@ -277,6 +308,10 @@ func recentItems(gtx layout.Context) []dropItem {
 		r := &drop.rows[i]
 		if r.remove.Click.Clicked(gtx) {
 			forgetSearches([]string{c.URI})
+			return nil
+		}
+		if r.play.Clicked(gtx) {
+			playSuggestion(gtx, c)
 			return nil
 		}
 		if r.click.Clicked(gtx) {
@@ -322,6 +357,10 @@ func suggestionItems(gtx layout.Context) []dropItem {
 	typed := strings.TrimSpace(SearchQuery.Text())
 	for i, s := range sugg {
 		r := &drop.rows[i]
+		if r.play.Clicked(gtx) && s.Card != nil {
+			playSuggestion(gtx, *s.Card)
+			return nil
+		}
 		if r.click.Clicked(gtx) {
 			openSuggestion(gtx, s)
 			return nil
@@ -451,6 +490,16 @@ func entityRow(gtx layout.Context, r *dropRow, c spotify.Card, sel bool, trailin
 				radius = is / 2
 			}
 			Image{URL: Pick(c.Images, is), Radius: radius, Round: round, Icon: cardIcon(c.Type)}.Layout(gtx, image.Pt(is, is))
+			// On hover, a Play button over the picture (the web's 50% black veil).
+			if playable(c.Type) && (r.hovered() || sel) {
+				r.play.Label = "Play " + c.Name
+				r.play.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					FillRect(gtx.Ops, image.Rect(0, 0, is, is), radius, Alpha(ColBg, .5))
+					ic := Dp(gtx, 24)
+					Offset(gtx, (is-ic)/2, (is-ic)/2, func() { IconPx(gtx, "play", ic, ColText) })
+					return layout.Dimensions{Size: image.Pt(is, is)}
+				})
+			}
 		})
 		tx := Dp(gtx, 8+48+12)
 		tw := rw - tx - Dp(gtx, 4+32+12)

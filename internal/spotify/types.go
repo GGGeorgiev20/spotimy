@@ -64,6 +64,8 @@ type Playlist struct {
 	Followers   int       `json:"followers"`
 	Following   bool      `json:"following"`
 	CanEdit     bool      `json:"canEdit"`
+	CanInvite   bool      `json:"canInvite"` // may invite collaborators
+	Public      bool      `json:"public"`
 	IsOwner     bool      `json:"isOwner"`
 	Collab      bool      `json:"collaborative"`
 	Members     []User    `json:"members"` // collaborators other than the owner
@@ -99,6 +101,8 @@ type Card struct {
 	Images []Image `json:"images"`
 	// Verified marks a verified artist (the badge after the name).
 	Verified bool `json:"verified,omitempty"`
+	// AlbumURI is a song's album (opening a song opens it).
+	AlbumURI string `json:"albumUri,omitempty"`
 }
 
 type LibraryItem struct {

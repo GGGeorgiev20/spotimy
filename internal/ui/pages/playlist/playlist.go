@@ -185,7 +185,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		switch {
 		case i == itemHeader:
 			o := ui.HeaderOpts{
-				Images: pl.Images, Type: "Playlist", Title: pl.Name, Color: p.color, Icon: "note",
+				Images: pl.Images, Type: visibility(pl), Title: pl.Name, Color: p.color, Icon: "note",
 				Description: p.desc,
 				Meta:        func(gtx layout.Context) layout.Dimensions { return p.meta(gtx, pl) },
 			}
@@ -197,13 +197,16 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 			return d
 		case i == itemActions:
 			a := ui.ActionOpts{
-				ContextURI: p.uri, Shuffle: true,
+				ContextURI: p.uri, Shuffle: true, Download: true,
 				Menu: func() []ui.MenuItem {
 					return ui.CardMenu(spotify.Card{URI: p.uri, Type: "playlist", Name: pl.Name, Images: pl.Images}, ui.CardMenuOpts{Own: pl.IsOwner, Description: p.desc})
 				},
 			}
 			if !pl.IsOwner {
 				a.SaveURI = p.uri
+			}
+			if pl.CanInvite {
+				a.OnInvite, a.InviteLabel = func() { invite(p.uri) }, "Invite collaborators to "+pl.Name
 			}
 			d := p.actions.Layout(gtx, a)
 			if p.tracks.Total > 0 {
@@ -269,4 +272,25 @@ func (p *page) meta(gtx layout.Context, pl *spotify.Playlist) layout.Dimensions 
 	}
 	segs = append(segs, ui.Seg{Text: s, Color: dim})
 	return ui.Inline(gtx, 14, ui.Regular, ui.ColText, ui.ColNone, segs...)
+}
+
+// visibility is the header's type line: Spotify shows whether anyone can
+// see the playlist.
+func visibility(pl *spotify.Playlist) string {
+	if pl.Public {
+		return "Public Playlist"
+	}
+	return "Private Playlist"
+}
+
+// invite copies a collaborator invite link, as the official button does.
+func invite(uri string) {
+	ui.Async(func() (string, error) { return ui.B.InviteLink(uri) }, func(link string, err error) {
+		if err != nil {
+			ui.Toast("Couldn't create an invite link: " + err.Error())
+			return
+		}
+		ui.CopyText(link)
+		ui.Toast("Invite link copied to clipboard")
+	})
 }

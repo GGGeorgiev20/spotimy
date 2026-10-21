@@ -249,7 +249,7 @@ func TestParseSearchSuggestions(t *testing.T) {
 	if a := s[2].Card; a.Type != "artist" || a.Name != "Radiohead" || !a.Verified || len(a.Images) == 0 || a.Detail != "Artist" {
 		t.Errorf("artist: %+v", a)
 	}
-	if tr := s[3].Card; tr.Type != "track" || tr.Detail != "Song • Radiohead" || len(tr.Images) == 0 {
+	if tr := s[3].Card; tr.Type != "track" || tr.Detail != "Song • Radiohead" || len(tr.Images) == 0 || tr.AlbumURI == "" {
 		t.Errorf("track: %+v", tr)
 	}
 }

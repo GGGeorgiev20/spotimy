@@ -24,7 +24,6 @@ var bar struct {
 	save    ui.IconButton
 	tr      transport
 	vol     volume
-	npv     ui.IconButton
 	lyrics  ui.IconButton
 	queue   ui.IconButton
 	devices ui.IconButton
@@ -111,7 +110,7 @@ func layoutLeft(gtx layout.Context) {
 				ui.Offset(gtx, cs-b-dp(4), dp(4), func() {
 					ui.FillCircle(gtx.Ops, b, ui.Alpha(ui.ColBg, .7))
 					icon := "chevron-up"
-					if ui.Prefs.RightPanel == "npv" {
+					if ui.RightPanel() == "npv" {
 						icon = "chevron-down"
 					}
 					ui.Offset(gtx, dp(4), dp(4), func() { ui.Icon(gtx, icon, 16, ui.ColText) })
@@ -167,10 +166,8 @@ func layoutRight(gtx layout.Context) {
 	b := dp(32)
 	onLyrics := ui.Current().Path == "/lyrics"
 
-	if bar.npv.Click.Clicked(gtx) {
-		ui.TogglePanel("npv")
-	}
-	if bar.lyrics.Click.Clicked(gtx) {
+	noLyrics := t == nil || !ui.HasLyrics(t.URI)
+	if bar.lyrics.Click.Clicked(gtx) && !noLyrics {
 		if onLyrics {
 			ui.Back()
 		} else {
@@ -187,12 +184,13 @@ func layoutRight(gtx layout.Context) {
 		ui.SetFullscreen(true)
 	}
 
-	// Right-aligned row; the volume slider gives way on narrow windows.
-	sw := min(dp(93), w-6*b-dp(8))
+	// Right-aligned row; the volume slider gives way on narrow windows. The
+	// Now Playing view has no button any more: it's always there (or its rail).
+	sw := min(dp(93), w-5*b-dp(8))
 	if sw < dp(24) {
 		sw = 0
 	}
-	rowW := 6*b + sw
+	rowW := 5*b + sw
 	if sw > 0 {
 		rowW += dp(8)
 	}
@@ -205,10 +203,9 @@ func layoutRight(gtx layout.Context) {
 			})
 			x += b
 		}
-		btn(&bar.npv, "now-playing", "Now playing view", ui.Prefs.RightPanel == "npv", false)
-		btn(&bar.lyrics, "lyrics", "Lyrics", onLyrics, t == nil)
-		btn(&bar.queue, "queue", "Queue", ui.Prefs.RightPanel == "queue", false)
-		btn(&bar.devices, "devices", "Connect to a device", ui.Prefs.RightPanel == "devices" || s != nil && s.Remote, false)
+		btn(&bar.lyrics, "lyrics", "Lyrics", onLyrics, noLyrics)
+		btn(&bar.queue, "queue", "Queue", ui.RightPanel() == "queue", false)
+		btn(&bar.devices, "devices", "Connect to a device", ui.RightPanel() == "devices" || s != nil && s.Remote, false)
 		ui.Offset(gtx, x, 0, func() { bar.vol.layout(gtx, sw) })
 		x += b + sw
 		if sw > 0 {

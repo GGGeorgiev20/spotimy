@@ -384,8 +384,11 @@ var Prefs = struct {
 	LibView      string `json:"libView"` // list, compact, grid
 	LibWidth     int    `json:"libWidth"`
 	LibCollapsed bool   `json:"libCollapsed"`
-	// RightPanel: "", queue, npv, devices, friends
+	// RightPanel: queue, devices or friends over the Now Playing view; ""
+	// (or "npv") is the Now Playing view itself, the default.
 	RightPanel string `json:"rightPanel"`
+	// NPVHidden collapses the Now Playing view to its rail.
+	NPVHidden bool `json:"npvHidden"`
 }{LibSort: "Recents", LibView: "list", LibWidth: 340}
 
 var (
@@ -417,11 +420,46 @@ func savePrefs() {
 	}()
 }
 
-// TogglePanel opens the right panel name, or closes it if it's open.
+// TogglePanel opens the right panel name, or closes it (back to the Now
+// Playing view) if it's open. "npv" shows or collapses the Now Playing view.
 func TogglePanel(name string) {
-	if Prefs.RightPanel == name {
+	switch {
+	case name == "npv" && RightPanel() == "npv":
+		Prefs.NPVHidden = true
+	case name == "npv":
+		Prefs.RightPanel, Prefs.NPVHidden = "", false
+	case Prefs.RightPanel == name:
 		Prefs.RightPanel = ""
-	} else {
+	default:
 		Prefs.RightPanel = name
 	}
+}
+
+// RightPanel is the panel showing on the right: queue, devices, friends,
+// npv, or "" for the collapsed Now Playing rail.
+func RightPanel() string {
+	switch Prefs.RightPanel {
+	case "", "npv":
+		if Prefs.NPVHidden {
+			return ""
+		}
+		return "npv"
+	}
+	return Prefs.RightPanel
+}
+
+var lyricsKnown = map[string]*Res[bool]{}
+
+// HasLyrics reports whether a track has lyrics (true until it's known).
+func HasLyrics(uri string) bool {
+	r := lyricsKnown[uri]
+	if r == nil {
+		r = &Res[bool]{}
+		lyricsKnown[uri] = r
+		r.Load(func() (bool, error) {
+			l, err := B.Lyrics(uri)
+			return l != nil && len(l.Lines) > 0, err
+		})
+	}
+	return !r.Done || r.Err != nil || r.V
 }

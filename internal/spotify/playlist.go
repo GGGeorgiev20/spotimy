@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -30,8 +31,10 @@ type gqlPlaylist struct {
 	OwnerV2     struct {
 		Data gqlUser `json:"data"`
 	} `json:"ownerV2"`
+	BasePermission          string `json:"basePermission"` // VIEWER, CONTRIBUTOR or BLOCKED
 	CurrentUserCapabilities struct {
-		CanEditItems bool `json:"canEditItems"`
+		CanEditItems               bool `json:"canEditItems"`
+		CanAdministratePermissions bool `json:"canAdministratePermissions"`
 	} `json:"currentUserCapabilities"`
 	Members struct {
 		TotalCount int `json:"totalCount"`
@@ -95,9 +98,12 @@ func (c *Client) Playlist(ctx context.Context, uri string, offset, limit int) (*
 		Followers:   p.Followers,
 		Following:   p.Following,
 		CanEdit:     p.CurrentUserCapabilities.CanEditItems,
-		Collab:      p.Members.TotalCount > 1,
-		RevisionID:  p.RevisionID,
-		Tracks:      TrackPage{Total: p.Content.TotalCount, Offset: offset, Items: playlistTracks(p.Content.Items)},
+		CanInvite:   p.CurrentUserCapabilities.CanAdministratePermissions,
+		// The web player's rule: anyone may view it unless blocked.
+		Public:     p.BasePermission == "VIEWER" || p.BasePermission == "CONTRIBUTOR",
+		Collab:     p.Members.TotalCount > 1,
+		RevisionID: p.RevisionID,
+		Tracks:     TrackPage{Total: p.Content.TotalCount, Offset: offset, Items: playlistTracks(p.Content.Items)},
 	}
 	out.Members = []User{}
 	for _, m := range p.Members.Items {
@@ -107,6 +113,28 @@ func (c *Client) Playlist(ctx context.Context, uri string, offset, limit int) (*
 	}
 	out.IsOwner = owner.URI != "" && owner.URI == c.UserURI()
 	return out, nil
+}
+
+// InviteLink makes a collaborator invite link for a playlist the user owns
+// (it expires after a day, the server's default).
+func (c *Client) InviteLink(ctx context.Context, playlist string) (string, error) {
+	id := trackID(playlist)
+	var resp struct {
+		Token string `json:"token"`
+	}
+	body := `{"permission":{"permissionLevel":"CONTRIBUTOR"}}`
+	raw, err := c.do(ctx, request{op: "playlist-permission", method: "POST", url: c.spclientURL + "/playlist-permission/v1/playlist/" + id + "/permission-grant",
+		body: []byte(body), contentType: "application/json", accept: "application/json"})
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return "", &Error{Op: "playlist-permission", Err: err}
+	}
+	if resp.Token == "" {
+		return "", &Error{Op: "playlist-permission", Err: errors.New("no token")}
+	}
+	return "https://open.spotify.com/playlist/" + id + "?pt=" + resp.Token, nil
 }
 
 // InvalidatePlaylists drops cached playlist pages after an edit.

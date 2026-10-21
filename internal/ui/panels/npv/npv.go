@@ -20,10 +20,10 @@ func init() { ui.RightPanels["npv"] = p.layout }
 var p panel
 
 type panel struct {
-	header ui.PanelHeader
-	more   ui.IconButton
-	list   ui.List
-	ctx    ui.ContextName
+	hide, expand ui.IconButton
+	more         ui.IconButton
+	list         ui.List
+	ctx          ui.ContextName
 
 	// Per-track state; the Res values are replaced on a track change so late
 	// results of the previous track can't land in them.
@@ -96,23 +96,9 @@ func (p *panel) layout(gtx layout.Context) layout.Dimensions {
 	if p.more.Click.Clicked(gtx) && t != nil {
 		ui.OpenMenu(ui.TrackMenu(ui.TrackOf(t), ui.TrackMenuOpts{}))
 	}
-	var extra layout.Widget
-	if t != nil {
-		extra = func(gtx layout.Context) layout.Dimensions {
-			d := p.more.Layout(gtx, ui.IconStyle{Icon: "more", Label: "More options for " + t.Name})
-			ui.Tip(gtx, &p.more.Click, d, "More options for "+t.Name, false)
-			return d
-		}
-	}
 	return ui.Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			return p.header.Layout(gtx, "Hide Now Playing view", func(gtx layout.Context) layout.Dimensions {
-				if ctxName == "" {
-					return ui.Text(gtx, "Now playing", 16, ui.Bold, ui.ColText)
-				}
-				p.ctxLink.Click.Label = ctxName
-				return p.ctxLink.Layout(gtx, ctxName, 16, ui.Bold, ui.ColText, ui.ColNone)
-			}, extra)
+			return p.headerRow(gtx, t, ctxName)
 		},
 		func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = gtx.Constraints.Max.Y
@@ -124,6 +110,45 @@ func (p *panel) layout(gtx layout.Context) layout.Dimensions {
 			return p.body(gtx, t)
 		},
 	)
+}
+
+// headerRow is the official header: the button that collapses the view,
+// the context's name, then More options and Expand (full screen).
+func (p *panel) headerRow(gtx layout.Context, t *backend.NowTrack, ctxName string) layout.Dimensions {
+	if p.hide.Click.Clicked(gtx) {
+		ui.TogglePanel("npv")
+	}
+	if p.expand.Click.Clicked(gtx) {
+		ui.SetFullscreen(true)
+	}
+	w, h, b := gtx.Constraints.Max.X, ui.Dp(gtx, 64), ui.Dp(gtx, 32)
+	btn := func(x int, i *ui.IconButton, icon, tip string) {
+		ui.Offset(gtx, x, (h-b)/2, func() {
+			d := i.Layout(gtx, ui.IconStyle{Icon: icon, Label: tip})
+			ui.Tip(gtx, &i.Click, d, tip, false)
+		})
+	}
+	btn(ui.Dp(gtx, 8), &p.hide, "npv-hide", "Hide Now Playing view")
+	right := w - ui.Dp(gtx, 8) - b
+	btn(right, &p.expand, "maximize", "Expand Now Playing view")
+	if t != nil {
+		right -= b
+		btn(right, &p.more, "more", "More options for "+t.Name)
+	}
+	x := ui.Dp(gtx, 8) + b + ui.Dp(gtx, 4)
+	m := op.Record(gtx.Ops)
+	g := gtx
+	g.Constraints = layout.Constraints{Max: image.Pt(max(0, right-x-ui.Dp(gtx, 8)), h)}
+	var d layout.Dimensions
+	if ctxName == "" {
+		d = ui.Text(g, "Now playing", 16, ui.Bold, ui.ColText)
+	} else {
+		p.ctxLink.Click.Label = ctxName
+		d = p.ctxLink.Layout(g, ctxName, 16, ui.Bold, ui.ColText, ui.ColNone)
+	}
+	call := m.Stop()
+	ui.Offset(gtx, x, (h-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
+	return layout.Dimensions{Size: image.Pt(w, h)}
 }
 
 func (p *panel) body(gtx layout.Context, t *backend.NowTrack) layout.Dimensions {

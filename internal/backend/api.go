@@ -240,6 +240,16 @@ func (a *App) PlaylistTracks() (map[string]bool, error) {
 	return out, nil
 }
 
+// InviteLink creates a collaborator invite link for a playlist.
+func (a *App) InviteLink(playlist string) (string, error) {
+	if a.sandboxed("InviteLink", playlist) {
+		return "https://open.spotify.com/playlist/sandbox?pt=sandbox", nil
+	}
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.InviteLink(ctx, playlist)
+}
+
 func (a *App) AddToPlaylist(playlist string, uris []string) error {
 	if a.sandboxed("AddToPlaylist", playlist, uris) {
 		return nil

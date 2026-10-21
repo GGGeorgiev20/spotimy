@@ -198,9 +198,12 @@ func layoutApp(gtx layout.Context) {
 		libW = Dp(gtx, 72)
 	}
 	rightW := 0
-	panel := RightPanels[Prefs.RightPanel]
+	panel := RightPanels[RightPanel()]
 	if panel != nil {
 		rightW = max(Dp(gtx, 280), min(Dp(gtx, 420), win.X/4))
+	} else if RightPanels["npv"] != nil {
+		// The collapsed Now Playing view: a 52dp rail to bring it back.
+		panel, rightW = layoutNPVRail, Dp(gtx, 52)
 	}
 	mainW := win.X - 2*pad - libW - gap
 	if panel != nil {
@@ -488,7 +491,7 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 		Tip(gtx, &avatarBtn, d, name, true)
 	})
 	Offset(gtx, ax-Dp(gtx, 8)-Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
-		d := friendsBtn.Layout(gtx, IconStyle{Icon: "friends", Label: "Friend Activity", Active: Prefs.RightPanel == "friends"})
+		d := friendsBtn.Layout(gtx, IconStyle{Icon: "friends", Label: "Friend Activity", Active: RightPanel() == "friends"})
 		Tip(gtx, &friendsBtn.Click, d, "Friend Activity", true)
 	})
 	Offset(gtx, ax-2*Dp(gtx, 8)-2*Dp(gtx, 32), (h-Dp(gtx, 32))/2, func() {
@@ -705,6 +708,21 @@ func Spinner(gtx layout.Context, size float32) layout.Dimensions {
 	return layout.Dimensions{Size: image.Pt(s, s)}
 }
 
+var npvShow IconButton
+
+// layoutNPVRail is the collapsed Now Playing view: one button, centered.
+func layoutNPVRail(gtx layout.Context) layout.Dimensions {
+	if npvShow.Click.Clicked(gtx) {
+		Prefs.NPVHidden = false
+	}
+	size, b := gtx.Constraints.Max, Dp(gtx, 32)
+	Offset(gtx, (size.X-b)/2, (size.Y-b)/2, func() {
+		d := npvShow.Layout(gtx, IconStyle{Icon: "chevron-left", Label: "Show Now Playing view"})
+		Tip(gtx, &npvShow.Click, d, "Show Now Playing view", false)
+	})
+	return layout.Dimensions{Size: size}
+}
+
 // ---- Shortcuts ----
 
 var (
@@ -826,7 +844,7 @@ func handleShortcut(gtx layout.Context, e key.Event) {
 		case "Q":
 			Prefs.RightPanel = "queue"
 		case "J":
-			Prefs.RightPanel = "npv"
+			Prefs.RightPanel, Prefs.NPVHidden = "", false
 		case "R":
 			TogglePanel("npv")
 		case "L":

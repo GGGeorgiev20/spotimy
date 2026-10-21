@@ -285,8 +285,9 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 		tt.play(tr)
 	}
 	if r.save.Clicked(gtx) {
-		ToggleSaved(key)
+		AddedClicked(key)
 	}
+	LoadInPlaylists()
 	if r.more.Clicked(gtx) {
 		tt.Selected = i
 		OpenMenu(TrackMenu(tr, TrackMenuOpts{PlaylistURI: tt.PlaylistURI, CanEdit: tt.CanEdit}))
@@ -462,7 +463,7 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 				moreX := c.dur - bs
 				durX := moreX - Dp(gtx, 16) - Measure(gtx, "0:00", 14, Regular)
 				saveX := durX - Dp(gtx, 16) - bs
-				saved := Saved[key]
+				saved := Added(key) // Liked Songs or any of your playlists
 				if hov || saved {
 					Offset(gtx, saveX, (h-bs)/2, func() {
 						icon, col := "plus-circle", ColText2
@@ -473,7 +474,7 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 						}
 						r.save.Label = "Save to Liked Songs"
 						if saved {
-							r.save.Label = "Remove from Liked Songs"
+							r.save.Label = "Add to playlist"
 						}
 						r.save.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return IconPx(gtx, icon, bs, col) })
 					})

@@ -56,6 +56,7 @@ type gqlEntity struct {
 		TotalMilliseconds int `json:"totalMilliseconds"`
 	} `json:"duration"`
 	AlbumOfTrack *struct {
+		URI      string      `json:"uri"`
 		CoverArt *gqlSources `json:"coverArt"`
 	} `json:"albumOfTrack"` // Track
 	Avatar      *gqlSources `json:"avatar"`      // User
@@ -142,7 +143,7 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		c.Images = e.Image.images()
 	case "Track":
 		if e.AlbumOfTrack != nil {
-			c.Images = e.AlbumOfTrack.CoverArt.images()
+			c.Images, c.AlbumURI = e.AlbumOfTrack.CoverArt.images(), e.AlbumOfTrack.URI
 		}
 		c.Subtitle = e.Artists.names()
 		c.Detail = joinDot("Song", c.Subtitle)

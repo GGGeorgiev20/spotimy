@@ -168,9 +168,10 @@ func ShowArtwork(url string) { ShowOverlay(&artworkView{url: url}) }
 
 // ActionBar is the row under a header: big play, shuffle, save, more.
 type ActionBar struct {
-	Play          PlayButton
-	Shuffle, Save IconButton
-	More          IconButton
+	Play             PlayButton
+	Shuffle, Save    IconButton
+	Download, Invite IconButton
+	More             IconButton
 }
 
 type ActionOpts struct {
@@ -186,6 +187,12 @@ type ActionOpts struct {
 	Heart   bool
 	// Extra widgets after the save button (Follow pill...).
 	Extra layout.Widget
+	// Download shows the download button (offline storage isn't supported:
+	// it says so).
+	Download bool
+	// OnInvite shows "Invite collaborators" (InviteLabel is its tooltip).
+	OnInvite    func()
+	InviteLabel string
 	// Menu items for "…" (nil hides it).
 	Menu func() []MenuItem
 	// Above is a line drawn over the buttons (an episode's date and length).
@@ -217,6 +224,12 @@ func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
 	}
 	if a.Save.Click.Clicked(gtx) && o.SaveURI != "" {
 		ToggleSaved(o.SaveURI)
+	}
+	if a.Download.Click.Clicked(gtx) {
+		Toast("Downloads aren't available in this client")
+	}
+	if a.Invite.Click.Clicked(gtx) && o.OnInvite != nil {
+		o.OnInvite()
 	}
 	if a.More.Click.Clicked(gtx) && o.Menu != nil {
 		OpenMenu(o.Menu())
@@ -261,6 +274,19 @@ func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
 	}
 	if o.Extra != nil {
 		kids = append(kids, gap, layout.Rigid(o.Extra))
+	}
+	icon := func(b *IconButton, name, tip string) layout.FlexChild {
+		return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			d := b.Layout(gtx, IconStyle{Icon: name, Size: 32, Box: 32, Label: tip})
+			Tip(gtx, &b.Click, d, tip, false)
+			return d
+		})
+	}
+	if o.Download {
+		kids = append(kids, gap, icon(&a.Download, "download", "Download"))
+	}
+	if o.OnInvite != nil {
+		kids = append(kids, gap, icon(&a.Invite, "user-add", o.InviteLabel))
 	}
 	if o.Menu != nil {
 		kids = append(kids, gap, layout.Rigid(func(gtx layout.Context) layout.Dimensions {

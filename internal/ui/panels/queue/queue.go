@@ -298,11 +298,13 @@ func (p *panel) empty(gtx layout.Context) layout.Dimensions {
 	g.Constraints = layout.Constraints{Max: image.Pt(size.X-2*ui.Dp(gtx, 16), size.Y)}
 	d := ui.Column(g,
 		func(gtx layout.Context) layout.Dimensions {
-			return ui.Label{Text: "Add to your queue", Size: 24, Weight: ui.Bold, MaxLines: 2, Align: text.Middle, LineHeight: 29}.Layout(gtx)
+			// Align centers the lines within the text's own width; N centers
+			// that block in the panel.
+			return layout.N.Layout(gtx, ui.Label{Text: "Add to your queue", Size: 24, Weight: ui.Bold, MaxLines: 2, Align: text.Middle, LineHeight: 29}.Layout)
 		},
 		ui.Gap(0, 8),
 		func(gtx layout.Context) layout.Dimensions {
-			return ui.Label{Text: "Tap \"Add to queue\" from a track's menu to see it here", Size: 16, Color: ui.ColText2, MaxLines: 3, Align: text.Middle, LineHeight: 22}.Layout(gtx)
+			return layout.N.Layout(gtx, ui.Label{Text: "Tap \"Add to queue\" from a track's menu to see it here", Size: 16, Color: ui.ColText2, MaxLines: 3, Align: text.Middle, LineHeight: 22}.Layout)
 		},
 		ui.Gap(0, 40),
 		func(gtx layout.Context) layout.Dimensions {
