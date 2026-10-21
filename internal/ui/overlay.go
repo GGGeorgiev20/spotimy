@@ -44,7 +44,11 @@ type menuLevel struct {
 	rows   []image.Rectangle
 	ptr    bool    // opened at the pointer: 8dp off it, flipping to its other side
 	minW   float32 // dp
+	shown  time.Time
 }
+
+// popupFade is how long menus and tooltips take to fade in.
+const popupFade = 100 * time.Millisecond
 
 var (
 	menus   []*menuLevel
@@ -138,7 +142,11 @@ func layoutMenus(gtx layout.Context) {
 			at.X = max(0, at.X)
 		}
 		lv.rect = image.Rectangle{Min: at, Max: at.Add(d.Size)}
-		Offset(gtx, at.X, at.Y, func() { call.Add(gtx.Ops) })
+		v := Appear(gtx, &lv.shown, popupFade)
+		Offset(gtx, at.X, at.Y, func() {
+			defer paint.PushOpacity(gtx.Ops, v).Pop()
+			call.Add(gtx.Ops)
+		})
 		if li == len(menus)-1 {
 			break
 		}
@@ -322,7 +330,12 @@ var (
 	modalBg     color.NRGBA
 	modalPad    float32 // dp
 	modalShadow bool
+	modalShown  time.Time
 )
+
+// modalFade is the dialogs' entrance: the web player fades them in while
+// they rise 10% of their height, over 150ms.
+const modalFade = 150 * time.Millisecond
 
 // ShowModal opens m in the standard dialog box (width dp, 0 = 524).
 func ShowModal(m Modal, width float32) { showBox(m, width, RGB(0x282828), 24, true) }
@@ -332,6 +345,7 @@ func ShowLightModal(m Modal, width float32) { showBox(m, width, ColText, 32, fal
 
 func showBox(m Modal, width float32, bg color.NRGBA, pad float32, shadow bool) {
 	modal, modalWidth, modalBare, modalBg, modalPad, modalShadow = m, width, false, bg, pad, shadow
+	modalShown = time.Time{}
 	Invalidate()
 }
 
@@ -339,6 +353,7 @@ func showBox(m Modal, width float32, bg color.NRGBA, pad float32, shadow bool) {
 // (e.g. the full-size artwork viewer).
 func ShowOverlay(m Modal) {
 	modal, modalBare = m, true
+	modalShown = time.Time{}
 	Invalidate()
 }
 
@@ -367,13 +382,17 @@ func layoutModal(gtx layout.Context) {
 			return
 		}
 	}
-	FillRect(gtx.Ops, image.Rectangle{Max: win}, 0, Alpha(ColBg, .7))
+	v := Appear(gtx, &modalShown, modalFade)
+	FillRect(gtx.Ops, image.Rectangle{Max: win}, 0, Alpha(ColBg, .7*v))
 	st := clip.Rect{Max: win}.Push(gtx.Ops)
 	event.Op(gtx.Ops, modalTag)
 	st.Pop()
+	defer paint.PushOpacity(gtx.Ops, v).Pop()
 	if modalBare {
 		g := gtx
 		g.Constraints = layout.Exact(win)
+		// Full-window overlays rise like a 70%-tall dialog would.
+		defer op.Offset(image.Pt(0, int((1-v)*float32(win.Y)*.07))).Push(gtx.Ops).Pop()
 		modal.Layout(g)
 		return
 	}
@@ -390,6 +409,7 @@ func layoutModal(gtx layout.Context) {
 	call := m.Stop()
 	bh := d.Size.Y + 2*pad
 	x, y := (win.X-bw)/2, (win.Y-bh)/2
+	y += int((1 - v) * float32(bh) / 10)
 	Offset(gtx, x, y, func() {
 		r := image.Rect(0, 0, bw, bh)
 		if modalShadow {
@@ -449,6 +469,9 @@ func (t *ModalTitle) Layout(gtx layout.Context, title, sub string) layout.Dimens
 
 // ---- Toasts ----
 
+// toastFade is how long a toast takes to fade out.
+const toastFade = 300 * time.Millisecond
+
 func layoutToasts(gtx layout.Context, bottom int) {
 	const life = 5 * time.Second
 	now := gtx.Now
@@ -473,7 +496,17 @@ func layoutToasts(gtx layout.Context, bottom int) {
 		call := m.Stop()
 		y -= d.Size.Y
 		x := (win.X - d.Size.X) / 2
-		Offset(gtx, x, y, func() {
+		// Toasts fade in rising 8dp, and fade out before they go.
+		in := easeOut(gtx, now.Sub(t.at), modalFade)
+		out := float32(1)
+		if left := life - now.Sub(t.at); left < toastFade {
+			out = float32(left) / float32(toastFade)
+			gtx.Execute(op.InvalidateCmd{})
+		} else {
+			gtx.Execute(op.InvalidateCmd{At: t.at.Add(life - toastFade)})
+		}
+		Offset(gtx, x, y+int((1-in)*float32(Dp(gtx, 8))), func() {
+			defer paint.PushOpacity(gtx.Ops, in*out).Pop()
 			r := image.Rectangle{Max: d.Size}
 			Shadow(gtx.Ops, r, Dp(gtx, 6), Dp(gtx, 12), Dp(gtx, 4), .3)
 			FillRect(gtx.Ops, r, Dp(gtx, 6), ColText)
@@ -501,6 +534,7 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 		gtx.Execute(op.InvalidateCmd{At: c.hoverSince.Add(delay)})
 		return
 	}
+	v := easeOut(gtx, gtx.Now.Sub(c.hoverSince.Add(delay)), popupFade)
 	m := op.Record(gtx.Ops)
 	g := gtx
 	g.Constraints = layout.Constraints{Max: image.Pt(Dp(gtx, 300), Dp(gtx, 100))}
@@ -515,6 +549,7 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 	}
 	m = op.Record(gtx.Ops)
 	Offset(gtx, x, y, func() {
+		defer paint.PushOpacity(gtx.Ops, v).Pop()
 		r := image.Rectangle{Max: td.Size}
 		popupShadow(gtx, r)
 		FillRect(gtx.Ops, r, Dp(gtx, 4), RGB(0x282828))

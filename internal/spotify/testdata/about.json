@@ -1,0 +1,97 @@
+{
+ "data": {
+  "artistUnion": {
+   "__typename": "Artist",
+   "onPlatformReputationTrait": {
+    "verification": {
+     "aiPersona": null,
+     "isRegistered": true,
+     "isVerified": true
+    }
+   },
+   "profile": {
+    "biography": {
+     "text": "And, baby, that’s sh0w business f0r y0u ❤️‍&#x1f525;",
+     "type": "AUTOBIOGRAPHY"
+    },
+    "externalLinks": {
+     "items": [
+      {
+       "name": "FACEBOOK",
+       "url": "https://facebook.com/TaylorSwift"
+      },
+      {
+       "name": "INSTAGRAM",
+       "url": "https://instagram.com/taylorswift"
+      }
+     ]
+    },
+    "name": "Taylor Swift"
+   },
+   "stats": {
+    "followers": 165713065,
+    "monthlyListeners": 105807677,
+    "topCities": {
+     "items": [
+      {
+       "city": "London",
+       "country": "GB",
+       "numberOfListeners": 1672755,
+       "region": "ENG"
+      },
+      {
+       "city": "Quezon City",
+       "country": "PH",
+       "numberOfListeners": 1444226,
+       "region": "00"
+      }
+     ]
+    },
+    "worldRank": 5
+   },
+   "visuals": {
+    "avatarImage": {
+     "sources": [
+      {
+       "height": 640,
+       "url": "https://i.scdn.co/image/ab6761610000e5eb12184bdd29403de54cb9d9c7",
+       "width": 640
+      },
+      {
+       "height": 160,
+       "url": "https://i.scdn.co/image/ab6761610000f17812184bdd29403de54cb9d9c7",
+       "width": 160
+      },
+      {
+       "height": 320,
+       "url": "https://i.scdn.co/image/ab6761610000517412184bdd29403de54cb9d9c7",
+       "width": 320
+      }
+     ]
+    },
+    "gallery": {
+     "items": [
+      {
+       "sources": [
+        {
+         "height": 640,
+         "url": "https://i.scdn.co/image/ab6761670000ecd42bf054eaed60a69249718908",
+         "width": 640
+        }
+       ]
+      },
+      {
+       "sources": [
+        {
+         "height": 640,
+         "url": "https://i.scdn.co/image/ab6761670000ecd464d14cdfef28e4d6f1662b92",
+         "width": 640
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ }
+}

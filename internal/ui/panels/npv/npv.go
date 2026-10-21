@@ -13,6 +13,7 @@ import (
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
+	"github.com/GGGeorgiev20/personal-spotify/internal/ui/pages/artist"
 )
 
 func init() { ui.RightPanels["npv"] = p.layout }
@@ -238,7 +239,7 @@ func (p *panel) titleRow(gtx layout.Context, t *backend.NowTrack) layout.Dimensi
 
 func (p *panel) artistCard(gtx layout.Context, a *spotify.ArtistCard) layout.Dimensions {
 	if p.about.Clicked(gtx) {
-		ui.ShowModal(&aboutModal{a: a}, 524)
+		artist.ShowAbout(a.URI)
 	}
 	if p.artistName.Click.Clicked(gtx) {
 		ui.OpenURI(a.URI)
@@ -448,26 +449,4 @@ func (p *panel) nextCard(gtx layout.Context, t *backend.QueueTrack) layout.Dimen
 			)
 		})
 	})
-}
-
-// aboutModal is the full artist bio dialog.
-type aboutModal struct{ a *spotify.ArtistCard }
-
-func (m *aboutModal) Layout(gtx layout.Context) layout.Dimensions {
-	a := m.a
-	return ui.Column(gtx,
-		func(gtx layout.Context) layout.Dimensions {
-			return ui.Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions {
-				return ui.Text(gtx, a.Name, 24, ui.Bold, ui.ColText)
-			})
-		},
-		func(gtx layout.Context) layout.Dimensions {
-			return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
-				return ui.Text(gtx, ui.FmtNumber(a.MonthlyListeners)+" monthly listeners", 14, ui.Bold, ui.ColText2)
-			})
-		},
-		func(gtx layout.Context) layout.Dimensions {
-			return ui.Label{Text: a.Bio, Size: 14, Color: ui.ColText2, MaxLines: -1}.Layout(gtx)
-		},
-	)
 }

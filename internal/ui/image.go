@@ -38,7 +38,9 @@ type imgEntry struct {
 	bytes int
 	ready bool
 	err   bool
-	w, h  int
+	// readyAt is when it finished loading: it fades in from then.
+	readyAt time.Time
+	w, h    int
 }
 
 const imgBudget = 160 << 20
@@ -75,7 +77,7 @@ func lookupImage(url string, px int) (*imgEntry, bool) {
 			e.err = true
 			return
 		}
-		e.op, e.ready = paint.NewImageOp(m), true
+		e.op, e.ready, e.readyAt = paint.NewImageOp(m), true, time.Now()
 		e.w, e.h = m.Bounds().Dx(), m.Bounds().Dy()
 		e.bytes = len(m.Pix)
 		imgBytes += e.bytes
@@ -171,6 +173,15 @@ func (im Image) Layout(gtx layout.Context, size image.Point) layout.Dimensions {
 		}
 		return layout.Dimensions{Size: size}
 	}
+	// A picture that just arrived fades in over its placeholder.
+	if v := easeOut(gtx, gtx.Now.Sub(e.readyAt), imageFade); v < 1 {
+		ph := im.Placeholder
+		if ph == ColNone {
+			ph = ColSurface3
+		}
+		paintAll(gtx.Ops, ph)
+		defer paint.PushOpacity(gtx.Ops, v).Pop()
+	}
 	sc := max(float32(size.X)/float32(e.w), float32(size.Y)/float32(e.h))
 	if im.Contain {
 		sc = min(float32(size.X)/float32(e.w), float32(size.Y)/float32(e.h))
@@ -185,6 +196,9 @@ func (im Image) Layout(gtx layout.Context, size image.Point) layout.Dimensions {
 	paint.PaintOp{}.Add(gtx.Ops)
 	return layout.Dimensions{Size: size}
 }
+
+// imageFade is how long a loaded picture takes to fade in.
+const imageFade = 300 * time.Millisecond
 
 // Pick returns the URL of the smallest image at least min px wide, else the
 // largest (images without a width count as 640).

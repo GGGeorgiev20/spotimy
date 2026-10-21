@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -169,9 +170,6 @@ func TestParseArtist(t *testing.T) {
 	if p := a.Pick; p == nil || p.Title != "Test Single" || p.Subtitle != "Single" || p.Comment == "" || len(p.Images) == 0 {
 		t.Errorf("artist pick: %+v", a.Pick)
 	}
-	if len(a.Photos) != 2 || len(a.Gallery) == 0 || a.Photos[0][0].URL != a.Gallery[0].URL {
-		t.Errorf("gallery photos: %d", len(a.Photos))
-	}
 	if len(a.Albums) == 0 || len(a.Popular) == 0 || len(a.Header) == 0 {
 		t.Errorf("discography/header missing")
 	}
@@ -260,5 +258,21 @@ func TestParseSearchSuggestions(t *testing.T) {
 	}
 	if tr := s[3].Card; tr.Type != "track" || tr.Detail != "Song • Radiohead" || len(tr.Images) == 0 || tr.AlbumURI == "" {
 		t.Errorf("track: %+v", tr)
+	}
+}
+
+func TestParseArtistAbout(t *testing.T) {
+	a, err := fixtureClient(t, "about").ArtistAbout(context.Background(), "spotify:artist:06HL4z0CvFAxyc27GXpf02")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Name != "Taylor Swift" || !a.Verified || !a.Registered || !a.Autobiography || a.Followers == 0 || a.WorldRank != 5 {
+		t.Errorf("about: %+v", a)
+	}
+	if len(a.Photos) != 2 || len(a.Cities) != 2 || a.Cities[0].Name != "London, GB" || len(a.Links) != 2 || len(a.Avatar) == 0 {
+		t.Errorf("photos %d cities %v links %d", len(a.Photos), a.Cities, len(a.Links))
+	}
+	if strings.Contains(a.Bio, "&#x") {
+		t.Errorf("bio entities not decoded: %q", a.Bio)
 	}
 }

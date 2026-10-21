@@ -180,6 +180,13 @@ func (a *App) Artist(uri string) (*spotify.ArtistPage, error) {
 	return a.sp.Artist(ctx, uri)
 }
 
+// ArtistAbout is an artist's About dialog.
+func (a *App) ArtistAbout(uri string) (*spotify.ArtistAbout, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.ArtistAbout(ctx, uri)
+}
+
 // ArtistShelf is the "Show all" page of one of an artist's shelves.
 func (a *App) ArtistShelf(uri, kind string) (*spotify.Shelf, error) {
 	ctx, cancel := a.call()

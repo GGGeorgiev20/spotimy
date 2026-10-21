@@ -12,9 +12,8 @@ type ArtistPage struct {
 	Name             string    `json:"name"`
 	Verified         bool      `json:"verified"`
 	Avatar           []Image   `json:"avatar"`
-	Header           []Image   `json:"header"`  // banner; empty for artists without one
-	Gallery          []Image   `json:"gallery"` // the first gallery picture
-	Photos           [][]Image `json:"photos"`  // every gallery picture (the About dialog's carousel)
+	Header           []Image   `json:"header"` // banner; empty for artists without one
+	Gallery          []Image   `json:"gallery"`
 	MonthlyListeners int       `json:"monthlyListeners"`
 	Followers        int       `json:"followers"`
 	WorldRank        int       `json:"worldRank"`
@@ -305,7 +304,7 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 	d := a.Discography
 	out := &ArtistPage{
 		URI: a.URI, Name: a.Profile.Name, Verified: a.Profile.Verified,
-		Avatar: a.Visuals.AvatarImage.images(), Gallery: a.Visuals.Gallery.first(), Photos: a.Visuals.Gallery.all(),
+		Avatar: a.Visuals.AvatarImage.images(), Gallery: a.Visuals.Gallery.first(),
 		MonthlyListeners: a.Stats.MonthlyListeners, Followers: a.Stats.Followers, WorldRank: a.Stats.WorldRank,
 		Bio: stripHTML(paragraphRE.ReplaceAllString(a.Profile.Biography.Text, "\n")), Following: a.Saved,
 		Albums: d.Albums.cards(), Singles: d.Singles.cards(), Compilations: d.Compilations.cards(),

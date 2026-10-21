@@ -40,7 +40,10 @@ func (h *Hover) Step(gtx layout.Context, on bool, dur time.Duration) float32 {
 	if h.last.IsZero() {
 		h.last = gtx.Now
 	}
-	dt := float32(gtx.Now.Sub(h.last)) / float32(dur)
+	// No frames are drawn while nothing moves, so the time since the last
+	// call can be seconds: count at most a frame's worth, or the first step
+	// of every animation would jump straight to its end.
+	dt := float32(min(gtx.Now.Sub(h.last), maxFrameGap)) / float32(dur)
 	h.last = gtx.Now
 	if h.v < target {
 		h.v = min(target, h.v+dt)
@@ -51,6 +54,32 @@ func (h *Hover) Step(gtx layout.Context, on bool, dur time.Duration) float32 {
 		gtx.Execute(op.InvalidateCmd{})
 	}
 	return h.v
+}
+
+// maxFrameGap is the most time one animation step counts.
+const maxFrameGap = 20 * time.Millisecond
+
+// Appear is an entrance animation's progress: 0 to 1 over dur from *since,
+// eased out like CSS's cubic-bezier(0, 0, .2, 1), asking for frames until it
+// ends. A zero *since is stamped with this frame's time, so reset it to
+// replay the animation.
+func Appear(gtx layout.Context, since *time.Time, dur time.Duration) float32 {
+	if since.IsZero() {
+		*since = gtx.Now
+	}
+	return easeOut(gtx, gtx.Now.Sub(*since), dur)
+}
+
+// easeOut is the eased progress at elapsed of dur (requesting the next frame
+// while it's below 1).
+func easeOut(gtx layout.Context, elapsed, dur time.Duration) float32 {
+	t := float32(elapsed) / float32(dur)
+	if t >= 1 {
+		return 1
+	}
+	gtx.Execute(op.InvalidateCmd{})
+	t = max(0, t)
+	return 1 - (1-t)*(1-t)
 }
 
 // IconButton is a bare icon that brightens on hover, like the player controls.
@@ -128,7 +157,7 @@ func (b *PlayButton) Layout(gtx layout.Context, size float32, playing bool) layo
 		b.Click.Label = "Pause"
 	}
 	b.Click.update(gtx) // this frame's hover, not the last one's
-	v := b.hover.Step(gtx, b.Click.Hovered(), 100*time.Millisecond)
+	v := b.hover.Step(gtx, b.Click.Hovered(), 150*time.Millisecond)
 	d := Dp(gtx, size)
 	draw := d + int(float32(d)*.04*v+.5)
 	o := (d - draw) / 2

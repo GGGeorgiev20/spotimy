@@ -2,6 +2,7 @@ package artist
 
 import (
 	"image"
+	"image/color"
 	"strings"
 	"time"
 
@@ -11,6 +12,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/text"
+	"gioui.org/unit"
+	"golang.org/x/image/math/fixed"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
@@ -81,13 +85,27 @@ func rank(gtx layout.Context, n int) {
 	line("in the world", 12, ui.Regular, s*55/100)
 }
 
-// about is the modal with the full bio, listener stats and top cities.
+// ShowAbout opens the artist's About dialog (from the artist page and the
+// Now Playing panel's "About the artist" card).
+func ShowAbout(uri string) {
+	m := &about{uri: uri}
+	m.res.Load(func() (*spotify.ArtistAbout, error) { return ui.B.ArtistAbout(uri) })
+	ui.ShowOverlay(m)
+}
+
+// about is the web player's About dialog: the gallery, then the stats and
+// links beside the bio and the artist's verification.
 type about struct {
-	a     *spotify.ArtistPage
+	uri   string
+	res   ui.Res[*spotify.ArtistAbout]
 	list  ui.List
 	close ui.Click
 	links []ui.Click
+	learn ui.Click // "Learn more" about verification
 	box   bool
+	// contentH is the content's height last frame: the dialog shrinks to it
+	// (up to 70% of the window).
+	contentH int
 	// The gallery carousel: the picture shown, and the slide toward it
 	// (from the position it started at, at slideAt).
 	prev, next ui.Click
@@ -96,19 +114,35 @@ type about struct {
 	slideAt    time.Time
 }
 
+const verifiedURL = "https://support.spotify.com/article/verified-by-spotify/"
+
 func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 	win := gtx.Constraints.Max
 	if m.close.Clicked(gtx) {
 		ui.CloseModal()
 		return layout.Dimensions{Size: win}
 	}
-	for i := range m.links {
-		if m.links[i].Clicked(gtx) {
-			backend.OpenURL(m.a.Links[i].URL)
+	a := m.res.V
+	if a != nil {
+		if len(m.links) < len(a.Links) {
+			m.links = make([]ui.Click, len(a.Links))
+		}
+		for i := range a.Links {
+			if m.links[i].Clicked(gtx) {
+				backend.OpenURL(a.Links[i].URL)
+			}
+		}
+		if m.learn.Clicked(gtx) {
+			backend.OpenURL(verifiedURL)
 		}
 	}
 	// The web player's dialog: 768px wide, at most 70vh tall.
 	w, h := min(ui.Dp(gtx, 768), win.X*9/10), win.Y*7/10
+	if a != nil && m.contentH > 0 {
+		h = min(h, m.contentH)
+	} else if a == nil {
+		h = min(h, ui.Dp(gtx, 240))
+	}
 	ui.Offset(gtx, (win.X-w)/2, (win.Y-h)/2, func() {
 		r := image.Rect(0, 0, w, h)
 		ui.Shadow(gtx.Ops, r, ui.Dp(gtx, 8), ui.Dp(gtx, 24), ui.Dp(gtx, 4), .4)
@@ -122,20 +156,33 @@ func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 		}
 		g := gtx
 		g.Constraints = layout.Exact(image.Pt(w, h))
-		photos := m.a.Photos
-		if len(photos) == 0 && len(m.a.Gallery) > 0 {
-			photos = [][]spotify.Image{m.a.Gallery}
-		}
-		n := 1
-		if len(photos) > 0 {
-			n = 2
-		}
-		m.list.Layout(g, n, func(gtx layout.Context, i int) layout.Dimensions {
-			if i == 0 && n == 2 {
-				return m.carousel(gtx, photos, w)
+		switch {
+		case a == nil && m.res.Err != nil:
+			layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions {
+				return ui.Text(gtx, "Couldn't load this artist. Try again later.", 16, ui.Regular, ui.ColText2)
+			})
+		case a == nil:
+			layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions { return ui.Spinner(gtx, 32) })
+		default:
+			n, total := 1, 0
+			if len(a.Photos) > 0 {
+				n = 2
 			}
-			return m.body(gtx)
-		})
+			m.list.Layout(g, n, func(gtx layout.Context, i int) layout.Dimensions {
+				var d layout.Dimensions
+				if i == 0 && n == 2 {
+					d = m.carousel(gtx, a.Photos, w)
+				} else {
+					d = m.body(gtx, a)
+				}
+				total += d.Size.Y
+				return d
+			})
+			if m.list.Position.First == 0 && total > 0 && total != m.contentH {
+				m.contentH = total
+				gtx.Execute(op.InvalidateCmd{})
+			}
+		}
 		st.Pop()
 		bs := ui.Dp(gtx, 32)
 		ui.Offset(gtx, w-ui.Dp(gtx, 16)-bs, ui.Dp(gtx, 16), func() {
@@ -216,11 +263,11 @@ func (m *about) pos(gtx layout.Context) float32 {
 	return m.from + (float32(m.cur)-m.from)*t
 }
 
-// body is the stats column and the bio.
-func (m *about) body(gtx layout.Context) layout.Dimensions {
-	a := m.a
+// body is the stats column beside the bio, who posted it and the artist's
+// verification (the web player's 223px and remaining columns, 40px padding).
+func (m *about) body(gtx layout.Context, a *spotify.ArtistAbout) layout.Dimensions {
 	pad, w := ui.Dp(gtx, 40), gtx.Constraints.Max.X
-	leftW := ui.Dp(gtx, 211)
+	leftW := ui.Dp(gtx, 223)
 	stat := func(n int, label string) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {
 			return ui.Pad(gtx, 0, 0, 40, 0, func(gtx layout.Context) layout.Dimensions {
@@ -254,21 +301,71 @@ func (m *about) body(gtx layout.Context) layout.Dimensions {
 		})
 	}
 	if len(a.Links) > 0 {
-		left = append(left, ui.Gap(0, 8))
+		left = append(left, ui.Gap(0, 24))
 	}
 	for i, l := range a.Links {
 		left = append(left, m.linkRow(&m.links[i], l))
 	}
-	var paras []layout.Widget
-	for _, s := range strings.Split(a.Bio, "\n") {
-		if s = strings.TrimSpace(s); s != "" {
-			paras = append(paras, func(gtx layout.Context) layout.Dimensions {
-				return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
-					return ui.Label{Text: s, Size: 16, Color: ui.ColText2, MaxLines: -1}.Layout(gtx)
+
+	var right []layout.Widget
+	block := func(ws ...layout.Widget) {
+		if len(right) > 0 {
+			right = append(right, ui.Gap(0, 32))
+		}
+		right = append(right, ws...)
+	}
+	if a.Bio != "" {
+		var paras []layout.Widget
+		for _, s := range strings.Split(a.Bio, "\n") {
+			if s = strings.TrimSpace(s); s != "" {
+				if len(paras) > 0 {
+					paras = append(paras, ui.Gap(0, 16))
+				}
+				paras = append(paras, func(gtx layout.Context) layout.Dimensions {
+					return ui.Label{Text: s, Size: 16, Color: ui.ColText2, MaxLines: -1, LineHeight: 22}.Layout(gtx)
 				})
+			}
+		}
+		block(paras...)
+		if a.Autobiography {
+			block(func(gtx layout.Context) layout.Dimensions {
+				s := ui.Dp(gtx, 32)
+				ui.Cover(gtx, a.Avatar, s, 0, true, "artist")
+				ui.Offset(gtx, s+ui.Dp(gtx, 8), (s-ui.Dp(gtx, 20))/2, func() {
+					g := gtx
+					g.Constraints.Max.X = max(0, gtx.Constraints.Max.X-s-ui.Dp(gtx, 8))
+					ui.Text(g, "Posted By "+a.Name, 14, ui.Regular, ui.ColText2)
+				})
+				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, s)}
 			})
 		}
 	}
+	var rep []layout.Widget
+	if a.Verified {
+		rep = append(rep, func(gtx layout.Context) layout.Dimensions { return m.verifiedCard(gtx) })
+	}
+	if a.Registered {
+		if len(rep) > 0 {
+			rep = append(rep, ui.Gap(0, 16))
+		}
+		rep = append(rep, func(gtx layout.Context) layout.Dimensions {
+			return card(gtx, ui.RGB(0x1f1f1f), ui.Dp(gtx, 8), func(gtx layout.Context) layout.Dimensions {
+				return ui.Column(gtx,
+					func(gtx layout.Context) layout.Dimensions {
+						return ui.Label{Text: "Registered artist", Size: 16, Weight: ui.Bold, LineHeight: 22}.Layout(gtx)
+					},
+					ui.Gap(0, 8),
+					func(gtx layout.Context) layout.Dimensions {
+						return ui.Label{Text: "This artist has a claimed profile in Spotify for Artists.", Size: 14, Color: ui.ColText2, MaxLines: -1, LineHeight: 20}.Layout(gtx)
+					},
+				)
+			})
+		})
+	}
+	if len(rep) > 0 {
+		block(rep...)
+	}
+
 	rightW := max(0, w-2*pad-leftW)
 	place := func(x, cw int, ws []layout.Widget) int {
 		g := gtx
@@ -278,24 +375,79 @@ func (m *about) body(gtx layout.Context) layout.Dimensions {
 		return d.Size.Y
 	}
 	hl := place(pad, leftW, left)
-	hr := place(pad+leftW, rightW, paras)
+	hr := place(pad+leftW, rightW, right)
 	return layout.Dimensions{Size: image.Pt(w, max(hl, hr)+2*pad)}
 }
 
-// linkLabels are the services' display names; other names are shown as sent.
-var linkLabels = map[string]string{
-	"FACEBOOK": "Facebook", "INSTAGRAM": "Instagram", "TWITTER": "X", "WIKIPEDIA": "Wikipedia", "TIKTOK": "TikTok", "YOUTUBE": "YouTube",
+// verifiedCard is "Verified by Spotify" with its badge and explanation,
+// ending in a "Learn more" link.
+func (m *about) verifiedCard(gtx layout.Context) layout.Dimensions {
+	return card(gtx, ui.RGB(0x282828), ui.Dp(gtx, 6), func(gtx layout.Context) layout.Dimensions {
+		return ui.Column(gtx,
+			func(gtx layout.Context) layout.Dimensions {
+				s := ui.Dp(gtx, 24)
+				ui.IconPx(gtx, "verified", s, ui.RGB(0xc5f0c9))
+				ui.Offset(gtx, s+ui.Dp(gtx, 8), (s-ui.Dp(gtx, 20))/2, func() {
+					ui.Text(gtx, "Verified by Spotify", 14, ui.Bold, ui.ColText)
+				})
+				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, s)}
+			},
+			ui.Gap(0, 4),
+			func(gtx layout.Context) layout.Dimensions {
+				return tailLink(gtx, ui.Label{
+					Text: "This artist has grown an active fanbase to be eligible for review and has met Spotify's criteria for profile authenticity.",
+					Size: 14, Color: ui.ColText2, MaxLines: -1, LineHeight: 20,
+				}, "Learn more", &m.learn)
+			},
+		)
+	})
 }
 
-// linkIcon is a link's glyph: the service's logo, or a link-out arrow.
-func linkIcon(name string) string {
-	switch name {
-	case "FACEBOOK", "INSTAGRAM", "TIKTOK":
-		return strings.ToLower(name)
-	case "TWITTER":
-		return "x"
+// card is a rounded panel with 16dp padding, filling the width.
+func card(gtx layout.Context, bg color.NRGBA, r int, w layout.Widget) layout.Dimensions {
+	m := op.Record(gtx.Ops)
+	d := ui.Pad(gtx, 16, 16, 16, 16, w)
+	call := m.Stop()
+	d.Size.X = gtx.Constraints.Max.X
+	ui.FillRect(gtx.Ops, image.Rectangle{Max: d.Size}, r, bg)
+	call.Add(gtx.Ops)
+	return d
+}
+
+// tailLink lays out l with link appended to its last line, like an inline
+// text link: link (kept on one line) is clickable and underlined on hover.
+func tailLink(gtx layout.Context, l ui.Label, link string, c *ui.Click) layout.Dimensions {
+	nbsp := strings.ReplaceAll(link, " ", " ")
+	l.Text += " " + nbsp
+	d := l.Layout(gtx)
+	// Find where the last line ends: the link is its tail.
+	size := l.Size
+	ui.Shaper.LayoutString(text.Parameters{
+		Font: font.Font{Typeface: "Figtree", Weight: l.Weight}, PxPerEm: fixed.I(gtx.Sp(unit.Sp(size))),
+		WrapPolicy: text.WrapWords, MaxWidth: gtx.Constraints.Max.X, Locale: gtx.Locale, LineHeight: fixed.I(gtx.Sp(unit.Sp(l.LineHeight))),
+	}, l.Text)
+	var x1 fixed.Int26_6
+	var y, asc, desc int
+	for g, ok := ui.Shaper.NextGlyph(); ok; g, ok = ui.Shaper.NextGlyph() {
+		if int(g.Y) != y {
+			x1 = 0
+		}
+		y, asc, desc = int(g.Y), g.Ascent.Ceil(), g.Descent.Ceil()
+		x1 = max(x1, g.X+g.Advance)
 	}
-	return "link-out"
+	lw := ui.Measure(gtx, nbsp, size, l.Weight)
+	r := image.Rect(x1.Ceil()-lw, y-asc, x1.Ceil(), y+desc)
+	c.Label = link
+	ui.Offset(gtx, r.Min.X, r.Min.Y, func() {
+		c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			if c.Hovered() {
+				th := max(1, gtx.Sp(unit.Sp(size/12)))
+				ui.FillRect(gtx.Ops, image.Rect(0, asc+th, r.Dx(), asc+2*th), 0, l.Color)
+			}
+			return layout.Dimensions{Size: r.Size()}
+		})
+	})
+	return d
 }
 
 // linkRow is a social link: logo and name, opening in the browser.
@@ -313,12 +465,28 @@ func (m *about) linkRow(click *ui.Click, l spotify.Link) layout.Widget {
 				ui.Offset(gtx, s+ui.Dp(gtx, 4), ui.Dp(gtx, 2), func() {
 					g := gtx
 					g.Constraints.Max.X = max(0, gtx.Constraints.Max.X-s-ui.Dp(gtx, 4))
-					ui.Text(g, label, 16, ui.Regular, ui.ColText)
+					ui.Text(g, label, 14, ui.Regular, ui.ColText)
 				})
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, s)}
 			})
 		})
 	}
+}
+
+// linkLabels are the services' display names; other names are shown as sent.
+var linkLabels = map[string]string{
+	"FACEBOOK": "Facebook", "INSTAGRAM": "Instagram", "TWITTER": "X", "WIKIPEDIA": "Wikipedia", "TIKTOK": "TikTok", "YOUTUBE": "YouTube",
+}
+
+// linkIcon is a link's glyph: the service's logo, or a link-out arrow.
+func linkIcon(name string) string {
+	switch name {
+	case "FACEBOOK", "INSTAGRAM", "TIKTOK":
+		return strings.ToLower(name)
+	case "TWITTER":
+		return "x"
+	}
+	return "link-out"
 }
 
 // aboutWidth is the About card's width in a w px wide section: the web player

@@ -196,7 +196,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		ui.ToggleSaved(p.uri)
 	}
 	if p.aboutBtn.Clicked(gtx) {
-		ui.ShowOverlay(&about{a: a, links: make([]ui.Click, len(a.Links))})
+		ShowAbout(p.uri)
 	}
 	// The color wash continues behind the action bar.
 	top := p.headerH - p.list.ScrollTop()
