@@ -606,7 +606,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		remove = h.remove
 	}
 	if r.play.Clicked(gtx) || r.click.DoubleClicked(gtx) {
-		playTrack(t, current)
+		playTrack(t, current, h != nil)
 	}
 	if r.title.Click.Clicked(gtx) && t.Album != nil {
 		ui.OpenURI(t.Album.URI)
@@ -712,10 +712,14 @@ func (r *row) text(gtx layout.Context, t spotify.Track, current bool) layout.Dim
 	)
 }
 
-func playTrack(t spotify.Track, current bool) {
+// playTrack plays a row's track: an upcoming one is skipped to, keeping the
+// context (it may not even be in it: a queued song).
+func playTrack(t spotify.Track, current, upcoming bool) {
 	switch s := ui.Player.Status; {
 	case current:
 		ui.PlayPause()
+	case upcoming:
+		ui.SkipTo(t)
 	case s != nil && s.ContextURI != "":
 		ui.PlayTrack(s.ContextURI, t)
 	default:

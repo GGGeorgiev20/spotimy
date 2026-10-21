@@ -175,24 +175,39 @@ func Play(uri, skipTo string) {
 	playerCall("play", func() error { return B.Play(uri, skipTo) })
 }
 
-// PlayTrack plays t in context (or on its own when context is ""), showing
-// it in the player bar at once, as the official client does, while the
-// audio loads.
-func PlayTrack(context string, t spotify.Track) {
+// SkipTo jumps to an upcoming track (queued or later in the context), as
+// clicking it in the queue does: what's before it is skipped.
+func SkipTo(t spotify.Track) {
+	if s := Player.Status; s != nil {
+		showStarting(s.ContextURI, t)
+	}
+	showNPVOnPlay()
+	playerCall("skip", func() error { return B.SkipTo(t.URI, t.UID) })
+}
+
+// showStarting shows t as playing in context at once while its audio loads.
+func showStarting(context string, t spotify.Track) {
 	nt := &backend.NowTrack{URI: t.URI, Name: t.Name, Artists: t.Artists, DurationMs: int64(t.DurationMs)}
 	if t.Album != nil {
 		nt.AlbumURI, nt.AlbumName, nt.Images = t.Album.URI, t.Album.Name, t.Album.Images
 	}
+	starting.track, starting.context, starting.at = nt, context, time.Now()
+	if s := Player.Status; s != nil {
+		s.Track, s.PositionMs, s.Playing, s.Buffering, s.ContextURI = nt, 0, true, true, context
+		Player.FetchedAt = time.Now()
+		Player.Version++
+	}
+}
+
+// PlayTrack plays t in context (or on its own when context is ""), showing
+// it in the player bar at once, as the official client does, while the
+// audio loads.
+func PlayTrack(context string, t spotify.Track) {
 	ctx := context
 	if ctx == "" {
 		ctx = t.URI
 	}
-	starting.track, starting.context, starting.at = nt, ctx, time.Now()
-	if s := Player.Status; s != nil {
-		s.Track, s.PositionMs, s.Playing, s.Buffering, s.ContextURI = nt, 0, true, true, ctx
-		Player.FetchedAt = time.Now()
-		Player.Version++
-	}
+	showStarting(ctx, t)
 	if context == "" {
 		Play(t.URI, "")
 	} else {

@@ -187,6 +187,8 @@ type ApiLikedStates struct {
 type ApiNext struct {
 	// Uri The track URI to skip to. When omitted the next track in the context is played.
 	Uri *string `json:"uri,omitempty"`
+	// Uid The uid of the queue or context entry to skip to, when the same track is in several places.
+	Uid *string `json:"uid,omitempty"`
 }
 
 // ApiOutput A reopen audio output payload

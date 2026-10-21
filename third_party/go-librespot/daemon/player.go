@@ -765,7 +765,11 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 	case ApiRequestTypeNext:
 		data := req.Data.(ApiNext)
 		if data.Uri != nil {
-			_ = p.skipNext(&connectpb.ContextTrack{Uri: *data.Uri})
+			t := &connectpb.ContextTrack{Uri: *data.Uri}
+			if data.Uid != nil {
+				t.Uid = *data.Uid
+			}
+			_ = p.skipNext(t)
 		} else {
 			_ = p.skipNext(nil)
 		}

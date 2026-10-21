@@ -228,6 +228,27 @@ func (a *App) Next() error {
 	return err
 }
 
+// SkipTo jumps to an upcoming track, queued or in the context (uid tells
+// apart copies of the same track), like clicking it in the queue.
+func (a *App) SkipTo(uri, uid string) error {
+	if a.sandboxed("SkipTo", uri, uid) {
+		return nil
+	}
+	if cn, _ := a.remote(); cn != nil {
+		track := map[string]any{"uri": uri}
+		if uid != "" {
+			track["uid"] = uid
+		}
+		return a.cmd("skip_next", map[string]any{"track": track})
+	}
+	next := daemon.ApiNext{Uri: &uri}
+	if uid != "" {
+		next.Uid = &uid
+	}
+	_, err := a.do(daemon.ApiRequestTypeNext, next)
+	return err
+}
+
 func (a *App) Prev() error {
 	if a.sandboxed("Prev") {
 		return nil
