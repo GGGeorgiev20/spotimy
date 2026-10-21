@@ -34,7 +34,38 @@ type page struct {
 	asked map[int]bool // page numbers requested
 }
 
-type row struct{ click, play ui.Click }
+type row struct {
+	click, play ui.Click
+	drop        ui.DropTarget // songs dragged onto Liked Songs or a playlist
+}
+
+// libraryGroup names the library's drop targets.
+const libraryGroup = "library"
+
+// takesSongs reports whether songs dropped on it can go in: Liked Songs and
+// the playlists the user can edit.
+func takesSongs(it *spotify.LibraryItem) bool {
+	switch it.Type {
+	case "collection":
+		return it.URI == "spotify:collection:tracks"
+	case "playlist":
+		return ui.CanAddTo(it.URI)
+	}
+	return false
+}
+
+// dropSongs adds dropped songs to it.
+func dropSongs(it *spotify.LibraryItem, pl *ui.DragPayload) {
+	if it.Type == "collection" {
+		ui.SaveAll(pl.Tracks)
+		return
+	}
+	uris := make([]string, len(pl.Tracks))
+	for i, t := range pl.Tracks {
+		uris[i] = t.URI
+	}
+	ui.AddToPlaylist(it.Card, uris)
+}
 
 var st struct {
 	filter  string
@@ -740,6 +771,9 @@ func listRow(gtx layout.Context, it *spotify.LibraryItem, i int, collapsed, comp
 		px = ui.Dp(gtx, 4)
 	}
 	rw := w - 2*px
+	takes := takesSongs(it)
+	spot, ok := ui.DropHover(libraryGroup)
+	dropOver := takes && ok && spot == i
 	ui.Offset(gtx, px, 0, func() {
 		g := gtx
 		g.Constraints = layout.Constraints{Max: image.Pt(rw, h)}
@@ -747,6 +781,11 @@ func listRow(gtx layout.Context, it *spotify.LibraryItem, i int, collapsed, comp
 		r.click.Layout(g, func(gtx layout.Context) layout.Dimensions {
 			hov := r.click.Hovered()
 			switch {
+			case dropOver: // a drag over it: outlined in green
+				rad := ui.Dp(gtx, 6)
+				b := max(1, ui.Dp(gtx, 2))
+				ui.FillRect(gtx.Ops, image.Rect(0, 0, rw, h), rad, ui.ColAccent)
+				ui.FillRect(gtx.Ops, image.Rect(b, b, rw-b, h-b), rad-b, ui.ColSurface2)
 			case !folder && ui.Current().Path == ui.URIToPath(it.URI): // the open page is tinted
 				a := float32(.1)
 				if hov {
@@ -814,6 +853,12 @@ func listRow(gtx layout.Context, it *spotify.LibraryItem, i int, collapsed, comp
 			ui.Offset(gtx, tx, y+nd.Size.Y+ui.Dp(gtx, 2), func() { sub.Add(gtx.Ops) })
 			return layout.Dimensions{Size: image.Pt(rw, h)}
 		})
+		if takes {
+			r.drop.Group = libraryGroup
+			if pl, _ := r.drop.Add(gtx, image.Pt(rw, h), i); pl != nil {
+				dropSongs(it, pl)
+			}
+		}
 		if collapsed {
 			// Rail rows are all 64dp, after the list's 8dp top padding.
 			railTip(gtx, &r.click, it.Name, subtitle(it), st.listTop+ui.Dp(gtx, 8)+i*h+h/2-st.list.ScrollTop())

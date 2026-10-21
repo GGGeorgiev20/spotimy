@@ -395,6 +395,43 @@ func LoadInPlaylists() {
 	})
 }
 
+// editable is the playlists the user can add to (theirs and collaborative
+// ones), loaded on first use and every 5 minutes.
+var editable struct {
+	set map[string]bool
+	at  time.Time
+}
+
+// CanAddTo reports whether songs can be added to playlist uri (false until
+// the list has loaded).
+func CanAddTo(uri string) bool {
+	if editable.at.IsZero() || time.Since(editable.at) > 5*time.Minute {
+		editable.at = time.Now()
+		Async(func() ([]spotify.EditablePlaylist, error) { return B.EditablePlaylists(nil) }, func(pls []spotify.EditablePlaylist, err error) {
+			if err != nil {
+				Log.Warn("editable playlists", "err", err)
+				editable.at = time.Time{}
+				return
+			}
+			set := make(map[string]bool, len(pls))
+			for _, p := range pls {
+				set[p.URI] = true
+			}
+			editable.set = set
+		})
+	}
+	return editable.set[uri]
+}
+
+// SaveAll likes the tracks not liked yet.
+func SaveAll(tracks []spotify.Track) {
+	for _, t := range tracks {
+		if k := LikeKey(t); !Saved[k] {
+			ToggleSaved(k)
+		}
+	}
+}
+
 // Added reports a track saved anywhere, Liked Songs or a playlist: the green
 // check the official player bar and Now Playing view show.
 func Added(uri string) bool { return Saved[uri] || InPlaylists[uri] }
