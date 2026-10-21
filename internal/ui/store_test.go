@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -79,5 +81,28 @@ func TestSettled(t *testing.T) {
 	Player.Status.Track = &backend.NowTrack{URI: "spotify:track:b"}
 	if Settled(gtx) {
 		t.Fatal("a skip starts the wait over")
+	}
+}
+
+func TestNotePlayed(t *testing.T) {
+	defer func() { Prefs.History = nil }()
+	Prefs.History = nil
+	play := func(uri string, playing bool) {
+		notePlayed(&backend.PlayerStatus{Playing: playing, Track: &backend.NowTrack{URI: uri}})
+	}
+	play("spotify:track:a", true)
+	play("spotify:track:a", true) // still the same play
+	play("spotify:track:b", false)
+	play("spotify:track:b", true)
+	play("spotify:ad:x", true)
+	play("spotify:track:a", true)
+	if got := strings.Join(Prefs.History, " "); got != "spotify:track:a spotify:track:b spotify:track:a" {
+		t.Fatalf("history %q", got)
+	}
+	for i := 0; i < historyMax+10; i++ {
+		play("spotify:track:"+strconv.Itoa(i), true)
+	}
+	if len(Prefs.History) != historyMax {
+		t.Fatalf("history kept %d", len(Prefs.History))
 	}
 }

@@ -109,6 +109,8 @@ type Card struct {
 	Verified bool `json:"verified,omitempty"`
 	// AlbumURI is a song's album (opening a song opens it).
 	AlbumURI string `json:"albumUri,omitempty"`
+	// Artists are a song's artists (for its context menu).
+	Artists []Artist `json:"artists,omitempty"`
 }
 
 type LibraryItem struct {

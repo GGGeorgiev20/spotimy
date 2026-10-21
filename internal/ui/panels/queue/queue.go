@@ -51,6 +51,7 @@ type panel struct {
 	recent           bool
 	tabQueue, tabRec ui.Click
 	recentRes        ui.Res[[]spotify.Track]
+	recentVersion    int // the HistoryVersion recentRes was loaded for
 	recentRows       []row
 	recentList       ui.List
 }
@@ -80,7 +81,12 @@ func (p *panel) layout(gtx layout.Context) layout.Dimensions {
 	}
 	if p.tabRec.Clicked(gtx) {
 		p.recent = true
-		p.recentRes.Load(ui.B.RecentlyPlayed)
+		p.recentVersion = -1
+	}
+	if p.recent && p.recentVersion != ui.HistoryVersion {
+		p.recentVersion = ui.HistoryVersion
+		h := ui.RecentlyPlayed()
+		p.recentRes.Reload(func() ([]spotify.Track, error) { return ui.HistoryTracks(h) })
 	}
 	tab := func(c *ui.Click, label string, on bool) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {
@@ -381,6 +387,9 @@ func (p *panel) recentBody(gtx layout.Context) layout.Dimensions {
 		return ui.Unavailable(gtx, "Recently played", p.recentRes.Err)
 	}
 	ts := p.recentRes.V
+	if len(ts) == 0 {
+		return historyEmpty(gtx)
+	}
 	if len(p.recentRows) < len(ts) {
 		p.recentRows = make([]row, len(ts))
 	}
@@ -388,6 +397,24 @@ func (p *panel) recentBody(gtx layout.Context) layout.Dimensions {
 		return ui.Pad(gtx, 0, 8, 0, 8, func(gtx layout.Context) layout.Dimensions {
 			return p.recentRows[i].layout(gtx, ts[i], ui.IsCurrentTrack(ts[i], ""), nil)
 		})
+	})
+}
+
+// historyEmpty is the desktop client's empty "Recently played" tab.
+func historyEmpty(gtx layout.Context) layout.Dimensions {
+	return ui.Pad(gtx, 64, 24, 0, 24, func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
+		return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return ui.Icon(gtx, "clock", 64, ui.ColText2) }),
+			layout.Rigid(ui.Gap(0, 16)),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return ui.Label{Text: "See what you've listened to", Size: 16, Weight: ui.Bold, Align: text.Middle, MaxLines: 2}.Layout(gtx)
+			}),
+			layout.Rigid(ui.Gap(0, 4)),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return ui.Label{Text: "Your listening history will appear here", Size: 14, Color: ui.ColText2, Align: text.Middle, MaxLines: 2}.Layout(gtx)
+			}),
+		)
 	})
 }
 

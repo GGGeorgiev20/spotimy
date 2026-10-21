@@ -431,7 +431,7 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 			}},
 			{Divider: true},
 			{Label: "Log out", Action: func() {
-				Go("Couldn't log out", B.Logout, func() { Me = nil })
+				Go("Couldn't log out", B.Logout, func() { Me, Prefs.History = nil, nil })
 			}},
 		})
 	}

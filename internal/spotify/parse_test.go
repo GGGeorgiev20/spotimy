@@ -233,18 +233,6 @@ func TestGroupDigits(t *testing.T) {
 	}
 }
 
-func TestRecentLastTracks(t *testing.T) {
-	var r recentContexts
-	json.Unmarshal([]byte(`{"playContexts":[
-		{"uri":"spotify:album:a","lastPlayedTrackUri":"spotify:track:1"},
-		{"uri":"spotify:show:s","lastPlayedTrackUri":"spotify:episode:e"},
-		{"uri":"spotify:playlist:p","lastPlayedTrackUri":"spotify:track:1"},
-		{"uri":"spotify:artist:x","lastPlayedTrackUri":"spotify:track:2"}]}`), &r)
-	if got := r.lastTracks(); len(got) != 2 || got[0] != "spotify:track:1" || got[1] != "spotify:track:2" {
-		t.Errorf("got %v", got)
-	}
-}
-
 func TestParseSearchSuggestions(t *testing.T) {
 	s, err := fixtureClient(t, "suggestions").SearchSuggestions(context.Background(), "radiohead")
 	if err != nil {
@@ -256,7 +244,7 @@ func TestParseSearchSuggestions(t *testing.T) {
 	if a := s[2].Card; a.Type != "artist" || a.Name != "Radiohead" || !a.Verified || len(a.Images) == 0 || a.Detail != "Artist" {
 		t.Errorf("artist: %+v", a)
 	}
-	if tr := s[3].Card; tr.Type != "track" || tr.Detail != "Song • Radiohead" || len(tr.Images) == 0 || tr.AlbumURI == "" {
+	if tr := s[3].Card; tr.Type != "track" || tr.Detail != "Song • Radiohead" || len(tr.Images) == 0 || tr.AlbumURI == "" || len(tr.Artists) != 1 || tr.Artists[0].URI == "" {
 		t.Errorf("track: %+v", tr)
 	}
 }

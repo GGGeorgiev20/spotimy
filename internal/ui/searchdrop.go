@@ -318,6 +318,9 @@ func recentItems(gtx layout.Context) []dropItem {
 			openSuggestion(gtx, spotify.Suggestion{Card: &c})
 			return nil
 		}
+		if _, ok := r.click.RightClicked(gtx); ok {
+			OpenMenu(dropMenu(c))
+		}
 		items = append(items, dropItem{64, func(gtx layout.Context) layout.Dimensions {
 			return entityRow(gtx, r, c, false, func(gtx layout.Context, rw, rowH int) {
 				Offset(gtx, rw-Dp(gtx, 4+32), (rowH-Dp(gtx, 32))/2, func() {
@@ -365,6 +368,9 @@ func suggestionItems(gtx layout.Context) []dropItem {
 			openSuggestion(gtx, s)
 			return nil
 		}
+		if _, ok := r.click.RightClicked(gtx); ok && s.Card != nil {
+			OpenMenu(dropMenu(*s.Card))
+		}
 		sel := i == drop.sel
 		if s.Card == nil {
 			items = append(items, dropItem{56, func(gtx layout.Context) layout.Dimensions {
@@ -405,6 +411,24 @@ func suggestionItems(gtx layout.Context) []dropItem {
 		}})
 	}
 	return items
+}
+
+// dropMenu is a dropdown row's right-click menu: a song's, or the usual one
+// of its type.
+func dropMenu(c spotify.Card) []MenuItem {
+	if c.Type == "track" {
+		return TrackMenu(CardTrack(c), TrackMenuOpts{})
+	}
+	return CardMenu(c, CardMenuOpts{})
+}
+
+// CardTrack is the song a card stands for.
+func CardTrack(c spotify.Card) spotify.Track {
+	t := spotify.Track{URI: c.URI, Name: c.Name, Artists: c.Artists, Playable: true}
+	if c.AlbumURI != "" {
+		t.Album = &spotify.AlbumRef{URI: c.AlbumURI, Images: c.Images}
+	}
+	return t
 }
 
 // keyHints is the "↑ ↓ Navigate · Enter Search" header.

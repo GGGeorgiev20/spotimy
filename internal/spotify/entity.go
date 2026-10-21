@@ -145,7 +145,7 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		if e.AlbumOfTrack != nil {
 			c.Images, c.AlbumURI = e.AlbumOfTrack.CoverArt.images(), e.AlbumOfTrack.URI
 		}
-		c.Subtitle = e.Artists.names()
+		c.Subtitle, c.Artists = e.Artists.names(), e.Artists.list()
 		c.Detail = joinDot("Song", c.Subtitle)
 	case "User":
 		c.Name = e.DisplayName

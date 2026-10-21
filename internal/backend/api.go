@@ -375,10 +375,12 @@ func (a *App) YourEpisodes() ([]spotify.Episode, error) {
 	return a.sp.YourEpisodes(ctx)
 }
 
-func (a *App) RecentlyPlayed() ([]spotify.Track, error) {
+// Tracks returns the metadata of track URIs, in order (unknown ones are
+// left out).
+func (a *App) Tracks(uris []string) ([]spotify.Track, error) {
 	ctx, cancel := a.call()
 	defer cancel()
-	return a.sp.RecentlyPlayed(ctx)
+	return a.sp.Tracks(ctx, uris)
 }
 
 // PlaylistRecommendations is the "Recommended" list under a playlist.
