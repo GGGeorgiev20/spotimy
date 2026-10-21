@@ -4,6 +4,8 @@ package queue
 
 import (
 	"image"
+	"math"
+	"slices"
 	"strconv"
 	"time"
 
@@ -37,6 +39,13 @@ type panel struct {
 	heads []ui.DropTarget
 
 	loggedErr error // the load error last logged
+
+	// A move slides the rows from where they were: slides holds each moved
+	// row's starting offset (px), eased to 0 from slideAt. rowPx and headPx
+	// are the row and heading heights last laid out.
+	slides        map[string]int
+	slideAt       time.Time
+	rowPx, headPx int
 
 	// The "Recently played" tab.
 	recent           bool
@@ -144,26 +153,32 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 	if len(p.heads) < len(items)+1 {
 		p.heads = make([]ui.DropTarget, len(items)+1)
 	}
-	// A heading or the space below the list takes a drop at the start of the
-	// user queue (the headings above it) or at its end.
-	headDrop := func(gtx layout.Context, n int, d layout.Dimensions, spot int) layout.Dimensions {
+	p.rowPx = ui.Dp(gtx, rowDp)
+	// A heading takes a drop at the start of its section (the playing track's
+	// at the start of the queue); the room below the list at the end of the
+	// last section.
+	headDrop := func(gtx layout.Context, n int, d layout.Dimensions, s spot) layout.Dimensions {
 		p.heads[n].Group = queueGroup
-		if pl, at := p.heads[n].Add(gtx, d.Size, spot); pl != nil {
-			p.dropAt(pl, at, next, queued)
+		if pl, at := p.heads[n].Add(gtx, d.Size, s.code()); pl != nil {
+			p.dropAt(pl, decode(at), next, queued)
 		}
 		return d
 	}
 	return p.list.Layout(gtx, len(items)+1, func(gtx layout.Context, n int) layout.Dimensions {
 		if n == len(items) {
-			// Some room under the last row to drop onto.
-			return headDrop(gtx, n, layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, ui.Dp(gtx, 80))}, queued)
+			end := spot{at: len(next), ctx: len(next) > queued}
+			return headDrop(gtx, n, layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, ui.Dp(gtx, 80))}, end)
 		}
 		if k := items[n].kind; k != itemTrack {
-			spot := 0
+			s := spot{}
 			if k == itemNextHead {
-				spot = queued
+				s = spot{at: queued, ctx: true}
 			}
-			return headDrop(gtx, n, p.item(gtx, n, items, next, t, queued, ctxName), spot)
+			d := p.item(gtx, n, items, next, t, queued, ctxName)
+			if k != itemNow {
+				p.headPx = d.Size.Y
+			}
+			return headDrop(gtx, n, d, s)
 		}
 		return p.item(gtx, n, items, next, t, queued, ctxName)
 	})
@@ -195,50 +210,94 @@ func (p *panel) item(gtx layout.Context, n int, items []item, next []backend.Que
 			}, nil)
 		default:
 			q := next[it.i]
-			// The drop line goes where a drop would land: over a row of
-			// the queue, or at its end for anything below it.
+			inCtx := it.i >= queued
 			line := 0
-			if spot, ok := ui.DropHover(queueGroup); ok {
-				switch at := min(spot, queued); {
-				case at == it.i:
+			if code, ok := ui.DropHover(queueGroup); ok {
+				if row, below, ok := lineFor(decode(code), len(next), queued); ok && row == it.i {
 					line = -1
-				case at == it.i+1 && it.i+1 == len(next):
-					line = 1
+					if below {
+						line = 1
+					}
 				}
 			}
 			h := &hooks{
 				index: it.i,
 				line:  line,
-				onDrop: func(pl *ui.DragPayload, spot int) {
-					p.dropAt(pl, spot, next, queued)
+				above: spot{at: it.i, ctx: inCtx},
+				below: spot{at: it.i + 1, ctx: inCtx},
+				onDrop: func(pl *ui.DragPayload, code int) {
+					p.dropAt(pl, decode(code), next, queued)
 				},
 			}
 			if q.Provider == "queue" {
 				h.remove = func() { p.set(removeAt(next, it.i)) }
 			}
-			return p.rows[n].layout(gtx, q.Track, false, h)
+			var d layout.Dimensions
+			ui.Offset(gtx, 0, p.slide(gtx, key(q)), func() { d = p.rows[n].layout(gtx, q.Track, false, h) })
+			return d
 		}
 	})
 }
 
 const queueGroup = "queue"
 
+// spot is where a drop lands: before upcoming track at, in the user queue or
+// in the rest of the upcoming list (the context). The two meet at the
+// queue's end, which belongs to either.
+type spot struct {
+	at  int
+	ctx bool
+}
+
+// code packs a spot into a drop target's int.
+func (s spot) code() int {
+	c := s.at * 2
+	if s.ctx {
+		c++
+	}
+	return c
+}
+
+func decode(c int) spot { return spot{at: c / 2, ctx: c%2 == 1} }
+
+// lineFor is where the drop line goes for s: over the row it lands before,
+// or under the last row of its section; ok is false with no rows at all.
+// An empty queue's line goes over the first track.
+func lineFor(s spot, n, queued int) (row int, below, ok bool) {
+	lo, hi := 0, queued
+	if s.ctx {
+		lo, hi = queued, n
+	}
+	at := max(lo, min(s.at, hi))
+	switch {
+	case at < hi:
+		return at, false, true
+	case hi > lo:
+		return hi - 1, true, true
+	case n > 0 && !s.ctx:
+		return 0, false, true
+	case n > 0:
+		return n - 1, true, true
+	}
+	return 0, false, false
+}
+
 // dropOn makes the empty panel a drop target (the queue's start). It goes
 // under the content: on top it would take the button's clicks.
 func (p *panel) dropOn(gtx layout.Context, next []backend.QueueTrack, queued int) {
 	p.drop.Group = queueGroup
-	if pl, spot := p.drop.Add(gtx, gtx.Constraints.Max, queued); pl != nil {
-		p.dropAt(pl, spot, next, queued)
+	if pl, code := p.drop.Add(gtx, gtx.Constraints.Max, spot{}.code()); pl != nil {
+		p.dropAt(pl, decode(code), next, queued)
 	}
 }
 
-// dropAt applies a drop before upcoming track spot.
-func (p *panel) dropAt(pl *ui.DragPayload, spot int, next []backend.QueueTrack, queued int) {
+// dropAt applies a drop at s.
+func (p *panel) dropAt(pl *ui.DragPayload, s spot, next []backend.QueueTrack, queued int) {
 	if p.res.V == nil {
 		ui.Go("Couldn't add to queue", func() error { return ui.B.AddToQueue(uris(pl.Tracks)) }, nil)
 		return
 	}
-	out, appended := dropInto(next, queued, pl.Tracks, pl.QueueIndex, spot, newUID)
+	out, appended := dropInto(next, queued, pl.Tracks, pl.QueueIndex, s, newUID)
 	switch {
 	case out == nil:
 	case appended:
@@ -251,32 +310,55 @@ func (p *panel) dropAt(pl *ui.DragPayload, spot int, next []backend.QueueTrack, 
 	}
 }
 
-// dropInto is the upcoming list after dropping tracks before spot, where the
-// first queued entries are the user queue. Drops land within the user queue
-// (anywhere past it means its end). A track moved from the user queue moves;
-// one from the rest of the upcoming list, or from elsewhere, is queued there.
-// appended reports a plain add at the end; out is nil when nothing changes.
-func dropInto(next []backend.QueueTrack, queued int, tracks []spotify.Track, from, spot int, uid func() string) (out []backend.QueueTrack, appended bool) {
-	at := max(0, min(spot, queued))
-	if from >= 0 && from < queued {
-		if at > from {
+// dropInto is the upcoming list after a drop at s, where the first queued
+// entries are the user queue and the rest the context. A track dragged from
+// the list (from >= 0) moves, joining the section it lands in; tracks from
+// elsewhere are put in. appended reports a plain add at the end of the queue;
+// out is nil when nothing changes.
+func dropInto(next []backend.QueueTrack, queued int, tracks []spotify.Track, from int, s spot, uid func() string) (out []backend.QueueTrack, appended bool) {
+	rest, at := next, s.at
+	var add []backend.QueueTrack
+	if from >= 0 && from < len(next) {
+		rest = removeAt(next, from)
+		if from < at {
 			at--
 		}
-		if at == from {
-			return nil, false
+		if from < queued {
+			queued--
 		}
-		return moveTo(next, from, at), false
+		q := next[from]
+		switch {
+		case !s.ctx:
+			q.Provider = "queue"
+		case q.Provider == "queue":
+			q.Provider = "context"
+		}
+		add = []backend.QueueTrack{q}
+	} else {
+		provider := "queue"
+		if s.ctx {
+			provider = "context"
+		}
+		for _, t := range tracks {
+			t.UID = uid()
+			add = append(add, backend.QueueTrack{Track: t, Provider: provider})
+		}
 	}
-	add := make([]backend.QueueTrack, len(tracks))
-	for i, t := range tracks {
-		t.UID = uid()
-		add[i] = backend.QueueTrack{Track: t, Provider: "queue"}
+	if s.ctx {
+		at = max(queued, min(at, len(rest)))
+	} else {
+		at = max(0, min(at, queued))
 	}
-	out = make([]backend.QueueTrack, 0, len(next)+len(add))
-	out = append(out, next[:at]...)
+	out = make([]backend.QueueTrack, 0, len(rest)+len(add))
+	out = append(out, rest[:at]...)
 	out = append(out, add...)
-	out = append(out, next[at:]...)
-	return out, at == queued && from < 0
+	out = append(out, rest[at:]...)
+	if from >= 0 && slices.EqualFunc(out, next, func(a, b backend.QueueTrack) bool {
+		return a.UID == b.UID && a.URI == b.URI && a.Provider == b.Provider
+	}) {
+		return nil, false
+	}
+	return out, from < 0 && !s.ctx && at == queued
 }
 
 func uris(ts []spotify.Track) []string {
@@ -330,8 +412,65 @@ func layoutItems(playing bool, next []backend.QueueTrack) []item {
 	return items
 }
 
+// slideTime is how long a moved row takes to reach its new place.
+const slideTime = 250 * time.Millisecond
+
+// key names an upcoming entry for the slide.
+func key(q backend.QueueTrack) string {
+	if q.UID != "" {
+		return q.UID
+	}
+	return q.URI
+}
+
+// rowTops is the y (px) of each track row of the list items for next.
+func (p *panel) rowTops(next []backend.QueueTrack) map[string]int {
+	out := map[string]int{}
+	y := 0
+	for _, it := range layoutItems(ui.NowTrack() != nil, next) {
+		switch it.kind {
+		case itemTrack:
+			out[key(next[it.i])] = y
+			y += p.rowPx
+		case itemNow:
+			y += p.rowPx
+		default:
+			y += p.headPx
+		}
+	}
+	return out
+}
+
+// startSlide sets the rows that move between old and next sliding.
+func (p *panel) startSlide(old, next []backend.QueueTrack) {
+	from, to := p.rowTops(old), p.rowTops(next)
+	p.slides = map[string]int{}
+	for k, y := range to {
+		if y0, ok := from[k]; ok && y0 != y {
+			p.slides[k] = y0 - y
+		}
+	}
+	p.slideAt = time.Now()
+}
+
+// slide is row k's offset now, easing out to 0.
+func (p *panel) slide(gtx layout.Context, k string) int {
+	d, ok := p.slides[k]
+	if !ok {
+		return 0
+	}
+	t := float64(gtx.Now.Sub(p.slideAt)) / float64(slideTime)
+	if t >= 1 {
+		delete(p.slides, k)
+		return 0
+	}
+	gtx.Execute(op.InvalidateCmd{})
+	return int(float64(d) * math.Pow(1-t, 3))
+}
+
 // set shows next at once and sends it to the cluster.
 func (p *panel) set(next []backend.QueueTrack) {
+	p.startSlide(p.res.V.Next, next)
 	p.res.V.Next = next
 	ui.Go("Couldn't update queue", func() error { return ui.B.SetQueue(queueItems(next)) }, nil)
 }
@@ -427,10 +566,11 @@ type row struct {
 // hooks make an upcoming row draggable (to reorder the queue) and a drop
 // target, and a row of the user queue removable.
 type hooks struct {
-	index  int // in the upcoming tracks
-	remove func()
-	line   int // draw the drop line above (-1) or below (1) this row
-	onDrop func(pl *ui.DragPayload, spot int)
+	index        int // in the upcoming tracks
+	remove       func()
+	line         int  // draw the drop line above (-1) or below (1) this row
+	above, below spot // where drops on the row's halves land
+	onDrop       func(pl *ui.DragPayload, code int)
 }
 
 func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks) layout.Dimensions {
@@ -506,12 +646,12 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		if h != nil {
 			r.above.Group, r.below.Group = queueGroup, queueGroup
 			half := rh / 2
-			if pl, spot := r.above.Add(gtx, image.Pt(w, half), h.index); pl != nil {
-				h.onDrop(pl, spot)
+			if pl, code := r.above.Add(gtx, image.Pt(w, half), h.above.code()); pl != nil {
+				h.onDrop(pl, code)
 			}
 			ui.Offset(gtx, 0, half, func() {
-				if pl, spot := r.below.Add(gtx, image.Pt(w, rh-half), h.index+1); pl != nil {
-					h.onDrop(pl, spot)
+				if pl, code := r.below.Add(gtx, image.Pt(w, rh-half), h.below.code()); pl != nil {
+					h.onDrop(pl, code)
 				}
 			})
 		}

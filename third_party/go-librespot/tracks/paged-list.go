@@ -183,12 +183,11 @@ func (l *pagedList[T]) unshuffle(rnd *rand.Rand) {
 }
 
 func (l *pagedList[T]) fetchNextPage(ctx context.Context) (int, error) {
-	var pageIdx int
-	if len(l.list) == 0 {
-		pageIdx = 0
-	} else {
-		curr := l.list[len(l.list)-1]
-		pageIdx = curr.pageIdx + 1
+	// The page after the last one loaded: the highest index, since items put
+	// in by hand (negative index) and reordered ones can come last.
+	pageIdx := 0
+	for _, it := range l.list {
+		pageIdx = max(pageIdx, it.pageIdx+1)
 	}
 
 	items, err := l.pages.Page(ctx, pageIdx)

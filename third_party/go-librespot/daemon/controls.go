@@ -1210,7 +1210,8 @@ func (p *AppPlayer) setQueue(prev []*connectpb.ContextTrack, next []*connectpb.C
 		return
 	}
 
-	p.listJob("set queue", classMutate, next,
+	// No next hint: the list itself now follows the order asked for.
+	p.listJob("set queue", classMutate, nil,
 		func(_ context.Context, list *tracks.List) error {
 			list.SetQueue(prev, next)
 			return nil

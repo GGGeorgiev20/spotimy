@@ -5,6 +5,7 @@ import (
 	"io"
 	"math"
 	"strings"
+	"time"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -90,6 +91,7 @@ type TrackDrag struct {
 	pressed, active bool
 	start, pos      f32.Point
 	payload         DragPayload
+	laidOut         time.Time // the frame Handle last ran in
 }
 
 // dragSource is the row whose drag Gio is transferring from. It has to stay
@@ -101,6 +103,7 @@ var dragSource *TrackDrag
 // Handle feeds the drag of row i, rowH px high and as wide as the
 // constraints. ro and move, when set, reorder the list on a drop inside it.
 func (d *TrackDrag) Handle(gtx layout.Context, p DragPayload, ro *Reorder, i, rowH int, move func(from, to int, after bool)) {
+	d.laidOut = gtx.Now
 	d.update(gtx, &p, ro, i, rowH, move)
 	// The row's own area (the clip in force may be the whole list's), on top
 	// of the row's links and passing their events through: a press on a
@@ -119,13 +122,21 @@ func (d *TrackDrag) Handle(gtx layout.Context, p DragPayload, ro *Reorder, i, ro
 }
 
 // KeepDragSource keeps the drag source registered while Gio transfers from
-// it, whether or not its row is still laid out. Call it once per frame,
-// after everything else.
+// it when its row is no longer laid out, and draws the ghost in its place.
+// Call it once per frame, after everything else, at the window's origin.
+// (While the row is there, the row registers it: event positions are in the
+// coordinates of the handler's last registration, and the row's own are
+// the ones its drag works in.)
 func KeepDragSource(gtx layout.Context) {
-	if d := dragSource; d != nil {
-		d.update(gtx, nil, nil, 0, 0, nil)
-		if dragSource == d {
-			d.everywhere(gtx)
+	d := dragSource
+	if d == nil || d.laidOut.Equal(gtx.Now) {
+		return
+	}
+	d.update(gtx, nil, nil, 0, 0, nil)
+	if dragSource == d {
+		d.everywhere(gtx)
+		if d.active {
+			d.ghost(gtx)
 		}
 	}
 }

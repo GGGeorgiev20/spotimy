@@ -288,3 +288,29 @@ func (suite *TrackListInternalSuite) TestAllTracksIsResidentAndBounded() {
 func TestTrackListInternalSuite(t *testing.T) {
 	suite.Run(t, new(TrackListInternalSuite))
 }
+
+// A set_queue that moves tracks around "Next from" reorders the context, takes
+// in a track moved out of the queue, and drops one moved into it.
+func (suite *TrackListInternalSuite) TestSetQueueReordersUpcoming() {
+	suite.resolver.EXPECT().Page(mock.Anything, 0).Return([]*connectpb.ContextTrack{
+		{Uri: trackUri(0), Uid: "u0"}, {Uri: trackUri(1), Uid: "u1"}, {Uri: trackUri(2), Uid: "u2"}, {Uri: trackUri(3), Uid: "u3"},
+	}, nil).Once()
+	suite.resolver.EXPECT().Page(mock.Anything, 1).Return(nil, io.EOF).Maybe()
+	suite.Require().NoError(suite.list.tracks.moveStart(context.Background()))
+
+	queued := &connectpb.ContextTrack{Uri: trackUri(2), Uid: "u2", Metadata: map[string]string{"is_queued": "true"}}
+	moved := &connectpb.ContextTrack{Uri: trackUri(9), Uid: "q9", Metadata: map[string]string{}}
+	suite.list.SetQueue(nil, []*connectpb.ContextTrack{
+		queued,                        // u2 moved up into the queue
+		{Uri: trackUri(3), Uid: "u3"}, // then u3 before u1
+		moved,                         // a track moved down out of the queue
+		{Uri: trackUri(1), Uid: "u1"},
+	})
+
+	var got []string
+	for _, t := range suite.list.NextTracks(context.Background(), nil) {
+		got = append(got, t.Uid)
+	}
+	suite.Equal([]string{"u2", "u3", "q9", "u1"}, got)
+	suite.Len(suite.list.queue, 1)
+}

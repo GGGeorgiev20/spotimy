@@ -21,9 +21,9 @@ import (
 var lyricsExpanded bool
 
 // lyricsCard is the Now Playing view's lyrics card on a dark tone of the
-// cover's color. Closed it is a still "Lyrics preview" of the first lines;
-// "Show more" opens it into the synced lyrics, the sung line white and kept in
-// the middle, each line seeking there when clicked.
+// cover's color: the synced lyrics, the sung line white and kept in the
+// middle. Closed it is a short "Lyrics preview"; "Show more" opens it taller,
+// with each line seeking there when clicked.
 type lyricsCard struct {
 	res   *ui.Res[*spotify.Lyrics]
 	base  color.NRGBA // the cover's color
@@ -61,9 +61,10 @@ func (c *lyricsCard) has() bool {
 	return c.res != nil && c.res.Ok() && c.res.V != nil && len(c.res.V.Lines) > 0
 }
 
-// Card heights (the official max-heights): closed and open.
+// Card heights: closed, tall enough for the line before the sung one, it and
+// the next (the official 177 shows two), and open (the official 440).
 const (
-	lyricsPreviewH = 177
+	lyricsPreviewH = 250
 	lyricsOpenH    = 440
 )
 
@@ -89,7 +90,8 @@ func (c *lyricsCard) layout(gtx layout.Context) layout.Dimensions {
 	bg := ui.Tone(c.base, min(ui.Lightness(c.base), 22))
 	upcoming := ui.Tone(c.base, 82)
 	past := ui.Mix(bg, upcoming, .5)
-	synced := open && l.Synced // the preview is a still excerpt
+	synced := l.Synced
+	seekable := open && l.Synced // only the open card's lines can be clicked
 
 	active := -1
 	if synced {
@@ -100,7 +102,7 @@ func (c *lyricsCard) layout(gtx layout.Context) layout.Dimensions {
 		}
 	}
 	for i := range c.lines {
-		if c.lines[i].Clicked(gtx) && synced {
+		if c.lines[i].Clicked(gtx) && seekable {
 			ui.Seek(l.Lines[i].StartMs)
 		}
 	}
@@ -131,13 +133,13 @@ func (c *lyricsCard) layout(gtx layout.Context) layout.Dimensions {
 			col = past
 		}
 		lc := &c.lines[i]
-		lc.Disabled, lc.Arrow, lc.Label = !synced, !synced, words
+		lc.Disabled, lc.Arrow, lc.Label = !seekable, !seekable, words
 		var d layout.Dimensions
 		ui.Offset(gtx, 0, y, func() {
 			g := gtx
 			g.Constraints = layout.Constraints{Max: image.Pt(tw, 1<<20)}
 			d = lc.Layout(g, func(gtx layout.Context) layout.Dimensions {
-				return ui.Label{Text: words, Size: 24, Weight: ui.Bold, Color: col, MaxLines: -1, LineHeight: 24 * 1.2, Underline: synced && lc.Hovered()}.Layout(gtx)
+				return ui.Label{Text: words, Size: 24, Weight: ui.Bold, Color: col, MaxLines: -1, LineHeight: 24 * 1.2, Underline: seekable && lc.Hovered()}.Layout(gtx)
 			})
 		})
 		if i == active {

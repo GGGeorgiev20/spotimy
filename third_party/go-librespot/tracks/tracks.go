@@ -412,16 +412,67 @@ func (tl *List) SetQueue(_ []*connectpb.ContextTrack, next []*connectpb.ContextT
 		tl.queue = nil
 	}
 
-	// I don't know if this good enough, but it surely saves us a lot of complicated code
+	// The queued tracks always come first in the next list: the first
+	// "non-queue" one ends the queue.
+	n := 0
 	for _, track := range next {
-		// the queued tracks will always be the first tracks in the next list, so if we meet the first "non-queue",
-		// 	the queue definitely ended
 		if queued := track.Metadata["is_queued"]; queued != "true" {
 			break
 		}
 
 		tl.queue = append(tl.queue, track)
+		n++
 	}
+
+	tl.reorderUpcoming(next[n:])
+}
+
+// sameTrack reports whether a and b are the same entry: by uid when both
+// have one, else by uri.
+func sameTrack(a, b *connectpb.ContextTrack) bool {
+	if a.Uid != "" && b.Uid != "" {
+		return a.Uid == b.Uid
+	}
+	return a.Uri != "" && a.Uri == b.Uri
+}
+
+// reorderUpcoming makes the context's upcoming tracks start with next, in
+// that order, as set_queue asks when a controller moves tracks around "Next
+// from": the tracks are taken from where they were in the context, tracks
+// it doesn't have (moved out of the queue) are put in, and the rest follow
+// in their own order. A track now in the queue leaves the context.
+func (tl *List) reorderUpcoming(next []*connectpb.ContextTrack) {
+	l := tl.tracks
+	if l.pos < 0 || len(next) == 0 {
+		return
+	}
+	tail := l.list[l.pos+1:]
+	used := make([]bool, len(tail))
+	out := make([]pagedListItem[*connectpb.ContextTrack], 0, len(tail)+len(next))
+	for _, t := range next {
+		found := -1
+		for k, it := range tail {
+			if !used[k] && sameTrack(it.item, t) {
+				found = k
+				break
+			}
+		}
+		if found >= 0 {
+			used[found] = true
+			out = append(out, tail[found])
+			continue
+		}
+		cp := proto.Clone(t).(*connectpb.ContextTrack)
+		delete(cp.Metadata, "is_queued")
+		out = append(out, pagedListItem[*connectpb.ContextTrack]{cp, -1, -1})
+	}
+	for k, it := range tail {
+		if used[k] || slices.ContainsFunc(tl.queue, func(q *connectpb.ContextTrack) bool { return sameTrack(q, it.item) }) {
+			continue
+		}
+		out = append(out, it)
+	}
+	l.list = append(l.list[:l.pos+1:l.pos+1], out...)
 }
 
 // UpcomingQueue returns the queued tracks still to play: the whole queue, less

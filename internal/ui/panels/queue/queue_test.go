@@ -47,40 +47,72 @@ func TestQueueEdits(t *testing.T) {
 }
 
 func TestDropInto(t *testing.T) {
-	next := tracks("abcXY")
+	next := tracks("abcXY") // a b c queued, X Y the context
 	uid := func() string { return "new" }
 	for _, c := range []struct {
 		name     string
 		tracks   string // dragged in from elsewhere (from = -1)
 		from     int
-		spot     int
+		at       spot
 		want     string
+		provider string // of the moved or added track, when checked
 		appended bool
 	}{
-		{"queue row down", "", 0, 2, "bacXY", false},
-		{"queue row up", "", 2, 0, "cabXY", false},
-		{"queue row past the queue lands at its end", "", 0, 5, "bcaXY", false},
-		{"queue row onto itself", "", 1, 1, "", false},
-		{"queue row just below itself", "", 1, 2, "", false},
-		{"Next up row into the queue", "", 3, 1, "aXbcXY", false},
-		{"from a list, between queue rows", "Z", -1, 1, "aZbcXY", false},
-		{"from a list, below the queue", "Z", -1, 4, "abcZXY", true},
+		{"queue row down", "", 0, spot{2, false}, "bacXY", "queue", false},
+		{"queue row up", "", 2, spot{0, false}, "cabXY", "", false},
+		{"queue row to the queue's end", "", 0, spot{3, false}, "bcaXY", "", false},
+		{"queue row onto itself", "", 1, spot{1, false}, "", "", false},
+		{"queue row into Next from", "", 0, spot{4, true}, "bcXaY", "context", false},
+		{"Next from row into the queue", "", 3, spot{1, false}, "aXbcY", "queue", false},
+		{"Next from row reordered", "", 4, spot{3, true}, "abcYX", "context", false},
+		{"from a list, between queue rows", "Z", -1, spot{1, false}, "aZbcXY", "queue", false},
+		{"from a list, at the queue's end", "Z", -1, spot{3, false}, "abcZXY", "queue", true},
+		{"from a list, into Next from", "Z", -1, spot{4, true}, "abcXZY", "context", false},
 	} {
 		var ts []spotify.Track
 		for _, r := range c.tracks {
 			ts = append(ts, spotify.Track{URI: string(r)})
 		}
-		if c.from >= 0 {
-			ts = []spotify.Track{next[c.from].Track}
-		}
-		out, appended := dropInto(next, 3, ts, c.from, c.spot, uid)
+		out, appended := dropInto(next, 3, ts, c.from, c.at, uid)
 		if uriString(out) != c.want || appended != c.appended {
 			t.Errorf("%s: got %q appended=%v, want %q appended=%v", c.name, uriString(out), appended, c.want, c.appended)
+			continue
+		}
+		if c.provider != "" {
+			moved := "Z"
+			if c.from >= 0 {
+				moved = next[c.from].URI
+			}
+			for _, q := range out {
+				if q.URI == moved && q.Provider != c.provider {
+					t.Errorf("%s: %s is %q, want %q", c.name, moved, q.Provider, c.provider)
+				}
+			}
 		}
 	}
-	out, _ := dropInto(next, 3, []spotify.Track{{URI: "Z"}}, -1, 0, uid)
-	if out[0].Provider != "queue" || out[0].UID != "new" {
-		t.Errorf("dropped track is queued with a uid: %+v", out[0])
+	if uriString(next) != "abcXY" {
+		t.Error("input modified")
+	}
+}
+
+func TestLineFor(t *testing.T) {
+	for _, c := range []struct {
+		s     spot
+		row   int
+		below bool
+	}{
+		{spot{0, false}, 0, false},
+		{spot{3, false}, 2, true}, // under the last queued row
+		{spot{3, true}, 3, false}, // over the first Next from row
+		{spot{5, true}, 4, true},  // under the last row
+	} {
+		row, below, ok := lineFor(c.s, 5, 3)
+		if !ok || row != c.row || below != c.below {
+			t.Errorf("lineFor(%+v) = %d %v %v, want %d %v", c.s, row, below, ok, c.row, c.below)
+		}
+	}
+	if row, below, _ := lineFor(spot{0, false}, 2, 0); row != 0 || below { // empty queue: over the first track
+		t.Errorf("empty queue: %d %v", row, below)
 	}
 }
 
