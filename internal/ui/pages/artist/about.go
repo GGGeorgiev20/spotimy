@@ -29,7 +29,7 @@ func (p *page) aboutSection(gtx layout.Context) layout.Dimensions {
 				})
 			},
 			func(gtx layout.Context) layout.Dimensions {
-				w, h, r := gtx.Constraints.Max.X, ui.Dp(gtx, 516), ui.Dp(gtx, 8)
+				w, h, r := aboutWidth(gtx.Constraints.Max.X, gtx.Metric.PxPerDp), ui.Dp(gtx, 516), ui.Dp(gtx, 8)
 				p.aboutBtn.Label = "About " + a.Name
 				return p.aboutBtn.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					ui.FillRect(gtx.Ops, image.Rect(0, 0, w, h), r, ui.ColSurface3)
@@ -241,4 +241,16 @@ func (m *about) linkRow(click *ui.Click, l spotify.Link) layout.Widget {
 			})
 		})
 	}
+}
+
+// aboutWidth is the About card's width in a w px wide section: the web player
+// puts it in a grid of minmax(180px, 1fr) columns 24px apart where it spans
+// four columns (at least 372px).
+func aboutWidth(w int, pxPerDp float32) int {
+	gap, minCol := 24*pxPerDp, 180*pxPerDp
+	n := max(1, int((float32(w)+gap)/(minCol+gap)))
+	col := (float32(w)+gap)/float32(n) - gap
+	span := min(4, n)
+	cw := int(float32(span)*col + float32(span-1)*gap + .5)
+	return min(w, max(cw, int(372*pxPerDp)))
 }

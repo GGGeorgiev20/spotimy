@@ -253,7 +253,8 @@ func meta(gtx layout.Context, a *spotify.ArtistPage) layout.Dimensions {
 
 // banner is the full-width header with the artist's picture behind the name.
 func banner(gtx layout.Context, a *spotify.ArtistPage) layout.Dimensions {
-	w, h := gtx.Constraints.Max.X, ui.Dp(gtx, 320)
+	// The web player's banner is 40vh: 40% of the window's height.
+	w, h := gtx.Constraints.Max.X, max(ui.Dp(gtx, 240), ui.WindowSize.Y*40/100)
 	ui.Image{URL: ui.Pick(a.Header, w), FocusY: .15, Placeholder: ui.RGB(0x535353)}.Layout(gtx, image.Pt(w, h))
 	ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), ui.Alpha(ui.ColBg, 0), veil(.6))
 	pad := ui.ContentPad(gtx)

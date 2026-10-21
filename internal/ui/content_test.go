@@ -76,3 +76,16 @@ func TestCarouselSnap(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderHeight(t *testing.T) {
+	for _, c := range []struct{ w, vh, want float32 }{
+		{1113, 939, 281.7}, // 30vh
+		{1113, 1080, 324},  // 30vh in a full-HD window
+		{1500, 1400, 336},  // capped
+		{600, 600, 186},    // narrow: the minimum
+	} {
+		if got := headerHeightDp(c.w, c.vh); got < c.want-.5 || got > c.want+.5 {
+			t.Errorf("headerHeightDp(%v, %v) = %v, want %v", c.w, c.vh, got, c.want)
+		}
+	}
+}

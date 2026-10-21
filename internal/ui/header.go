@@ -101,8 +101,9 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	)
 	call := m.Stop()
 
-	// The gap above the artwork shrinks from 43.5dp to 20dp as the view widens.
-	total := max(pad+px(43.5-23.5*t)+art, pad+info.Size.Y+px(8))
+	// The gap above the artwork shrinks from 43.5dp to 20dp as the view widens,
+	// and the header is at least the web player's fluid height.
+	total := max(pad+px(43.5-23.5*t)+art, pad+info.Size.Y+px(8), px(headerHeightDp(float32(w)/gtx.Metric.PxPerDp, float32(WindowSize.Y)/gtx.Metric.PxPerDp)))
 	c := o.Color
 	if c == ColNone {
 		c = RGB(0x535353)
@@ -316,4 +317,13 @@ func CoverColor(images []spotify.Image, done func(color.NRGBA)) {
 			done(HeaderColor(Hex(r.hex)))
 		}
 	})
+}
+
+// headerHeightDp is the web player's entity header height for a main view
+// mainW dp wide in a window winH dp tall: min-height clamp(186, …, 276),
+// height min(30vh, clamp(186, …, 336)), max-height 336.
+func headerHeightDp(mainW, winH float32) float32 {
+	lerp := func(lo, span, hi float32) float32 { return max(lo, min(hi, lo+(mainW-600)/424*span)) }
+	fluid, minH := lerp(186, 150, 336), lerp(186, 90, 276)
+	return min(336, max(minH, min(.3*winH, fluid)))
 }

@@ -134,8 +134,12 @@ func Run() {
 
 var rootTag = new(int)
 
+// WindowSize is the window's size in px (CSS vh/vw sizes derive from it).
+var WindowSize image.Point
+
 // Frame lays out the whole window.
 func Frame(gtx layout.Context) {
+	WindowSize = gtx.Constraints.Max
 	runPosted()
 	clickDepth = 0
 	win := gtx.Constraints.Max
