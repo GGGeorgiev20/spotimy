@@ -41,6 +41,7 @@ func RefreshPlayer() {
 				if err != nil {
 					return
 				}
+				loadingTrack(s, Player.Status, time.Now())
 				Player.Status, Player.FetchedAt = s, time.Now()
 				Player.Version++
 				noteAlias(s.ContextURI)
@@ -139,6 +140,54 @@ func PlayContext(uri string) {
 func Play(uri, skipTo string) {
 	playRequest, playRequestAt = uri, time.Now()
 	playerCall("play", func() error { return B.Play(uri, skipTo) })
+}
+
+// PlayTrack plays t in context (or on its own when context is ""), showing
+// it in the player bar at once, as the official client does, while the
+// audio loads.
+func PlayTrack(context string, t spotify.Track) {
+	nt := &backend.NowTrack{URI: t.URI, Name: t.Name, Artists: t.Artists, DurationMs: int64(t.DurationMs)}
+	if t.Album != nil {
+		nt.AlbumURI, nt.AlbumName, nt.Images = t.Album.URI, t.Album.Name, t.Album.Images
+	}
+	starting.track, starting.at = nt, time.Now()
+	if s := Player.Status; s != nil {
+		s.Track, s.PositionMs, s.Playing, s.Buffering = nt, 0, true, true
+		if context != "" {
+			s.ContextURI = context
+		} else {
+			s.ContextURI = t.URI
+		}
+		Player.FetchedAt = time.Now()
+		Player.Version++
+	}
+	if context == "" {
+		Play(t.URI, "")
+	} else {
+		Play(context, t.URI)
+	}
+}
+
+// starting is the track PlayTrack started, shown until the player reports
+// it: while a track loads the player reports none.
+var starting struct {
+	track *backend.NowTrack
+	at    time.Time
+}
+
+// loadingTrack fills in the track of a status taken mid-load: the one just
+// started, else the one on its way out, rather than an empty player bar.
+func loadingTrack(s, prev *backend.PlayerStatus, now time.Time) {
+	switch {
+	case s.Track != nil && !s.Buffering:
+		starting.track = nil
+	case s.Track != nil:
+	case !s.Buffering:
+	case starting.track != nil && now.Sub(starting.at) < 15*time.Second:
+		s.Track = starting.track
+	case prev != nil:
+		s.Track, s.PositionMs = prev.Track, prev.PositionMs
+	}
 }
 
 // The player may report a context under another URI than the one we asked

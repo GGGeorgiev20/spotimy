@@ -453,8 +453,8 @@ func playTrack(t spotify.Track, current bool) {
 	case current:
 		ui.PlayPause()
 	case s != nil && s.ContextURI != "":
-		ui.Play(s.ContextURI, t.URI)
+		ui.PlayTrack(s.ContextURI, t)
 	default:
-		ui.Play(t.URI, "")
+		ui.PlayTrack("", t)
 	}
 }

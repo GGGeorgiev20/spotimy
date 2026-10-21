@@ -143,7 +143,7 @@ func (r *recs) layoutRow(gtx layout.Context, pl *spotify.Playlist, t spotify.Tra
 		ui.AddToPlaylist(spotify.Card{URI: uri, Type: "playlist", Name: pl.Name, Images: pl.Images}, []string{t.URI})
 	}
 	if rr.play.Clicked(gtx) || rr.row.DoubleClicked(gtx) {
-		ui.Play(t.URI, "")
+		ui.PlayTrack("", t)
 	}
 	for k := range t.Artists {
 		if rr.artists[k].Click.Clicked(gtx) {

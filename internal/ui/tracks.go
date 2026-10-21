@@ -311,10 +311,8 @@ func (tt *TrackTable) play(t spotify.Track) {
 	switch {
 	case IsCurrentTrack(t, tt.ContextURI):
 		PlayPause()
-	case tt.ContextURI != "":
-		Play(tt.ContextURI, t.URI)
 	default:
-		Play(t.URI, "")
+		PlayTrack(tt.ContextURI, t)
 	}
 }
 

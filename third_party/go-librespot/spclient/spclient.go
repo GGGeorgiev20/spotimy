@@ -462,6 +462,46 @@ func (c *Spclient) ExtendedMetadataSimple(ctx context.Context, id librespot.Spot
 	return fmt.Errorf("extended metadata with kind %s not found", ext)
 }
 
+// ExtendedMetadataMulti fetches several extensions of one entity in a single
+// request: each kind in data is unmarshalled into its message.
+func (c *Spclient) ExtendedMetadataMulti(ctx context.Context, id librespot.SpotifyId, data map[extmetadatapb.ExtensionKind]proto.Message) error {
+	queries := make([]*extmetadatapb.ExtensionQuery, 0, len(data))
+	for kind := range data {
+		queries = append(queries, &extmetadatapb.ExtensionQuery{ExtensionKind: kind})
+	}
+	resp, err := c.ExtendedMetadata(ctx, &extmetadatapb.BatchedEntityRequest{
+		EntityRequest: []*extmetadatapb.EntityRequest{{EntityUri: id.Uri(), Query: queries}},
+	})
+	if err != nil {
+		return err
+	}
+
+	found := 0
+	for _, item := range resp.ExtendedMetadata {
+		msg, ok := data[item.ExtensionKind]
+		if !ok {
+			continue
+		}
+		for _, extData := range item.ExtensionData {
+			if extData.EntityUri != id.Uri() {
+				continue
+			}
+			if extData.Header.StatusCode != 200 {
+				return fmt.Errorf("extended metadata request for %s returned status %d", item.ExtensionKind, extData.Header.StatusCode)
+			}
+			if err := extData.ExtensionData.UnmarshalTo(msg); err != nil {
+				return fmt.Errorf("failed unmarshalling extended metadata data: %w", err)
+			}
+			found++
+			break
+		}
+	}
+	if found != len(data) {
+		return fmt.Errorf("extended metadata: got %d of %d extensions", found, len(data))
+	}
+	return nil
+}
+
 func (c *Spclient) PlaylistSignals(ctx context.Context, playlist librespot.SpotifyId, reqProto *playlist4pb.ListSignals, lenses []string) (*playlist4pb.SelectedListContent, error) {
 	if playlist.Type() != librespot.SpotifyIdTypePlaylist {
 		panic(fmt.Sprintf("invalid type: %s", playlist.Type()))

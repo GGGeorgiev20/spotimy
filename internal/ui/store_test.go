@@ -26,3 +26,29 @@ func TestIsContext(t *testing.T) {
 		t.Error("alias of the requested context should match")
 	}
 }
+
+func TestLoadingTrack(t *testing.T) {
+	now := time.Now()
+	old := &backend.PlayerStatus{Track: &backend.NowTrack{URI: "spotify:track:old"}, PositionMs: 5000}
+	started := &backend.NowTrack{URI: "spotify:track:new"}
+
+	// Mid-load the player reports no track: the outgoing one stays.
+	s := &backend.PlayerStatus{Buffering: true}
+	loadingTrack(s, old, now)
+	if s.Track != old.Track || s.PositionMs != 5000 {
+		t.Fatalf("kept %+v", s.Track)
+	}
+	// Unless the user just started another: that one shows.
+	starting.track, starting.at = started, now
+	s = &backend.PlayerStatus{Buffering: true}
+	loadingTrack(s, old, now)
+	if s.Track != started {
+		t.Fatalf("got %+v, want the started track", s.Track)
+	}
+	// Once loaded, the player's own track wins and the guess is dropped.
+	s = &backend.PlayerStatus{Track: &backend.NowTrack{URI: "spotify:track:new"}}
+	loadingTrack(s, old, now)
+	if starting.track != nil || s.Track.URI != "spotify:track:new" {
+		t.Fatalf("after load: %+v, starting %+v", s.Track, starting.track)
+	}
+}

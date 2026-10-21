@@ -1,6 +1,7 @@
 package player
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/devgianlu/go-librespot/spclient"
 	"github.com/devgianlu/go-librespot/vorbis"
 	"golang.org/x/exp/rand"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -60,6 +63,7 @@ type Player struct {
 	cache *cache.Cache
 
 	cdnQuarantine map[string]time.Time
+	cdnMu         sync.Mutex // guards cdnQuarantine: streams can be created concurrently
 
 	newOutput func(source librespot.Float32Reader, volume float32, device string) (output.Output, error)
 
@@ -635,7 +639,10 @@ func (p *Player) httpChunkedReaderFromStorageResolve(log librespot.Logger, clien
 				continue
 			}
 
-			if lastFailed, found := p.cdnQuarantine[cdnUrl.Host]; found {
+			p.cdnMu.Lock()
+			lastFailed, found := p.cdnQuarantine[cdnUrl.Host]
+			p.cdnMu.Unlock()
+			if found {
 				if i == len(storageResolve.Cdnurl)-1 {
 					log.WithField("host", cdnUrl.Host).Warnf("cannot skip cdn url because it is the last one")
 				} else if time.Since(lastFailed) < CdnUrlQuarantineDuration {
@@ -648,11 +655,15 @@ func (p *Player) httpChunkedReaderFromStorageResolve(log librespot.Logger, clien
 			rawStream, err = audio.NewHttpChunkedReader(log, client, cdnUrl.String())
 			if err != nil {
 				log.WithError(err).WithField("host", cdnUrl.Host).Warnf("failed creating chunked reader, trying next url")
+				p.cdnMu.Lock()
 				p.cdnQuarantine[cdnUrl.Host] = time.Now()
+				p.cdnMu.Unlock()
 				continue
 			}
 
+			p.cdnMu.Lock()
 			delete(p.cdnQuarantine, cdnUrl.Host)
+			p.cdnMu.Unlock()
 			return rawStream, nil
 		}
 
@@ -725,10 +736,15 @@ func (p *Player) getUnrestrictedTrack(ctx context.Context, spotId librespot.Spot
 	if err != nil {
 		return nil, fmt.Errorf("failed getting track metadata: %w", err)
 	}
+	return p.unrestrict(&trackMeta)
+}
 
-	media := librespot.NewMediaFromTrack(&trackMeta)
+// unrestrict returns the track, or the alternative of it that may be played
+// in this country.
+func (p *Player) unrestrict(trackMeta *metadatapb.Track) (*metadatapb.Track, error) {
+	media := librespot.NewMediaFromTrack(trackMeta)
 	if !isMediaRestricted(media, p.countryCode()) {
-		return &trackMeta, nil
+		return trackMeta, nil
 	}
 
 	for _, alt := range trackMeta.Alternative {
@@ -743,7 +759,7 @@ func (p *Player) getUnrestrictedTrack(ctx context.Context, spotId librespot.Spot
 			trackMeta.File = alt.File
 			trackMeta.Preview = alt.Preview
 			trackMeta.OriginalAudio = alt.OriginalAudio
-			return &trackMeta, nil
+			return trackMeta, nil
 		}
 	}
 
@@ -778,18 +794,38 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 	var media *librespot.Media
 	var file *metadatapb.AudioFile
 	if spotId.Type() == librespot.SpotifyIdTypeTrack {
-		trackMeta, err := p.getUnrestrictedTrack(ctx, spotId)
+		// The track and its audio files in one request. The files are asked
+		// again only when a regional alternative replaces the track, or when
+		// the combined request fails (a restricted track's files may not
+		// resolve).
+		var trackMeta metadatapb.Track
+		var audioFilesResp audiofilespb.AudioFilesExtensionResponse
+		filesFor := spotId.Id() // whose files audioFilesResp holds (nil: none)
+		err := p.sp.ExtendedMetadataMulti(ctx, spotId, map[extmetadatapb.ExtensionKind]proto.Message{
+			extmetadatapb.ExtensionKind_TRACK_V4:    &trackMeta,
+			extmetadatapb.ExtensionKind_AUDIO_FILES: &audioFilesResp,
+		})
+		var unrestricted *metadatapb.Track
+		if err == nil {
+			unrestricted, err = p.unrestrict(&trackMeta)
+		} else {
+			log.WithError(err).Debugf("combined metadata request failed, asking separately")
+			filesFor = nil
+			unrestricted, err = p.getUnrestrictedTrack(ctx, spotId)
+		}
 		if err != nil {
 			return nil, err
 		}
 
-		media = librespot.NewMediaFromTrack(trackMeta)
+		media = librespot.NewMediaFromTrack(unrestricted)
 		spotId = media.Id()
 
-		var audioFilesResp audiofilespb.AudioFilesExtensionResponse
-		err = p.sp.ExtendedMetadataSimple(ctx, spotId, extmetadatapb.ExtensionKind_AUDIO_FILES, &audioFilesResp)
-		if err != nil {
-			return nil, fmt.Errorf("failed getting audio files metadata: %w", err)
+		if !bytes.Equal(spotId.Id(), filesFor) {
+			audioFilesResp = audiofilespb.AudioFilesExtensionResponse{}
+			err = p.sp.ExtendedMetadataSimple(ctx, spotId, extmetadatapb.ExtensionKind_AUDIO_FILES, &audioFilesResp)
+			if err != nil {
+				return nil, fmt.Errorf("failed getting audio files metadata: %w", err)
+			}
 		}
 
 		var audioFiles []*metadatapb.AudioFile
@@ -844,12 +880,19 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 
 	log.Debugf("selected format %s (%x)", file.Format.String(), file.FileId)
 
-	audioKey, err := p.retrieveAudioKey(ctx, spotId, file.FileId)
-	if err != nil {
-		return nil, fmt.Errorf("failed retrieving audio key: %w", err)
+	// The key comes over the access point and the file from storage resolve
+	// and the CDN, so the key is asked for while the file is being located
+	// and its first chunk fetched. The channel is buffered: an early return
+	// below leaves nothing blocked.
+	type keyResult struct {
+		key []byte
+		err error
 	}
-
-	p.events.PostStreamRequestAudioKey(playbackId)
+	keyCh := make(chan keyResult, 1)
+	go func() {
+		key, err := p.retrieveAudioKey(ctx, spotId, file.FileId)
+		keyCh <- keyResult{key, err}
+	}()
 
 	// Prefer a cached copy of the encrypted audio file when available: this
 	// avoids resolving storage and downloading from the CDN entirely. The audio
@@ -875,20 +918,17 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 		}
 	}
 
+	var httpStream *audio.HttpChunkedReader
 	if rawStream == nil {
 		storageResolve, err := p.sp.ResolveStorageInteractive(ctx, file.FileId, file.Format, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed resolving track storage: %w", err)
 		}
 
-		p.events.PostStreamResolveStorage(playbackId)
-
-		httpStream, err := p.httpChunkedReaderFromStorageResolve(log, client, storageResolve)
+		httpStream, err = p.httpChunkedReaderFromStorageResolve(log, client, storageResolve)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating chunked reader: %w", err)
 		}
-
-		p.events.PostStreamInitHttpChunkReader(playbackId, httpStream)
 
 		// Persist the encrypted file to the cache once it has been fully
 		// downloaded. This is best-effort: caching failures never affect
@@ -903,6 +943,18 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 		}
 
 		rawStream = httpStream
+	}
+
+	kr := <-keyCh
+	if kr.err != nil {
+		return nil, fmt.Errorf("failed retrieving audio key: %w", kr.err)
+	}
+	audioKey := kr.key
+
+	p.events.PostStreamRequestAudioKey(playbackId)
+	if httpStream != nil {
+		p.events.PostStreamResolveStorage(playbackId)
+		p.events.PostStreamInitHttpChunkReader(playbackId, httpStream)
 	}
 
 	decryptedStream, err := audio.NewAesAudioDecryptor(rawStream, audioKey)

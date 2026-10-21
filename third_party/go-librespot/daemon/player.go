@@ -121,6 +121,10 @@ type AppPlayer struct {
 
 	prefetchTimer *time.Timer
 
+	// warm is the stream of the track a play request starts on, fetched while
+	// its context resolves (see warmStream).
+	warm warmStreams
+
 	// meta resolves track metadata for this session off the player loop,
 	// filling the caches on app. Nil when metadata.enabled is false, which is
 	// how every metadata path knows to do nothing.
@@ -699,6 +703,12 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 
 		if p.primaryStream != nil && p.prodInfo != nil {
 			resp.Track = p.newApiResponseStatusTrack(p.primaryStream, p.state.trackPosition())
+		} else if t := p.state.player.Track; t != nil && p.prodInfo != nil {
+			// Still loading: describe the track on its way in when its
+			// metadata is already known, rather than no track at all.
+			if media := p.app.metaCache.get(t.Uri); media != nil {
+				resp.Track = p.newApiResponseStatusMedia(media, 0)
+			}
 		}
 
 		resp.NextTrack = p.apiNextTrack()
@@ -786,6 +796,16 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 		// no audio plays from 0:00 while the track loads. The seek waits for the
 		// load to land rather than polling for it.
 		loadPaused := data.Paused || data.Position > 0
+
+		// The track to start on is known before its context resolves: fetch
+		// its stream meanwhile.
+		if data.Position == 0 {
+			if data.SkipToUri != "" {
+				p.warmStream(data.SkipToUri)
+			} else {
+				p.warmStream(data.Uri)
+			}
+		}
 
 		p.loadGen++
 		p.loader.submit(loaderJob{

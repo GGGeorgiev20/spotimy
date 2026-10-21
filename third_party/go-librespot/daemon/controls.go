@@ -143,16 +143,24 @@ func (p *AppPlayer) schedulePrefetchNext() {
 		return
 	}
 
+	// The next track is readied soon after this one starts rather than near
+	// its end, so that skipping to it plays at once. A prefetch only costs the
+	// metadata, the key and the first chunk; the rest of the file is fetched
+	// as it plays. The short wait lets this track's own start go first and
+	// lets a burst of skips settle.
 	untilTrackEnd := time.Duration(p.primaryStream.Media.Duration()-int32(p.player.PositionMs())) * time.Millisecond
-	untilTrackEnd -= 30 * time.Second
-	if untilTrackEnd < 10*time.Second {
+	wait := min(untilTrackEnd-30*time.Second, earlyPrefetchDelay)
+	if wait <= 0 {
 		p.prefetchTimer.Reset(0)
 		p.app.log.Tracef("prefetch as soon as possible")
 	} else {
-		p.prefetchTimer.Reset(untilTrackEnd)
-		p.app.log.Tracef("scheduling prefetch in %.0fs", untilTrackEnd.Seconds())
+		p.prefetchTimer.Reset(wait)
+		p.app.log.Tracef("scheduling prefetch in %.0fs", wait.Seconds())
 	}
 }
+
+// earlyPrefetchDelay is how long after a track starts the next one is readied.
+const earlyPrefetchDelay = 2 * time.Second
 
 func (p *AppPlayer) emitMprisUpdate(playbackStatus mpris.PlaybackStatus) {
 	// p.state, p.state.player, p.state.device, p.state.player.Options are assumed to always be non-nil here
@@ -944,6 +952,9 @@ func (p *AppPlayer) fetchTrack(ctx context.Context, spotId librespot.SpotifyId, 
 	log := p.app.log.WithField("uri", spotId.Uri())
 
 	stream := opts.prefetchedStream
+	if stream == nil && opts.position == 0 {
+		stream = p.takeWarm(ctx, spotId)
+	}
 	if stream == nil {
 		var err error
 		if stream, err = p.player.NewStream(ctx, p.app.client, spotId, p.app.cfg.Bitrate, opts.position); err != nil {

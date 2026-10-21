@@ -33,6 +33,16 @@ Tests:
 make test
 ```
 
+go-librespot is vendored in `third_party/go-librespot` (go.mod replaces the module with it), patched to start tracks faster:
+
+- the track's metadata and its audio files come in one request;
+- the audio key is fetched while storage resolves and the first chunk downloads;
+- a play request's track starts loading while its context resolves;
+- the next track is readied two seconds into the current one rather than 30 seconds before its end, so skipping plays at once;
+- status reports the track that is loading when its metadata is known.
+
+Its own tests run with `cd third_party/go-librespot && go test -tags test_unit ./...`.
+
 `cmd/spdev` is a development tool. It logs in with the credentials the app stored and calls the internal API directly. Use it to probe variables, capture fixtures, or check a broken operation:
 
 ```bash

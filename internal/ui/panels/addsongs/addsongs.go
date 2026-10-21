@@ -139,13 +139,13 @@ func trackRow(gtx layout.Context, t spotify.Track) layout.Dimensions {
 		ui.AddToPlaylist(p.target, []string{t.URI})
 	}
 	if r.play.Clicked(gtx) {
-		ui.Play(t.URI, "")
+		ui.PlayTrack("", t)
 	}
 	if _, ok := r.click.RightClicked(gtx); ok {
 		ui.OpenMenu(ui.TrackMenu(t, ui.TrackMenuOpts{}))
 	}
 	if r.click.DoubleClicked(gtx) {
-		ui.Play(t.URI, "")
+		ui.PlayTrack("", t)
 	}
 	w, h := gtx.Constraints.Max.X, ui.Dp(gtx, 64)
 	px := func(v float32) int { return ui.Dp(gtx, v) }
