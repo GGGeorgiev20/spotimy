@@ -84,7 +84,7 @@ func (c *Client) Album(ctx context.Context, uri string) (*Album, error) {
 			if x.URI == a.URI {
 				continue
 			}
-			out.More = append(out.More, Card{URI: x.URI, Type: "album", Name: x.Name, Subtitle: year(x.Date.ISOString), Images: x.CoverArt.images()})
+			out.More = append(out.More, Card{URI: x.URI, Type: "album", Name: x.Name, Subtitle: x.Date.year(), Images: x.CoverArt.images()})
 		}
 	}
 	return out, nil

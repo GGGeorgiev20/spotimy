@@ -59,8 +59,11 @@ func TestParsePlaylist(t *testing.T) {
 		t.Fatalf("playlist: %+v", p)
 	}
 	tr := p.Tracks.Items[0]
-	if tr.URI == "" || tr.UID == "" || tr.Name == "" || len(tr.Artists) == 0 || tr.Album == nil || tr.DurationMs == 0 || tr.AddedAt == "" {
+	if tr.URI == "" || tr.UID == "" || tr.Name == "" || len(tr.Artists) == 0 || tr.Album == nil || tr.DurationMs == 0 || tr.AddedAt == "" || !tr.Video {
 		t.Errorf("track: %+v", tr)
+	}
+	if len(p.Banner) != 1 || p.MadeFor != "Test User" || !p.PromoNote {
+		t.Errorf("generated playlist header: banner=%v madeFor=%q promo=%v", p.Banner, p.MadeFor, p.PromoNote)
 	}
 }
 
@@ -75,6 +78,9 @@ func TestParseAlbum(t *testing.T) {
 	tr := a.Tracks[0]
 	if tr.Name != "Speak to Me" || tr.TrackNumber != 1 || tr.DurationMs != 64333 || tr.Album.URI != a.URI || tr.UID == "" {
 		t.Errorf("track: %+v", tr)
+	}
+	if len(a.More) == 0 || a.More[0].Subtitle != "1979" { // "More by" only has years
+		t.Errorf("more by: %+v", a.More)
 	}
 }
 

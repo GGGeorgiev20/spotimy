@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"math"
 	"strconv"
 	"strings"
 
@@ -260,7 +259,7 @@ func banner(gtx layout.Context, a *spotify.ArtistPage) layout.Dimensions {
 	// The web player's banner is 40vh: 40% of the window's height.
 	w, h := gtx.Constraints.Max.X, max(ui.Dp(gtx, 240), ui.WindowSize.Y*40/100)
 	ui.Image{URL: ui.Pick(a.Header, w), FocusY: .15, Placeholder: ui.RGB(0x535353)}.Layout(gtx, image.Pt(w, h))
-	ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), ui.Alpha(ui.ColBg, 0), veil(.6))
+	ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), ui.Alpha(ui.ColBg, 0), ui.Veil(.6))
 	pad := ui.ContentPad(gtx)
 	gtx.Constraints.Max.X = w - 2*pad
 	m := op.Record(gtx.Ops)
@@ -441,10 +440,4 @@ func compact(n int) string {
 		}
 	}
 	return fmt.Sprint(n)
-}
-
-// veil is black at CSS opacity a. Gio blends in linear light, so the alpha is
-// raised to darken as much as the same CSS overlay does in sRGB.
-func veil(a float32) color.NRGBA {
-	return ui.Alpha(ui.ColBg, float32(1-math.Pow(float64(1-a), 2.2)))
 }

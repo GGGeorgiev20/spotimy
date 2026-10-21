@@ -40,3 +40,21 @@ func TestViewOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderSort(t *testing.T) {
+	l := ListControls{Default: SortCustom, Sort: SortCustom}
+	for _, want := range []struct {
+		sort string
+		desc bool
+	}{{SortTitle, false}, {SortTitle, true}, {SortCustom, false}} {
+		l.HeaderSort(SortTitle)
+		if l.Sort != want.sort || l.Desc != want.desc {
+			t.Fatalf("got %s desc=%v, want %s desc=%v", l.Sort, l.Desc, want.sort, want.desc)
+		}
+	}
+	l.HeaderSort(SortTitle)
+	l.HeaderSort(SortAlbum) // another column starts over
+	if l.Sort != SortAlbum || l.Desc || !l.SortedBy(SortAlbum) || l.SortedBy(SortTitle) {
+		t.Fatalf("got %s desc=%v", l.Sort, l.Desc)
+	}
+}

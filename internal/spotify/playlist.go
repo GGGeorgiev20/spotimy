@@ -31,6 +31,10 @@ type gqlPlaylist struct {
 	OwnerV2     struct {
 		Data gqlUser `json:"data"`
 	} `json:"ownerV2"`
+	Attributes []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	} `json:"attributes"`
 	BasePermission          string `json:"basePermission"` // VIEWER, CONTRIBUTOR or BLOCKED
 	CurrentUserCapabilities struct {
 		CanEditItems               bool `json:"canEditItems"`
@@ -104,6 +108,16 @@ func (c *Client) Playlist(ctx context.Context, uri string, offset, limit int) (*
 		Collab:     p.Members.TotalCount > 1,
 		RevisionID: p.RevisionID,
 		Tracks:     TrackPage{Total: p.Content.TotalCount, Offset: offset, Items: playlistTracks(p.Content.Items)},
+	}
+	for _, a := range p.Attributes {
+		switch a.Key {
+		case "header_image_url_desktop":
+			out.Banner = []Image{{URL: a.Value}}
+		case "madeFor.username":
+			out.MadeFor = a.Value
+		case "should_show_promo_disclosure":
+			out.PromoNote = a.Value == "true"
+		}
 	}
 	out.Members = []User{}
 	for _, m := range p.Members.Items {

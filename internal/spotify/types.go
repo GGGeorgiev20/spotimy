@@ -45,6 +45,7 @@ type Track struct {
 	TrackNumber int       `json:"trackNumber,omitempty"`
 	DiscNumber  int       `json:"discNumber,omitempty"`
 	Episode     bool      `json:"episode,omitempty"`
+	Video       bool      `json:"video,omitempty"` // has a music video
 }
 
 // TrackPage is one page of a long track list.
@@ -71,6 +72,11 @@ type Playlist struct {
 	Members     []User    `json:"members"` // collaborators other than the owner
 	RevisionID  string    `json:"revisionId"`
 	Tracks      TrackPage `json:"tracks"`
+	// Generated playlists (Daily Mix...): the wide header picture, who it
+	// was made for, and whether to link "About recommendations".
+	Banner    []Image `json:"banner,omitempty"`
+	MadeFor   string  `json:"madeFor,omitempty"`
+	PromoNote bool    `json:"promoNote,omitempty"`
 }
 
 type Album struct {

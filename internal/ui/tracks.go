@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"image/color"
 	"math"
 	"time"
 
@@ -86,7 +87,7 @@ func (p *Paged) Loaded() []spotify.Track {
 }
 
 // TrackTable draws the official track list rows. Variant: "playlist"
-// (# Title Album Date-added Duration), "album" (no art, track numbers),
+// (# Title Album Date-added Duration), "album" (no art, track numbers, plays),
 // "artist" (plays column, no header, no artist names), "search" (Title Album Duration), "compact" (cover, title, duration: search
 // top songs).
 type TrackTable struct {
@@ -101,8 +102,15 @@ type TrackTable struct {
 	OnMove func(from, to int, after bool)
 	// NoAdded drops the date added column (generated playlists have no dates).
 	NoAdded bool
+	// NoCheck hides the "saved" check button: in Liked Songs and playlists
+	// you can edit every song is already saved somewhere.
+	NoCheck bool
+	// Sort makes the Title, Album, Date added and duration headers sort
+	// the list, as clicking them does in the desktop client.
+	Sort *ListControls
 
 	Selected int
+	hdr      [2][4]Click // header buttons, unpinned and pinned
 	rows     map[int]*trackRow
 	reorder  Reorder
 }
@@ -146,7 +154,7 @@ func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 	main := MainDp(gtx)
 	vars := 0 // album/plays, date added
 	switch tt.Variant {
-	case "search", "artist":
+	case "search", "artist", "album":
 		if main >= 600 {
 			vars = 1
 		}
@@ -189,7 +197,7 @@ func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 	}
 	c := cols{gap: gap, idx: px(16), title: int(size[0]), dur: int(size[len(fr)-1])}
 	if vars > 0 {
-		if tt.Variant == "artist" {
+		if tt.Variant == "artist" || tt.Variant == "album" {
 			c.plays = int(size[1])
 		} else {
 			c.album = int(size[1])
@@ -201,9 +209,24 @@ func (tt *TrackTable) columns(gtx layout.Context, w int) cols {
 	return c
 }
 
+// headerKeys are the sort keys of the Title, Album, Date added and duration
+// headers.
+var headerKeys = [4]string{SortTitle, SortAlbum, SortAdded, SortDuration}
+
 // Header draws the column header row ("# Title Album Date added ⏱").
 // stuck gives it the darker background used while it's pinned under the top bar.
 func (tt *TrackTable) Header(gtx layout.Context, stuck bool) layout.Dimensions {
+	pin := 0
+	if stuck {
+		pin = 1
+	}
+	btns := &tt.hdr[pin]
+	sortable := func(k int) bool { return tt.Sort != nil && tt.Sort.Has(headerKeys[k]) }
+	for k := range btns {
+		if btns[k].Clicked(gtx) && sortable(k) {
+			tt.Sort.HeaderSort(headerKeys[k])
+		}
+	}
 	w := gtx.Constraints.Max.X
 	h, pad := Dp(gtx, 36), ContentPad(gtx)
 	if stuck {
@@ -213,7 +236,37 @@ func (tt *TrackTable) Header(gtx layout.Context, stuck bool) layout.Dimensions {
 	}
 	c := tt.columns(gtx, w-2*pad)
 	x := pad + Dp(gtx, 16)
-	cell := func(cw int, s string, right bool) {
+	// label draws a header's text (or clock), with the sort caret when the
+	// list is sorted by it; k < 0 isn't sortable.
+	label := func(gtx layout.Context, k int, s string) layout.Dimensions {
+		draw := func(gtx layout.Context, col color.NRGBA) layout.Dimensions {
+			var d layout.Dimensions
+			if s == "" {
+				d = IconPx(gtx, "clock", Dp(gtx, 16), col)
+			} else {
+				d = Text(gtx, s, 14, Regular, col)
+			}
+			if k >= 0 && tt.Sort != nil && tt.Sort.SortedBy(headerKeys[k]) {
+				is := Dp(gtx, 16)
+				Offset(gtx, d.Size.X+Dp(gtx, 4), (d.Size.Y-is)/2, func() { IconPx(gtx, tt.Sort.Caret(), is, ColAccent) })
+				d.Size.X += Dp(gtx, 4) + is
+			}
+			return d
+		}
+		if k < 0 || !sortable(k) {
+			return draw(gtx, ColText2)
+		}
+		b := &btns[k]
+		b.Label = "Sort by " + map[int]string{0: "title", 1: "album", 2: "date added", 3: "duration"}[k]
+		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			col := ColText2
+			if b.Hovered() || tt.Sort.SortedBy(headerKeys[k]) {
+				col = ColText
+			}
+			return draw(gtx, col)
+		})
+	}
+	cell := func(cw, k int, s string) {
 		if cw <= 0 {
 			return
 		}
@@ -221,20 +274,29 @@ func (tt *TrackTable) Header(gtx layout.Context, stuck bool) layout.Dimensions {
 			g := gtx
 			g.Constraints = layout.Exact(image.Pt(cw, h))
 			al := layout.W
-			if right {
+			if k == -2 { // "#"
 				al = layout.E
 			}
-			al.Layout(g, func(gtx layout.Context) layout.Dimensions { return Text(gtx, s, 14, Regular, ColText2) })
+			al.Layout(g, func(gtx layout.Context) layout.Dimensions {
+				gtx.Constraints.Min = image.Point{}
+				return label(gtx, k, s)
+			})
 		})
 		x += cw + c.gap
 	}
-	cell(c.idx, "#", true)
-	cell(c.title, "Title", false)
-	cell(c.album, "Album", false)
-	cell(c.added, "Date added", false)
-	cell(c.plays, "", false)
-	Offset(gtx, x+c.dur-Dp(gtx, 16)-Dp(gtx, 32)-Dp(gtx, 16), (h-Dp(gtx, 16))/2, func() {
-		IconPx(gtx, "clock", Dp(gtx, 16), ColText2)
+	cell(c.idx, -2, "#")
+	cell(c.title, 0, "Title")
+	cell(c.album, 1, "Album")
+	cell(c.added, 2, "Date added")
+	cell(c.plays, -1, "Plays")
+	// The clock sits over the duration text; a caret goes after it.
+	Offset(gtx, x+c.dur-Dp(gtx, 16)-Dp(gtx, 32)-Dp(gtx, 16), 0, func() {
+		g := gtx
+		g.Constraints = layout.Exact(image.Pt(Dp(gtx, 64), h))
+		layout.W.Layout(g, func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min = image.Point{}
+			return label(gtx, 3, "")
+		})
 	})
 	return layout.Dimensions{Size: image.Pt(w, h+Dp(gtx, 16))}
 }
@@ -410,6 +472,12 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 				if tr.Explicit {
 					segs = append(segs, Seg{Widget: ExplicitBadge})
 				}
+				if tr.Video {
+					segs = append(segs, Seg{Widget: func(gtx layout.Context) layout.Dimensions { return VideoBadge(gtx, sub) }}, Seg{Text: "Music video"})
+					if tt.Variant != "artist" && len(tr.Artists) > 0 {
+						segs = append(segs, Seg{Text: " • "})
+					}
+				}
 				for k, a := range tr.Artists {
 					if tt.Variant == "artist" {
 						break // an artist's Popular rows only show the title
@@ -464,7 +532,7 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 				durX := moreX - Dp(gtx, 16) - Measure(gtx, "0:00", 14, Regular)
 				saveX := durX - Dp(gtx, 16) - bs
 				saved := Added(key) // Liked Songs or any of your playlists
-				if hov || saved {
+				if !tt.NoCheck && (hov || saved) {
 					Offset(gtx, saveX, (h-bs)/2, func() {
 						icon, col := "plus-circle", ColText2
 						if saved {
@@ -512,6 +580,13 @@ func ExplicitBadge(gtx layout.Context) layout.Dimensions {
 	g := gtx
 	g.Constraints = layout.Exact(image.Pt(s, s))
 	layout.Center.Layout(g, func(gtx layout.Context) layout.Dimensions { return Text(gtx, "E", 12, Bold, ColText) })
+	return layout.Dimensions{Size: image.Pt(s+Dp(gtx, 4), s), Baseline: Dp(gtx, 3)}
+}
+
+// VideoBadge is the screen icon before "Music video" in a row's subtitle.
+func VideoBadge(gtx layout.Context, c color.NRGBA) layout.Dimensions {
+	s := Dp(gtx, 16)
+	IconPx(gtx, "video", s, c)
 	return layout.Dimensions{Size: image.Pt(s+Dp(gtx, 4), s), Baseline: Dp(gtx, 3)}
 }
 

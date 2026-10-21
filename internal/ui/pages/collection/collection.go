@@ -62,7 +62,7 @@ func newLiked() *liked {
 		{Key: ui.SortTitle, Label: "Title"}, {Key: ui.SortArtist, Label: "Artist"},
 		{Key: ui.SortAlbum, Label: "Album"}, {Key: ui.SortAdded, Label: "Date added"},
 	}}
-	p.table = ui.TrackTable{Variant: "playlist"}
+	p.table = ui.TrackTable{Variant: "playlist", NoCheck: true, Sort: &p.ctl}
 	p.tracks = ui.NewPaged(func(off, lim int) (*spotify.TrackPage, error) { return ui.B.LikedSongs(off, lim) }, pageSize)
 	ui.Async(func() (*spotify.TrackPage, error) { return ui.B.LikedSongs(0, pageSize) }, func(tp *spotify.TrackPage, err error) {
 		p.loading = false

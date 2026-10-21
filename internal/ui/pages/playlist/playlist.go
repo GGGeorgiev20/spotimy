@@ -10,6 +10,7 @@ import (
 
 	"gioui.org/layout"
 
+	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
 )
@@ -42,6 +43,7 @@ type page struct {
 	actions ui.ActionBar
 	owner   ui.Link
 	member  ui.Link
+	promo   ui.Link // "About recommendations"
 	headerH int
 
 	ctl  ui.ListControls // search and sort
@@ -84,7 +86,7 @@ func (p *page) setup(pl *spotify.Playlist) {
 	}, pageSize)
 	p.tracks.Seed(pl.Tracks)
 	p.lengthG = -1
-	p.table = ui.TrackTable{Variant: "playlist", ContextURI: p.uri, PlaylistURI: p.uri, CanEdit: pl.CanEdit, NoAdded: true}
+	p.table = ui.TrackTable{Variant: "playlist", ContextURI: p.uri, PlaylistURI: p.uri, CanEdit: pl.CanEdit, NoAdded: true, NoCheck: pl.CanEdit, Sort: &p.ctl}
 	for _, t := range pl.Tracks.Items {
 		if t.AddedAt != "" {
 			p.table.NoAdded = false
@@ -95,7 +97,11 @@ func (p *page) setup(pl *spotify.Playlist) {
 	if pl.CanEdit && !p.recs.res.Done {
 		p.recs.fetch(p.uri, p.haveURIs())
 	}
-	ui.ExtractedColor(pl.Color, pl.Images, func(c color.NRGBA) { p.color = c })
+	if len(pl.Banner) > 0 {
+		p.color = ui.RGB(0x535353) // the official wash under a banner is plain gray
+	} else {
+		ui.ExtractedColor(pl.Color, pl.Images, func(c color.NRGBA) { p.color = c })
+	}
 }
 
 // move applies a drag-reorder at once, then syncs with the server (the
@@ -186,8 +192,8 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		case i == itemHeader:
 			o := ui.HeaderOpts{
 				Images: pl.Images, Type: visibility(pl), Title: pl.Name, Color: p.color, Icon: "note",
-				Description: p.desc,
-				Meta:        func(gtx layout.Context) layout.Dimensions { return p.meta(gtx, pl) },
+				Description: p.desc, Banner: pl.Banner,
+				Meta: func(gtx layout.Context) layout.Dimensions { return p.meta(gtx, pl) },
 			}
 			if pl.IsOwner {
 				o.OnEdit = func() { ui.EditPlaylist(p.uri, pl.Name, p.desc, nil) }
@@ -243,7 +249,11 @@ func (p *page) meta(gtx layout.Context, pl *spotify.Playlist) layout.Dimensions 
 			return layout.Dimensions{Size: image.Pt(s+ui.Dp(gtx, 4), s), Baseline: ui.Dp(gtx, 6)}
 		}})
 	}
-	segs = append(segs, ui.Seg{Text: pl.Owner.Name, Link: &p.owner, Weight: ui.Bold})
+	if pl.MadeFor != "" { // generated playlists name the listener, not Spotify
+		segs = append(segs, ui.Seg{Text: "Made for ", Color: dim}, ui.Seg{Text: pl.MadeFor, Weight: ui.Bold})
+	} else {
+		segs = append(segs, ui.Seg{Text: pl.Owner.Name, Link: &p.owner, Weight: ui.Bold})
+	}
 	switch len(pl.Members) {
 	case 0:
 	case 1:
@@ -271,7 +281,18 @@ func (p *page) meta(gtx layout.Context, pl *spotify.Playlist) layout.Dimensions 
 		s += ", " + p.length
 	}
 	segs = append(segs, ui.Seg{Text: s, Color: dim})
-	return ui.Inline(gtx, 14, ui.Regular, ui.ColText, ui.ColNone, segs...)
+	line := func(gtx layout.Context) layout.Dimensions {
+		return ui.Inline(gtx, 14, ui.Regular, ui.ColText, ui.ColNone, segs...)
+	}
+	if !pl.PromoNote {
+		return line(gtx)
+	}
+	if p.promo.Click.Clicked(gtx) {
+		backend.OpenURL("https://about-recommendations.spotify.com/")
+	}
+	return ui.Column(gtx, line, ui.Gap(0, 12), func(gtx layout.Context) layout.Dimensions {
+		return p.promo.Layout(gtx, "About recommendations and the impact of promotion", 14, ui.Regular, dim, ui.ColText)
+	})
 }
 
 // visibility is the header's type line: Spotify shows whether anyone can

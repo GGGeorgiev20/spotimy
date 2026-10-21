@@ -42,7 +42,7 @@ func (p *page) aboutSection(gtx layout.Context) layout.Dimensions {
 					if len(a.Gallery) > 0 {
 						ui.Image{URL: ui.Pick(a.Gallery, w), Radius: r}.Layout(gtx, image.Pt(w, h))
 					}
-					ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), ui.Alpha(ui.ColBg, 0), veil(.7))
+					ui.VGradient(gtx.Ops, image.Rect(0, 0, w, h), ui.Alpha(ui.ColBg, 0), ui.Veil(.7))
 					pad := ui.Dp(gtx, 40)
 					if a.WorldRank > 0 {
 						ui.Offset(gtx, w-pad-ui.Dp(gtx, 80), pad, func() { rank(gtx, a.WorldRank) })

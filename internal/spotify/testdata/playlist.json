@@ -997,6 +997,18 @@
     {
      "key": "isAlgotorial",
      "value": "false"
+    },
+    {
+     "key": "header_image_url_desktop",
+     "value": "https://i.scdn.co/image/ab67618600001016aadb68489c4d8af4ce900c0d"
+    },
+    {
+     "key": "madeFor.username",
+     "value": "Test User"
+    },
+    {
+     "key": "should_show_promo_disclosure",
+     "value": "true"
     }
    ],
    "basePermission": "VIEWER",

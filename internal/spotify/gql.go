@@ -140,9 +140,14 @@ type gqlTrack struct {
 	Playability struct {
 		Playable bool `json:"playable"`
 	} `json:"playability"`
-	Playcount   string `json:"playcount"`
-	TrackNumber int    `json:"trackNumber"`
-	DiscNumber  int    `json:"discNumber"`
+	Playcount      string `json:"playcount"`
+	TrackNumber    int    `json:"trackNumber"`
+	AssociationsV3 struct {
+		VideoAssociations struct {
+			TotalCount int `json:"totalCount"`
+		} `json:"videoAssociations"`
+	} `json:"associationsV3"`
+	DiscNumber int `json:"discNumber"`
 
 	// Episode fields (playlists can contain episodes).
 	PodcastV2 *struct {
@@ -173,6 +178,7 @@ func (t gqlTrack) track() Track {
 		Playcount:   t.Playcount,
 		TrackNumber: t.TrackNumber,
 		DiscNumber:  t.DiscNumber,
+		Video:       t.AssociationsV3.VideoAssociations.TotalCount > 0,
 	}
 	if r := t.RelinkingInformation; r != nil && r.LinkedTrack.URI != t.URI {
 		out.LinkedURI = r.LinkedTrack.URI

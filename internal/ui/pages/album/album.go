@@ -126,7 +126,7 @@ func typeLabel(t string) string {
 }
 
 func (p *page) meta(gtx layout.Context, a *spotify.Album) layout.Dimensions {
-	dim := ui.Alpha(ui.ColText, .7)
+	dim := ui.ColText2 // the desktop client's subdued text, a bit darker than playlists' 70% white
 	var segs []ui.Seg
 	if len(a.Artists) > 0 && len(a.Artists[0].Images) > 0 {
 		segs = append(segs, ui.Seg{Widget: func(gtx layout.Context) layout.Dimensions {

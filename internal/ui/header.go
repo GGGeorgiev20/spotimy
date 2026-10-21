@@ -3,6 +3,7 @@ package ui
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -30,6 +31,9 @@ type HeaderOpts struct {
 	// OnEdit makes the title clickable ("Edit details").
 	OnEdit func()
 	Icon   string // placeholder icon when there's no image
+	// Banner is a wide picture filling the header instead of the artwork
+	// (Daily Mixes), as on artist pages.
+	Banner []spotify.Image
 }
 
 // HeaderTitleSize is the font size (sp) of a header title that has avail px
@@ -59,6 +63,10 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	pad := ContentPad(gtx)
 	art := px(128 + 104*t)
 	infoX := pad + art + pad
+	banner := len(o.Banner) > 0
+	if banner {
+		infoX = pad
+	}
 	infoW := max(0, w-infoX-pad)
 	size := HeaderTitleSize(gtx, infoW, o.Title)
 
@@ -88,7 +96,11 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 				return layout.Dimensions{}
 			}
 			gtx.Constraints.Max.X = infoW
-			return Label{Text: o.Description, Size: 14, Color: Alpha(ColText, .7), MaxLines: 2}.Layout(gtx)
+			col := Alpha(ColText, .7)
+			if banner { // white over a picture, as the official banner has it
+				col = ColText
+			}
+			return Label{Text: o.Description, Size: 14, Color: col, MaxLines: 2}.Layout(gtx)
 		},
 		Gap(0, 8),
 		func(gtx layout.Context) layout.Dimensions {
@@ -100,6 +112,15 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 		},
 	)
 	call := m.Stop()
+
+	if banner {
+		// The web player's banner is 40vh: 40% of the window's height.
+		total := max(px(240), WindowSize.Y*40/100, info.Size.Y+px(64+24+16))
+		Image{URL: Pick(o.Banner, w), FocusY: .15, Placeholder: RGB(0x535353)}.Layout(gtx, image.Pt(w, total))
+		VGradient(gtx.Ops, image.Rect(0, 0, w, total), Alpha(ColBg, 0), Veil(.6))
+		Offset(gtx, infoX, total-px(24)-info.Size.Y, func() { call.Add(gtx.Ops) })
+		return layout.Dimensions{Size: image.Pt(w, total)}
+	}
 
 	// The gap above the artwork shrinks from 43.5dp to 20dp as the view widens,
 	// and the header is at least the web player's fluid height.
@@ -126,6 +147,12 @@ func (h *EntityHeader) Layout(gtx layout.Context, o HeaderOpts) layout.Dimension
 	})
 	Offset(gtx, infoX, total-pad-info.Size.Y, func() { call.Add(gtx.Ops) })
 	return layout.Dimensions{Size: image.Pt(w, total)}
+}
+
+// Veil is black at CSS opacity a. Gio blends in linear light, so the alpha is
+// raised to darken as much as the same CSS overlay does in sRGB.
+func Veil(a float32) color.NRGBA {
+	return Alpha(ColBg, float32(1-math.Pow(float64(1-a), 2.2)))
 }
 
 // HeaderFade paints the 173dp gradient that continues a header's color

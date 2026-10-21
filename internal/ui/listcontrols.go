@@ -191,6 +191,45 @@ func (l *ListControls) pick(k string) {
 	l.Version++
 }
 
+// Has reports whether the list can be sorted by k.
+func (l *ListControls) Has(k string) bool {
+	for _, o := range l.Options {
+		if o.Key == k {
+			return true
+		}
+	}
+	return false
+}
+
+// SortedBy reports whether the list is sorted by k away from its own order
+// (the default sort shows no caret).
+func (l *ListControls) SortedBy(k string) bool {
+	return l.Sort == k && (k != l.Default || l.Desc)
+}
+
+// Caret is the icon of the sort direction: up for the key's natural order
+// (A→Z, shortest first), which for dates is newest first.
+func (l *ListControls) Caret() string {
+	if l.Desc != (l.Sort == SortAdded) {
+		return "caret-down"
+	}
+	return "caret-up"
+}
+
+// HeaderSort is a click on a column header: sort by it, then reverse, then
+// back to the list's own order.
+func (l *ListControls) HeaderSort(k string) {
+	switch {
+	case l.Sort != k:
+		l.Sort, l.Desc = k, false
+	case !l.Desc:
+		l.Desc = true
+	default:
+		l.Sort, l.Desc = l.Default, false
+	}
+	l.Version++
+}
+
 func (l *ListControls) menu() []MenuItem {
 	items := []MenuItem{{Widget: func(gtx layout.Context) layout.Dimensions {
 		return Pad(gtx, 12, 8, 12, 12, func(gtx layout.Context) layout.Dimensions {
