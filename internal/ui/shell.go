@@ -40,10 +40,12 @@ var (
 )
 
 const (
-	PlayerBarHeight = 72
+	// PlayerBarHeight is the bottom of the window under the main row: an 8dp
+	// gap, the 72dp bar and the window's 8dp padding.
+	PlayerBarHeight = 8 + 72 + 8
 	// RemoteBarHeight is the green "Listening on <device>" strip under the
 	// player bar while another device plays; the player bar draws it itself.
-	RemoteBarHeight = 28
+	RemoteBarHeight = 24
 )
 
 // window is the native window (nil in the harness).
@@ -357,7 +359,6 @@ var (
 	backBtn, fwdBtn, homeBtn, friendsBtn IconButton
 	avatarBtn, clearSearch, browseBtn    Click
 	searchBox                            Click
-	searchTimer                          *time.Timer
 	searchFocused                        bool
 )
 
@@ -409,7 +410,7 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 	}
 	if clearSearch.Clicked(gtx) {
 		SearchQuery.SetText("")
-		searchChanged()
+		SearchQuery.Focus(gtx)
 	}
 	if browseBtn.Clicked(gtx) {
 		Navigate("/search")
@@ -537,7 +538,17 @@ func navCircle(gtx layout.Context, b *IconButton, icon, label string, disabled b
 
 func layoutSearchBox(gtx layout.Context, w int) {
 	h := Dp(gtx, 48)
-	changed, _ := SearchQuery.Poll(gtx)
+	// ↑ and ↓ move through the dropdown (before the editor takes them).
+	for {
+		e, ok := gtx.Event(key.Filter{Focus: &SearchQuery.Editor, Name: key.NameUpArrow}, key.Filter{Focus: &SearchQuery.Editor, Name: key.NameDownArrow})
+		if !ok {
+			break
+		}
+		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+			searchKey(gtx, string(ke.Name))
+		}
+	}
+	changed, submitted := SearchQuery.Poll(gtx)
 	focused := gtx.Focused(&SearchQuery.Editor)
 	if focused && !searchFocused {
 		drop.res = Res[[]spotify.Card]{} // fresh recent searches each time it opens
@@ -548,8 +559,11 @@ func layoutSearchBox(gtx layout.Context, w int) {
 	if !focused && SearchQuery.Len() > 0 && !strings.HasPrefix(Current().Path, "/search") {
 		SearchQuery.SetText("")
 	}
-	if changed && focused { // programmatic SetText must not navigate
-		searchChanged()
+	if changed && focused { // not a programmatic SetText (search page, back/forward)
+		searchTyped()
+	}
+	if submitted && focused {
+		searchKey(gtx, "Enter")
 	}
 	for {
 		e, ok := gtx.Event(key.Filter{Focus: &SearchQuery.Editor, Name: key.NameEscape})
@@ -620,31 +634,6 @@ func routeQuery(path string) string {
 	}
 	q, _ := url.PathUnescape(parts[1])
 	return q
-}
-
-// searchChanged updates the /search route 250ms after typing stops; it
-// replaces the history entry so each keystroke isn't a "back" step.
-func searchChanged() {
-	if searchTimer != nil {
-		searchTimer.Stop()
-	}
-	searchTimer = time.AfterFunc(250*time.Millisecond, func() {
-		Post(func() {
-			q := strings.TrimSpace(SearchQuery.Text())
-			if cur := Current().Path; strings.HasPrefix(cur, "/search") && routeQuery(cur) == q {
-				return // set programmatically from the route (or typing came back to it)
-			}
-			path := "/search"
-			if q != "" {
-				path += "/" + url.PathEscape(q)
-			}
-			if strings.HasPrefix(Current().Path, "/search") {
-				Replace(path)
-			} else {
-				Navigate(path)
-			}
-		})
-	})
 }
 
 // ---- Login ----
@@ -726,7 +715,6 @@ func shortcuts(gtx layout.Context) {
 	ctrl := key.ModShortcut
 	f := []event.Filter{
 		key.Filter{Name: key.NameSpace},
-		key.Filter{Name: key.NameEscape},
 		key.Filter{Name: key.NameRightArrow, Required: ctrl},
 		key.Filter{Name: key.NameLeftArrow, Required: ctrl},
 		key.Filter{Name: key.NameUpArrow, Required: ctrl},
@@ -745,6 +733,11 @@ func shortcuts(gtx layout.Context) {
 	}
 	for _, n := range []key.Name{"B", "H", "S", "Q", "J", "R", "L"} {
 		f = append(f, key.Filter{Name: n, Required: key.ModAlt | key.ModShift})
+	}
+	// A key event goes to the first filter that asks for it, and this runs
+	// before the page: leave Escape to a focused text field (it blurs).
+	if !inputFocusedLast {
+		f = append(f, key.Filter{Name: key.NameEscape})
 	}
 	for {
 		e, ok := gtx.Event(f...)

@@ -87,7 +87,7 @@ func (p *Paged) Loaded() []spotify.Track {
 
 // TrackTable draws the official track list rows. Variant: "playlist"
 // (# Title Album Date-added Duration), "album" (no art, track numbers),
-// "artist" (plays column, no header), "search" (Title Album Duration), "compact" (cover, title, duration: search
+// "artist" (plays column, no header, no artist names), "search" (Title Album Duration), "compact" (cover, title, duration: search
 // top songs).
 type TrackTable struct {
 	Variant    string
@@ -410,6 +410,9 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 					segs = append(segs, Seg{Widget: ExplicitBadge})
 				}
 				for k, a := range tr.Artists {
+					if tt.Variant == "artist" {
+						break // an artist's Popular rows only show the title
+					}
 					if k > 0 {
 						segs = append(segs, Seg{Text: ", "})
 					}

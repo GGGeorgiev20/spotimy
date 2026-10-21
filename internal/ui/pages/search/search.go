@@ -111,7 +111,7 @@ func (p *page) tabPath(id string) string {
 var shown *page
 
 // syncBox puts the route's query in the top bar (back/forward, direct
-// links); while typing, the route is already the typed text.
+// links); after Enter it's already the typed text.
 func (p *page) syncBox() {
 	if shown == p {
 		return

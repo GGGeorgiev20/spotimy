@@ -272,16 +272,17 @@ func banner(gtx layout.Context, a *spotify.ArtistPage) layout.Dimensions {
 	return layout.Dimensions{Size: image.Pt(w, h)}
 }
 
-// verified is the blue tick and "Verified by Spotify".
+// verified is the encore verified badge (24dp, light green on the dark
+// theme) and "Verified by Spotify", 8dp apart and centered on each other.
 func verified(gtx layout.Context) layout.Dimensions {
 	s := ui.Dp(gtx, 24)
-	ui.FillCircle(gtx.Ops, s*5/6, ui.RGB(0x4cb3ff))
-	ui.Offset(gtx, s/6+s/12, s/6+s/12, func() { ui.IconPx(gtx, "check", s/2, ui.ColText) })
-	ui.Offset(gtx, s+ui.Dp(gtx, 8), 0, func() {
-		g := gtx
-		g.Constraints.Max.Y = s
-		ui.Text(g, "Verified by Spotify", 14, ui.Bold, ui.ColText)
-	})
+	ui.IconPx(gtx, "verified", s, ui.RGB(0xc5f0c9))
+	m := op.Record(gtx.Ops)
+	g := gtx
+	g.Constraints.Max.X -= s + ui.Dp(gtx, 8)
+	d := ui.Text(g, "Verified by Spotify", 13, ui.Bold, ui.ColText)
+	call := m.Stop()
+	ui.Offset(gtx, s+ui.Dp(gtx, 8), (s-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
 	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, s)}
 }
 

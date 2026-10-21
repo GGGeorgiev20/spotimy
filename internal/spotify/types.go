@@ -97,6 +97,8 @@ type Card struct {
 	// used where items of mixed types are listed (recent searches).
 	Detail string  `json:"detail,omitempty"`
 	Images []Image `json:"images"`
+	// Verified marks a verified artist (the badge after the name).
+	Verified bool `json:"verified,omitempty"`
 }
 
 type LibraryItem struct {

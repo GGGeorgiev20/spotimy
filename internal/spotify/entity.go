@@ -32,8 +32,14 @@ type gqlEntity struct {
 		Data gqlUser `json:"data"`
 	} `json:"ownerV2"`
 	Profile *struct {
-		Name string `json:"name"`
+		Name     string `json:"name"`
+		Verified bool   `json:"verified"`
 	} `json:"profile"` // Artist
+	OnPlatformReputationTrait *struct {
+		Verification struct {
+			IsVerified bool `json:"isVerified"`
+		} `json:"verification"`
+	} `json:"onPlatformReputationTrait"` // Artist
 	Visuals *struct {
 		AvatarImage *gqlSources `json:"avatarImage"`
 	} `json:"visuals"` // Artist
@@ -111,7 +117,10 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		}
 	case "Artist":
 		if e.Profile != nil {
-			c.Name = e.Profile.Name
+			c.Name, c.Verified = e.Profile.Name, e.Profile.Verified
+		}
+		if t := e.OnPlatformReputationTrait; t != nil && t.Verification.IsVerified {
+			c.Verified = true
 		}
 		if e.Visuals != nil {
 			c.Images = e.Visuals.AvatarImage.images()

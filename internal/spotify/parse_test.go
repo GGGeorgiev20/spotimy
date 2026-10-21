@@ -234,3 +234,19 @@ func TestRecentLastTracks(t *testing.T) {
 		t.Errorf("got %v", got)
 	}
 }
+
+func TestParseSearchSuggestions(t *testing.T) {
+	s, err := fixtureClient(t, "suggestions").SearchSuggestions(context.Background(), "radiohead")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s) != 4 || s[0].Query != "radiohead" || s[1].Query == "" || s[2].Card == nil || s[3].Card == nil {
+		t.Fatalf("suggestions: %+v", s)
+	}
+	if a := s[2].Card; a.Type != "artist" || a.Name != "Radiohead" || !a.Verified || len(a.Images) == 0 || a.Detail != "Artist" {
+		t.Errorf("artist: %+v", a)
+	}
+	if tr := s[3].Card; tr.Type != "track" || tr.Detail != "Song • Radiohead" || len(tr.Images) == 0 {
+		t.Errorf("track: %+v", tr)
+	}
+}

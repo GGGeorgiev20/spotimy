@@ -1,0 +1,134 @@
+{
+ "data": {
+  "searchV2": {
+   "__typename": "SearchResultV2",
+   "query": "radiohead",
+   "topResultsV2": {
+    "itemsV2": [
+     {
+      "__typename": "TopResultHit",
+      "item": {
+       "__typename": "SearchAutoCompleteEntity",
+       "data": {
+        "text": "radiohead",
+        "uri": "spotify:search:radiohead"
+       }
+      }
+     },
+     {
+      "__typename": "TopResultHit",
+      "item": {
+       "__typename": "SearchAutoCompleteEntity",
+       "data": {
+        "text": "radiohead just",
+        "uri": "spotify:search:radiohead+just"
+       }
+      }
+     },
+     {
+      "__typename": "TopResultHit",
+      "item": {
+       "__typename": "ArtistResponseWrapper",
+       "data": {
+        "__typename": "Artist",
+        "onPlatformReputationTrait": {
+         "verification": {
+          "aiPersona": null,
+          "isVerified": true
+         }
+        },
+        "profile": {
+         "name": "Radiohead"
+        },
+        "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb",
+        "visuals": {
+         "avatarImage": {
+          "sources": [
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab6761610000e5eb959527d2fabc9c64287e57b9",
+            "width": 640
+           },
+           {
+            "height": 160,
+            "url": "https://i.scdn.co/image/ab6761610000f178959527d2fabc9c64287e57b9",
+            "width": 160
+           },
+           {
+            "height": 320,
+            "url": "https://i.scdn.co/image/ab67616100005174959527d2fabc9c64287e57b9",
+            "width": 320
+           }
+          ]
+         }
+        }
+       }
+      }
+     },
+     {
+      "__typename": "TopResultHit",
+      "item": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "coverArt": {
+          "sources": [
+           {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02de3c04b5fc750b68899b20a9",
+            "width": 300
+           },
+           {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851de3c04b5fc750b68899b20a9",
+            "width": 64
+           },
+           {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9",
+            "width": 640
+           }
+          ]
+         },
+         "id": "5vkqYmiPBYLaalcmjujWxK",
+         "name": "In Rainbows",
+         "uri": "spotify:album:5vkqYmiPBYLaalcmjujWxK"
+        },
+        "artists": {
+         "items": [
+          {
+           "onPlatformReputationTrait": {
+            "verification": {
+             "aiPersona": null
+            }
+           },
+           "profile": {
+            "name": "Radiohead"
+           },
+           "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
+          }
+         ]
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "duration": {
+         "totalMilliseconds": 318186
+        },
+        "id": "4wajJ1o7jWIg62YqpkHC7S",
+        "trackMediaType": "AUDIO",
+        "name": "Weird Fishes / Arpeggi",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "uri": "spotify:track:4wajJ1o7jWIg62YqpkHC7S"
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}

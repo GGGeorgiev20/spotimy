@@ -138,6 +138,12 @@ func (a *App) Search(term string) (*spotify.SearchResults, error) {
 	return a.sp.Search(ctx, term)
 }
 
+func (a *App) SearchSuggestions(term string) ([]spotify.Suggestion, error) {
+	ctx, cancel := a.call()
+	defer cancel()
+	return a.sp.SearchSuggestions(ctx, term)
+}
+
 func (a *App) SearchType(term, kind string, offset, limit int) (*spotify.SearchPage, error) {
 	ctx, cancel := a.call()
 	defer cancel()

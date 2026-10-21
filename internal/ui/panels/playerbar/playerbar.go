@@ -37,12 +37,12 @@ func dpf(gtx layout.Context) func(float32) int {
 	return func(v float32) int { return ui.Dp(gtx, v) }
 }
 
-// Layout draws the player bar into the whole constraint: the 72dp bar, then
-// the "Listening on" strip when another device plays.
+// Layout draws the player bar into the whole constraint: an 8dp gap, the
+// 72dp bar, then the "Listening on" strip when another device plays.
 func Layout(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
 	dp := dpf(gtx)
-	h := dp(ui.PlayerBarHeight)
+	top, h := dp(8), dp(72)
 	pad := dp(8)
 	total := size.X - 2*pad
 	side := max(dp(180), total*30/100)
@@ -51,7 +51,7 @@ func Layout(gtx layout.Context) layout.Dimensions {
 	ui.FillRect(gtx.Ops, image.Rectangle{Max: size}, 0, ui.ColBg)
 
 	at := func(x, w int, f func(gtx layout.Context)) {
-		ui.Offset(gtx, x, 0, func() {
+		ui.Offset(gtx, x, top, func() {
 			g := gtx
 			g.Constraints = layout.Exact(image.Pt(w, h))
 			defer clip.Rect{Max: g.Constraints.Max}.Push(gtx.Ops).Pop()
@@ -60,12 +60,12 @@ func Layout(gtx layout.Context) layout.Dimensions {
 	}
 	at(pad, side, layoutLeft)
 	at(pad+side+(col-centerW)/2, centerW, func(gtx layout.Context) {
-		ui.Offset(gtx, 0, (h-dp(57))/2, func() { bar.tr.layout(gtx, 32, 12) })
+		ui.Offset(gtx, 0, dp(8), func() { bar.tr.layout(gtx, 32, 12) })
 	})
 	at(size.X-pad-side, side, layoutRight)
 
 	if s := ui.Player.Status; s != nil && s.Remote {
-		ui.Offset(gtx, 0, h, func() { layoutRemote(gtx, s.DeviceName) })
+		ui.Offset(gtx, 0, top+h, func() { layoutRemote(gtx, s.DeviceName) })
 	}
 	return layout.Dimensions{Size: size}
 }

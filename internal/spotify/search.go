@@ -128,6 +128,51 @@ func (c *Client) Search(ctx context.Context, term string) (*SearchResults, error
 	return out, nil
 }
 
+// Suggestion is one row of the search box's dropdown: a query completion
+// (Query) or an entity (Card).
+type Suggestion struct {
+	Query string `json:"query,omitempty"`
+	Card  *Card  `json:"card,omitempty"`
+}
+
+// SearchSuggestions returns the dropdown's rows while typing: query
+// completions first, then artists, songs and so on.
+func (c *Client) SearchSuggestions(ctx context.Context, term string) ([]Suggestion, error) {
+	var resp struct {
+		SearchV2 struct {
+			TopResultsV2 struct {
+				ItemsV2 []struct {
+					Item gqlWrapper `json:"item"`
+				} `json:"itemsV2"`
+			} `json:"topResultsV2"`
+		} `json:"searchV2"`
+	}
+	vars := map[string]any{
+		"query": term, "limit": 30, "numberOfTopResults": 30, "offset": 0,
+		"includeAuthors": false, "includeEpisodeContentRatingsV2": false, "includeAudiobooks": true,
+		"includePreReleases": false, "includeArtistHasConcertsField": false,
+	}
+	if err := c.query(ctx, "searchSuggestions", vars, 2*time.Minute, &resp); err != nil {
+		return nil, err
+	}
+	out := []Suggestion{}
+	for _, it := range resp.SearchV2.TopResultsV2.ItemsV2 {
+		if it.Item.Typename == "SearchAutoCompleteEntity" {
+			var auto struct {
+				Text string `json:"text"`
+			}
+			if json.Unmarshal(it.Item.Data, &auto) == nil && auto.Text != "" {
+				out = append(out, Suggestion{Query: auto.Text})
+			}
+			continue
+		}
+		if card, ok := cardFromWrapper(it.Item); ok {
+			out = append(out, Suggestion{Card: &card})
+		}
+	}
+	return out, nil
+}
+
 // searchOps maps a search tab to its pathfinder operation and result field.
 var searchOps = map[string][2]string{
 	"tracks":    {"searchTracks", "tracksV2"},
