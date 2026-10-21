@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -152,4 +153,78 @@ func ArtistNames(as []spotify.Artist) string {
 		names[i] = a.Name
 	}
 	return strings.Join(names, ", ")
+}
+
+// Tone is c moved to CIE L* lightness l, keeping its hue and as much of its
+// chroma as sRGB holds. Spotify's dynamic colors are tones of a cover's
+// color: the Now Playing lyrics card is about L* 22, its upcoming lines 82.
+func Tone(c color.NRGBA, l float64) color.NRGBA {
+	_, a, b := toLab(c)
+	ch, h := math.Hypot(a, b), math.Atan2(b, a)
+	lo, hi := 0.0, ch // the largest chroma still inside sRGB
+	for range 24 {
+		m := (lo + hi) / 2
+		if _, ok := fromLab(l, m*math.Cos(h), m*math.Sin(h)); ok {
+			lo = m
+		} else {
+			hi = m
+		}
+	}
+	out, _ := fromLab(l, lo*math.Cos(h), lo*math.Sin(h))
+	return out
+}
+
+// Lightness is c's CIE L* (0–100).
+func Lightness(c color.NRGBA) float64 { l, _, _ := toLab(c); return l }
+
+var labWhite = [3]float64{0.95047, 1, 1.08883} // D65
+
+func toLab(c color.NRGBA) (l, a, b float64) {
+	lin := func(v uint8) float64 {
+		f := float64(v) / 255
+		if f <= 0.04045 {
+			return f / 12.92
+		}
+		return math.Pow((f+0.055)/1.055, 2.4)
+	}
+	r, g, bl := lin(c.R), lin(c.G), lin(c.B)
+	x := (0.4124*r + 0.3576*g + 0.1805*bl) / labWhite[0]
+	y := (0.2126*r + 0.7152*g + 0.0722*bl) / labWhite[1]
+	z := (0.0193*r + 0.1192*g + 0.9505*bl) / labWhite[2]
+	f := func(t float64) float64 {
+		if t > 216.0/24389 {
+			return math.Cbrt(t)
+		}
+		return (24389.0/27*t + 16) / 116
+	}
+	fx, fy, fz := f(x), f(y), f(z)
+	return 116*fy - 16, 500 * (fx - fy), 200 * (fy - fz)
+}
+
+// fromLab converts back to sRGB; ok is false outside the gamut.
+func fromLab(l, a, b float64) (color.NRGBA, bool) {
+	fi := func(t float64) float64 {
+		if t*t*t > 216.0/24389 {
+			return t * t * t
+		}
+		return (116*t - 16) / (24389.0 / 27)
+	}
+	fy := (l + 16) / 116
+	x, y, z := labWhite[0]*fi(fy+a/500), labWhite[1]*fi(fy), labWhite[2]*fi(fy-b/200)
+	rgb := [3]float64{3.2406*x - 1.5372*y - 0.4986*z, -0.9689*x + 1.8758*y + 0.0415*z, 0.0557*x - 0.2040*y + 1.0570*z}
+	ok := true
+	var out [3]uint8
+	for i, v := range rgb {
+		if v < -1e-4 || v > 1+1e-4 {
+			ok = false
+		}
+		v = min(1, max(0, v))
+		if v <= 0.0031308 {
+			v *= 12.92
+		} else {
+			v = 1.055*math.Pow(v, 1/2.4) - 0.055
+		}
+		out[i] = uint8(math.Round(v * 255))
+	}
+	return color.NRGBA{R: out[0], G: out[1], B: out[2], A: 255}, ok
 }

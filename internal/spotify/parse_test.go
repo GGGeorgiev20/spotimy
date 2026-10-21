@@ -160,6 +160,9 @@ func TestParseArtist(t *testing.T) {
 	if sub := a.Albums[0].Subtitle; len(sub) < 6 || sub[:2] != "20" {
 		t.Errorf("album subtitle should start with the year: %q", sub)
 	}
+	if p := a.Pick; p == nil || p.Title != "Test Single" || p.Subtitle != "Single" || p.Comment == "" || len(p.Images) == 0 {
+		t.Errorf("artist pick: %+v", a.Pick)
+	}
 	if len(a.Albums) == 0 || len(a.Popular) == 0 || len(a.Header) == 0 {
 		t.Errorf("discography/header missing")
 	}

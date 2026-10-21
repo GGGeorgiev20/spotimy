@@ -1,5 +1,6 @@
 // Package npv is the Now Playing view (Prefs.RightPanel "npv"): cover or
-// Canvas video, title, the artist card, credits and the next queued track.
+// Canvas video, title, the lyrics card, the artist card, credits and the next
+// queued track.
 package npv
 
 import (
@@ -30,12 +31,14 @@ type panel struct {
 	info   *ui.Res[*spotify.NowPlayingInfo]
 	canvas *ui.Res[string]
 	vid    *canvasVideo
+	lyr    lyricsCard
 
 	queue    ui.Res[*backend.Queue]
 	qVersion int
 
 	ctxLink, title, showAll, openQueue, artistName ui.Link
 	artists, credits                               []ui.Link
+	creditFollow                                   []ui.Pill
 	save                                           ui.IconButton
 	about                                          ui.Click
 	follow                                         ui.Pill
@@ -59,6 +62,8 @@ func (p *panel) track() *backend.NowTrack {
 				artist = t.Artists[0].URI
 			}
 			ui.LoadSaved([]string{uri, artist})
+			ui.LoadInPlaylists()
+			p.lyr.load(uri, t.Images)
 			p.canvas.Load(func() (string, error) {
 				u, err := ui.B.Canvas(uri)
 				if err != nil {
@@ -126,6 +131,10 @@ func (p *panel) body(gtx layout.Context, t *backend.NowTrack) layout.Dimensions 
 		func(gtx layout.Context) layout.Dimensions { return p.media(gtx, t) },
 		func(gtx layout.Context) layout.Dimensions { return p.titleRow(gtx, t) },
 	}
+	// The official order: lyrics, the artist, credits.
+	if p.lyr.uri == t.URI && p.lyr.has() {
+		items = append(items, p.lyr.layout)
+	}
 	if p.info.Ok() {
 		if a := p.info.V.Artist; a != nil {
 			items = append(items, func(gtx layout.Context) layout.Dimensions { return p.artistCard(gtx, a) })
@@ -165,43 +174,41 @@ func (p *panel) titleRow(gtx layout.Context, t *backend.NowTrack) layout.Dimensi
 		}
 	}
 	if p.save.Click.Clicked(gtx) {
-		ui.ToggleSaved(t.URI)
+		ui.AddedClicked(t.URI)
 	}
-	saved := ui.Saved[t.URI]
-	return ui.Pad(gtx, 16, 0, 0, 0, func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				return ui.Column(gtx,
-					func(gtx layout.Context) layout.Dimensions {
-						p.title.Click.Label = t.Name
-						return p.title.Layout(gtx, t.Name, 24, ui.Bold, ui.ColText, ui.ColNone)
-					},
-					func(gtx layout.Context) layout.Dimensions {
-						var segs []ui.Seg
-						for i, a := range t.Artists {
-							if i > 0 {
-								segs = append(segs, ui.Seg{Text: ", "})
-							}
-							segs = append(segs, ui.Seg{Text: a.Name, Link: &p.artists[i]})
+	saved := ui.Added(t.URI)
+	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return ui.Column(gtx,
+				func(gtx layout.Context) layout.Dimensions {
+					p.title.Click.Label = t.Name
+					return p.title.Layout(gtx, t.Name, 24, ui.Bold, ui.ColText, ui.ColNone)
+				},
+				func(gtx layout.Context) layout.Dimensions {
+					var segs []ui.Seg
+					for i, a := range t.Artists {
+						if i > 0 {
+							segs = append(segs, ui.Seg{Text: ", "})
 						}
-						return ui.Pad(gtx, 4, 0, 0, 0, func(gtx layout.Context) layout.Dimensions {
-							return ui.Inline(gtx, 16, ui.Regular, ui.ColText2, ui.ColText, segs...)
-						})
-					},
-				)
-			}),
-			layout.Rigid(ui.Gap(8, 0)),
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				icon, label := "plus-circle", "Save to Liked Songs"
-				if saved {
-					icon, label = "check-circle", "Remove from Liked Songs"
-				}
-				d := p.save.Layout(gtx, ui.IconStyle{Icon: icon, Size: 24, Box: 32, Active: saved, Label: label})
-				ui.Tip(gtx, &p.save.Click, d, label, false)
-				return d
-			}),
-		)
-	})
+						segs = append(segs, ui.Seg{Text: a.Name, Link: &p.artists[i]})
+					}
+					return ui.Pad(gtx, 3, 0, 0, 0, func(gtx layout.Context) layout.Dimensions {
+						return ui.Inline(gtx, 14, ui.Regular, ui.ColText2, ui.ColText, segs...)
+					})
+				},
+			)
+		}),
+		layout.Rigid(ui.Gap(8, 0)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			icon, label := "plus-circle", "Save to Liked Songs"
+			if saved {
+				icon, label = "check-circle", "Add to playlist"
+			}
+			d := p.save.Layout(gtx, ui.IconStyle{Icon: icon, Size: 24, Box: 32, Active: saved, Label: label})
+			ui.Tip(gtx, &p.save.Click, d, label, false)
+			return d
+		}),
+	)
 }
 
 func (p *panel) artistCard(gtx layout.Context, a *spotify.ArtistCard) layout.Dimensions {
@@ -217,9 +224,13 @@ func (p *panel) artistCard(gtx layout.Context, a *spotify.ArtistCard) layout.Dim
 	p.about.Label = "About the artist " + a.Name
 	return card(gtx, func(gtx layout.Context) layout.Dimensions {
 		return p.about.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			// The artist page's banner, 3:2, like the official card.
 			w := gtx.Constraints.Max.X
-			ih := min(w*9/10, ui.Dp(gtx, 330))
-			imgs := a.Gallery
+			ih := w * 2 / 3
+			imgs := a.Header
+			if len(imgs) == 0 {
+				imgs = a.Gallery
+			}
 			if len(imgs) == 0 {
 				imgs = a.Images
 			}
@@ -242,24 +253,32 @@ func (p *panel) artistCard(gtx layout.Context, a *spotify.ArtistCard) layout.Dim
 	})
 }
 
+// artistInfo is the name (and verified badge), then the monthly listeners
+// with Follow beside them, then the start of the bio.
 func (p *panel) artistInfo(gtx layout.Context, a *spotify.ArtistCard) layout.Dimensions {
 	following := ui.Saved[a.URI]
 	return ui.Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
-			return ui.Pad(gtx, 0, 0, 12, 0, func(gtx layout.Context) layout.Dimensions {
+			p.artistName.Click.Label = a.Name
+			segs := []ui.Seg{{Widget: func(gtx layout.Context) layout.Dimensions {
+				return p.artistName.Layout(gtx, a.Name, 16, ui.Bold, ui.ColText, ui.ColNone)
+			}}}
+			if a.Verified {
+				segs = append(segs, ui.Seg{Widget: func(gtx layout.Context) layout.Dimensions {
+					s, gap := ui.Dp(gtx, 16), ui.Dp(gtx, 6)
+					ui.Offset(gtx, gap, 0, func() { ui.IconPx(gtx, "verified", s, ui.RGB(0xc5f0c9)) })
+					return layout.Dimensions{Size: image.Pt(gap+s, s), Baseline: ui.Dp(gtx, 2)}
+				}})
+			}
+			return ui.Inline(gtx, 16, ui.Bold, ui.ColText, ui.ColText, segs...)
+		},
+		func(gtx layout.Context) layout.Dimensions {
+			return ui.Pad(gtx, 8, 0, 10, 0, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-						return ui.Column(gtx,
-							func(gtx layout.Context) layout.Dimensions {
-								p.artistName.Click.Label = a.Name
-								return p.artistName.Layout(gtx, a.Name, 16, ui.Bold, ui.ColText, ui.ColNone)
-							},
-							func(gtx layout.Context) layout.Dimensions {
-								return ui.Pad(gtx, 4, 0, 0, 0, func(gtx layout.Context) layout.Dimensions {
-									return ui.Label{Text: ui.FmtNumber(a.MonthlyListeners) + " monthly listeners", Size: 14, Color: ui.ColText2, MaxLines: 2}.Layout(gtx)
-								})
-							},
-						)
+						d := ui.Label{Text: ui.FmtNumber(a.MonthlyListeners) + " monthly listeners", Size: 16, Color: ui.ColText2, MaxLines: 2}.Layout(gtx)
+						d.Size.X = gtx.Constraints.Max.X // Follow goes to the right edge
+						return d
 					}),
 					layout.Rigid(ui.Gap(12, 0)),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -287,34 +306,61 @@ func (p *panel) creditsCard(gtx layout.Context, t *backend.NowTrack, cs []spotif
 	}
 	n := min(3, len(cs))
 	if len(p.credits) < n {
-		p.credits = make([]ui.Link, n)
+		p.credits, p.creditFollow = make([]ui.Link, n), make([]ui.Pill, n)
+	}
+	// The song's own artists get a Follow button, as in the official view.
+	main := map[string]bool{}
+	for _, a := range t.Artists {
+		main[a.URI] = true
 	}
 	for i := 0; i < n; i++ {
 		if p.credits[i].Click.Clicked(gtx) && cs[i].URI != "" {
 			ui.OpenURI(cs[i].URI)
 		}
+		if p.creditFollow[i].Click.Clicked(gtx) {
+			ui.ToggleSaved(cs[i].URI)
+		}
 	}
 	return card(gtx, func(gtx layout.Context) layout.Dimensions {
-		return ui.Pad(gtx, 16, 16, 4, 16, func(gtx layout.Context) layout.Dimensions {
+		return ui.Pad(gtx, 16, 16, 8, 16, func(gtx layout.Context) layout.Dimensions {
 			rows := []layout.Widget{func(gtx layout.Context) layout.Dimensions {
-				return ui.Pad(gtx, 0, 0, 12, 0, func(gtx layout.Context) layout.Dimensions {
+				return ui.Pad(gtx, 0, 0, 8, 0, func(gtx layout.Context) layout.Dimensions {
 					return header(gtx, "Credits", "Show all", &p.showAll, len(cs) > n)
 				})
 			}}
 			for i := 0; i < n; i++ {
 				c := cs[i]
+				if main[c.URI] {
+					ui.LoadSaved([]string{c.URI})
+				}
 				rows = append(rows, func(gtx layout.Context) layout.Dimensions {
-					return ui.Pad(gtx, 0, 0, 12, 0, func(gtx layout.Context) layout.Dimensions {
-						return ui.Column(gtx,
-							func(gtx layout.Context) layout.Dimensions {
-								if c.URI == "" {
-									return ui.Text(gtx, c.Name, 16, ui.Regular, ui.ColText)
+					return ui.Pad(gtx, 8, 0, 8, 0, func(gtx layout.Context) layout.Dimensions {
+						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+							layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+								return ui.Column(gtx,
+									func(gtx layout.Context) layout.Dimensions {
+										if c.URI == "" {
+											return ui.Text(gtx, c.Name, 16, ui.Regular, ui.ColText)
+										}
+										return p.credits[i].Layout(gtx, c.Name, 16, ui.Regular, ui.ColText, ui.ColNone)
+									},
+									func(gtx layout.Context) layout.Dimensions {
+										return ui.Text(gtx, c.Roles, 14, ui.Regular, ui.ColText2)
+									},
+								)
+							}),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								if !main[c.URI] {
+									return layout.Dimensions{}
 								}
-								return p.credits[i].Layout(gtx, c.Name, 16, ui.Regular, ui.ColText, ui.ColNone)
-							},
-							func(gtx layout.Context) layout.Dimensions {
-								return ui.Text(gtx, c.Roles, 14, ui.Regular, ui.ColText2)
-							},
+								txt := "Follow"
+								if ui.Saved[c.URI] {
+									txt = "Following"
+								}
+								return ui.Pad(gtx, 0, 0, 0, 12, func(gtx layout.Context) layout.Dimensions {
+									return p.creditFollow[i].Layout(gtx, ui.PillStyle{Text: txt, Weight: ui.Bold, Height: 32, PadX: 16, Outline: true})
+								})
+							}),
 						)
 					})
 				})

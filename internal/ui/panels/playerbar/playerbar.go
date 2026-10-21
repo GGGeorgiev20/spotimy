@@ -80,6 +80,7 @@ func layoutLeft(gtx layout.Context) {
 	if bar.liked != t.URI {
 		bar.liked = t.URI
 		ui.LoadSaved([]string{t.URI})
+		ui.LoadInPlaylists()
 	}
 	for len(bar.artists) < len(t.Artists) {
 		bar.artists = append(bar.artists, ui.Link{})
@@ -96,7 +97,7 @@ func layoutLeft(gtx layout.Context) {
 		}
 	}
 	if bar.save.Click.Clicked(gtx) {
-		ui.ToggleSaved(t.URI)
+		ui.AddedClicked(t.URI)
 	}
 
 	// Cover: opens the Now Playing view; a corner arrow shows on hover.
@@ -141,16 +142,16 @@ func layoutLeft(gtx layout.Context) {
 				}
 				segs = append(segs, ui.Seg{Text: a.Name, Link: &bar.artists[i]})
 			}
-			return ui.Inline(gtx, 11, ui.Regular, ui.ColText2, ui.ColText, segs...)
+			return ui.Inline(gtx, 12, ui.Regular, ui.ColText2, ui.ColText, segs...)
 		}),
 	)
 	call := m.Stop()
 	ui.Offset(gtx, x, (h-md.Size.Y)/2, func() { call.Add(gtx.Ops) })
 
-	saved := ui.Saved[t.URI]
+	saved := ui.Added(t.URI)
 	icon, tip := "plus-circle", "Add to Liked Songs"
 	if saved {
-		icon, tip = "check-circle", "Remove from Liked Songs"
+		icon, tip = "check-circle", "Add to playlist"
 	}
 	ui.Offset(gtx, x+md.Size.X+dp(16), (h-saveW)/2, func() {
 		d := bar.save.Layout(gtx, ui.IconStyle{Icon: icon, Active: saved, Label: tip})

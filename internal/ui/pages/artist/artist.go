@@ -49,6 +49,7 @@ type page struct {
 	disc     ui.Shelf
 	shelves  []ui.Shelf
 	aboutBtn ui.Click
+	pickBtn  ui.Click
 	tour     tour
 	merch    []ui.Click
 	items    []layout.Widget
@@ -132,6 +133,9 @@ func (p *page) build(a *spotify.ArtistPage) {
 			})
 		}
 		p.items = append(p.items, p.seeMoreBtn)
+	}
+	if a.Pick != nil {
+		p.items = append(p.items, p.pickSection)
 	}
 	if p.kind != "" {
 		p.items = append(p.items, p.discography)
@@ -309,6 +313,58 @@ func (p *page) popularTitle(gtx layout.Context) layout.Dimensions {
 	})
 }
 
+// pickSection is "Artist pick": the cover, the artist's comment in a white
+// pill with their picture, then the title and its type.
+func (p *page) pickSection(gtx layout.Context) layout.Dimensions {
+	a := p.res.V
+	pk := a.Pick
+	if p.pickBtn.Clicked(gtx) {
+		ui.OpenURI(pk.URI)
+	}
+	return ui.PageInset(gtx, 0, 40, func(gtx layout.Context) layout.Dimensions {
+		return ui.Column(gtx,
+			func(gtx layout.Context) layout.Dimensions {
+				return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {
+					return ui.Text(gtx, "Artist pick", 24, ui.Bold, ui.ColText)
+				})
+			},
+			func(gtx layout.Context) layout.Dimensions {
+				dp := func(v float32) int { return ui.Dp(gtx, v) }
+				is, x := dp(88), dp(88+16)
+				tw := gtx.Constraints.Max.X - x
+				p.pickBtn.Label = pk.Title
+				return p.pickBtn.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					ui.Image{URL: ui.Pick(pk.Images, is), Radius: dp(4), Icon: "album"}.Layout(gtx, image.Pt(is, is))
+					g := gtx
+					g.Constraints = layout.Constraints{Max: image.Pt(max(0, tw), is)}
+					y := 0
+					if pk.Comment != "" {
+						m := op.Record(gtx.Ops)
+						cg := g
+						cg.Constraints.Max.X = max(0, tw-dp(34+8))
+						cd := ui.Text(cg, pk.Comment, 14, ui.Regular, ui.ColBg)
+						call := m.Stop()
+						ph := dp(28)
+						ui.Offset(gtx, x, 0, func() {
+							ui.FillRect(gtx.Ops, image.Rect(0, 0, dp(34+8)+cd.Size.X, ph), ph/2, ui.ColText)
+							ui.Offset(gtx, dp(2), dp(2), func() {
+								ui.Image{URL: ui.Pick(a.Avatar, dp(24)), Round: true, Radius: dp(12), Icon: "artist"}.Layout(gtx, image.Pt(dp(24), dp(24)))
+							})
+							ui.Offset(gtx, dp(34), (ph-cd.Size.Y)/2, func() { call.Add(gtx.Ops) })
+						})
+						y = ph + dp(8)
+					}
+					ui.Offset(gtx, x, y, func() {
+						d := ui.Text(g, pk.Title, 16, ui.Bold, ui.ColText)
+						ui.Offset(gtx, 0, d.Size.Y+dp(4), func() { ui.Text(g, pk.Subtitle, 14, ui.Regular, ui.ColText2) })
+					})
+					return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, is)}
+				})
+			},
+		)
+	})
+}
+
 func (p *page) seeMoreBtn(gtx layout.Context) layout.Dimensions {
 	a := p.res.V
 	if len(a.TopTracks) <= 5 {
@@ -319,7 +375,11 @@ func (p *page) seeMoreBtn(gtx layout.Context) layout.Dimensions {
 		txt = "Show less"
 	}
 	p.seeMore.Click.Label = txt
-	return ui.Pad(gtx, 16, 0, 56, ui.ContentPadDp(gtx)+16, func(gtx layout.Context) layout.Dimensions {
+	bottom := float32(56) // a shelf title follows
+	if a.Pick != nil {
+		bottom = 41 // the Artist pick heading, which has no top margin
+	}
+	return ui.Pad(gtx, 16, 0, bottom, ui.ContentPadDp(gtx)+16, func(gtx layout.Context) layout.Dimensions {
 		return p.seeMore.Layout(gtx, txt, 14, ui.Bold, ui.Alpha(ui.ColText, .7), ui.ColText)
 	})
 }

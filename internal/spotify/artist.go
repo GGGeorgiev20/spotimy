@@ -31,6 +31,18 @@ type ArtistPage struct {
 	Concerts         []Concert `json:"concerts"`
 	ConcertTotal     int       `json:"concertTotal"`
 	Merch            []Merch   `json:"merch"`
+	// Pick is the "Artist pick" the artist pinned, if any.
+	Pick *ArtistPick `json:"pick,omitempty"`
+}
+
+// ArtistPick is a release, playlist or the like the artist pinned to their
+// page with a short comment.
+type ArtistPick struct {
+	URI      string  `json:"uri"`
+	Title    string  `json:"title"`
+	Subtitle string  `json:"subtitle"` // the type ("Single", "Playlist")
+	Comment  string  `json:"comment"`
+	Images   []Image `json:"images"`
 }
 
 // Link is an external page of the artist; Name is the service in capitals
@@ -227,6 +239,15 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 					Items []Link `json:"items"`
 				} `json:"externalLinks"`
 				PlaylistsV2 gqlV2List `json:"playlistsV2"`
+				PinnedItem  *struct {
+					URI            string `json:"uri"`
+					Title          string `json:"title"`
+					Subtitle       string `json:"subtitle"`
+					Comment        string `json:"comment"`
+					ThumbnailImage struct {
+						Data gqlSources `json:"data"`
+					} `json:"thumbnailImage"`
+				} `json:"pinnedItem"`
 			} `json:"profile"`
 			Goods       gqlGoods `json:"goods"`
 			HeaderImage *struct {
@@ -290,6 +311,9 @@ func (c *Client) Artist(ctx context.Context, uri string) (*ArtistPage, error) {
 		Totals:    [3]int{d.Albums.TotalCount, d.Singles.TotalCount, d.Compilations.TotalCount},
 		TopTracks: []Track{}, Popular: []Card{}, Shelves: []Shelf{}, Cities: []City{},
 		Links: []Link{}, Concerts: a.Goods.concerts(), ConcertTotal: a.Goods.Concerts.TotalCount, Merch: a.Goods.merch(),
+	}
+	if pi := a.Profile.PinnedItem; pi != nil && pi.URI != "" && pi.Title != "" {
+		out.Pick = &ArtistPick{URI: pi.URI, Title: pi.Title, Subtitle: pi.Subtitle, Comment: pi.Comment, Images: pi.ThumbnailImage.Data.images()}
 	}
 	for _, l := range a.Profile.ExternalLinks.Items {
 		if l.Name != "" && l.URL != "" {

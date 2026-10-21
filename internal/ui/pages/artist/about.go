@@ -21,9 +21,13 @@ var rankBlue = ui.RGB(0x0d72ea)
 // aboutSection is the "About" heading and its picture card (opens the modal).
 func (p *page) aboutSection(gtx layout.Context) layout.Dimensions {
 	a := p.res.V
-	// The web's card sits in a 521px box (the inline button's descender
-	// space), 5dp taller than the card.
-	return ui.PageInset(gtx, 0, 5+sectionGap(len(a.Merch) == 0), func(gtx layout.Context) layout.Dimensions {
+	// Merch below gets the grid's 24dp gap (the web stacks them with only
+	// 5dp, which looks cramped).
+	gap := float32(5)
+	if len(a.Merch) > 0 {
+		gap = 24
+	}
+	return ui.PageInset(gtx, 0, gap+sectionGap(len(a.Merch) == 0), func(gtx layout.Context) layout.Dimensions {
 		return ui.Column(gtx,
 			func(gtx layout.Context) layout.Dimensions {
 				return ui.Pad(gtx, 0, 0, 16, 0, func(gtx layout.Context) layout.Dimensions {

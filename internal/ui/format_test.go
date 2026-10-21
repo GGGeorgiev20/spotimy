@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image/color"
 	"testing"
 	"time"
 
@@ -41,5 +42,29 @@ func TestAlphaMatchesBrowser(t *testing.T) {
 	out := toLinear(0.07) + a*(1-toLinear(0.07))
 	if want := toLinear(42.0 / 255); out < want*0.9 || out > want*1.1 {
 		t.Errorf("alpha %.3f gives linear %.4f, want %.4f", a, out, want)
+	}
+}
+
+// Spotify's lyrics card colors for real covers (its higherContrast set):
+// the background is the cover color at L* 22 (darker ones stay), the
+// upcoming lines at 82.
+func TestTone(t *testing.T) {
+	near := func(a, b color.NRGBA) bool {
+		d := func(x, y uint8) int { return max(int(x)-int(y), int(y)-int(x)) }
+		return d(a.R, b.R) <= 12 && d(a.G, b.G) <= 12 && d(a.B, b.B) <= 12
+	}
+	for _, c := range []struct{ raw, bg, sub string }{
+		{"#904870", "#5c1841", "#ffb9e0"},
+		{"#777777", "#353535", "#cdcdcd"},
+		{"#500810", "#500810", "#ffbdb9"},
+		{"#7a7a29", "#393600", "#d1d284"},
+	} {
+		raw := Hex(c.raw)
+		if bg := Tone(raw, min(Lightness(raw), 22)); !near(bg, Hex(c.bg)) {
+			t.Errorf("%s: background %v, want ~%s", c.raw, bg, c.bg)
+		}
+		if sub := Tone(raw, 82); !near(sub, Hex(c.sub)) {
+			t.Errorf("%s: upcoming lines %v, want ~%s", c.raw, sub, c.sub)
+		}
 	}
 }

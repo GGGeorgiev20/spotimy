@@ -99,6 +99,7 @@ type ArtistCard struct {
 	Name             string  `json:"name"`
 	Images           []Image `json:"images"` // avatar
 	Gallery          []Image `json:"gallery"`
+	Header           []Image `json:"header"` // the artist page's banner (the card's picture)
 	MonthlyListeners int     `json:"monthlyListeners"`
 	Bio              string  `json:"bio"`
 	Verified         bool    `json:"verified"`
@@ -125,15 +126,27 @@ func (c *Client) NowPlaying(ctx context.Context, trackURI, artistURI string) (*N
 				AvatarImage *gqlSources `json:"avatarImage"`
 				Gallery     gqlImages   `json:"gallery"`
 			} `json:"visuals"`
+			HeaderImage *struct {
+				Data gqlSources `json:"data"`
+			} `json:"headerImage"`
+			OnPlatformReputationTrait struct {
+				Verification struct {
+					IsVerified bool `json:"isVerified"`
+				} `json:"verification"`
+			} `json:"onPlatformReputationTrait"`
 		} `json:"artistUnion"`
 	}
 	vars := map[string]any{"artistUri": artistURI, "trackUri": trackURI, "enableRelatedVideos": false, "enableRelatedAudioTracks": false}
 	if artistURI != "" {
 		if err := c.query(ctx, "queryNpvArtist", vars, 30*time.Minute, &npv); err == nil {
 			a := npv.ArtistUnion
-			out.Artist = &ArtistCard{URI: a.URI, Name: a.Profile.Name, Verified: a.Profile.Verified,
-				Images: a.Visuals.AvatarImage.images(), Gallery: a.Visuals.Gallery.first(),
+			out.Artist = &ArtistCard{URI: a.URI, Name: a.Profile.Name,
+				Verified: a.Profile.Verified || a.OnPlatformReputationTrait.Verification.IsVerified,
+				Images:   a.Visuals.AvatarImage.images(), Gallery: a.Visuals.Gallery.first(),
 				MonthlyListeners: a.Stats.MonthlyListeners, Bio: stripHTML(a.Profile.Biography.Text)}
+			if a.HeaderImage != nil {
+				out.Artist.Header = a.HeaderImage.Data.images()
+			}
 		}
 	}
 	var cr struct {

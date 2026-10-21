@@ -209,6 +209,37 @@ func (a *App) EditablePlaylists(uris []string) ([]spotify.EditablePlaylist, erro
 	return a.sp.EditablePlaylists(ctx, uris)
 }
 
+// PlaylistTracks is every track URI in the user's own (editable) playlists,
+// for the check the official client shows on songs saved in one.
+func (a *App) PlaylistTracks() (map[string]bool, error) {
+	pls, err := a.EditablePlaylists(nil)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	for _, pl := range pls {
+		if pl.Type != "playlist" {
+			continue // Liked Songs: that's Saved
+		}
+		for off := 0; ; off += 100 {
+			p, err := a.Playlist(pl.URI, off, 100)
+			if err != nil {
+				return nil, err
+			}
+			for _, t := range p.Tracks.Items {
+				out[t.URI] = true
+				if t.LinkedURI != "" {
+					out[t.LinkedURI] = true
+				}
+			}
+			if off+100 >= p.Tracks.Total || len(p.Tracks.Items) == 0 {
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
 func (a *App) AddToPlaylist(playlist string, uris []string) error {
 	if a.sandboxed("AddToPlaylist", playlist, uris) {
 		return nil

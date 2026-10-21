@@ -829,7 +829,7 @@
      ]
     },
     "name": "Radiohead",
-    "pinnedItem": null,
+    "pinnedItem": {"comment": "Listen to the new single", "subtitle": "Single", "title": "Test Single", "type": "ALBUM", "uri": "spotify:album:0BTFYxrEKtqZ02rUhECdy2", "thumbnailImage": {"data": {"sources": [{"url": "https://i.scdn.co/image/ab67616d00001e0296859254cae2e8709d95d8d2"}]}}},
     "playlistsV2": {
      "items": [
       {

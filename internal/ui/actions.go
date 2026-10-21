@@ -5,6 +5,7 @@ import (
 	"image"
 	"io"
 	"strings"
+	"time"
 
 	"gioui.org/io/clipboard"
 	"gioui.org/layout"
@@ -85,6 +86,9 @@ func QueueContext(uri string) {
 func AddToPlaylist(pl spotify.Card, uris []string) {
 	Go("Couldn't add to playlist", func() error { return B.AddToPlaylist(pl.URI, uris) }, func() {
 		PlaylistVersion[pl.URI]++
+		for _, u := range uris {
+			InPlaylists[u] = true
+		}
 		Toast("Added to " + pl.Name)
 	})
 }
@@ -182,6 +186,7 @@ func TrackMenu(t spotify.Track, o TrackMenuOpts) []MenuItem {
 		items = append(items, MenuItem{Label: "Remove from this playlist", Icon: "trash", Action: func() {
 			Go("Couldn't remove", func() error { return B.RemoveFromPlaylist(pl, []string{uid}) }, func() {
 				PlaylistVersion[pl]++
+				playlistIndex = time.Time{} // it may still be in another one: re-index
 				Toast("Removed from playlist")
 			})
 		}})

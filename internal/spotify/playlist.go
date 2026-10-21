@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 )
@@ -156,13 +157,17 @@ type EditablePlaylist struct {
 
 // EditablePlaylists lists the user's writable playlists for "Add to playlist".
 func (c *Client) EditablePlaylists(ctx context.Context, uris []string) ([]EditablePlaylist, error) {
-	if uris == nil {
-		uris = []string{}
+	if len(uris) == 0 {
+		// The API fails on an empty list ("Could not fetch items"); any
+		// track works, and its curates flags are then ignored.
+		uris = []string{"spotify:track:4uLU6hMCjMI75M1A2tKUQC"}
 	}
 	var resp struct {
 		Me struct {
 			EditablePlaylists struct {
-				Items []struct {
+				Typename string `json:"__typename"`
+				Message  string `json:"message"`
+				Items    []struct {
 					Curates bool       `json:"curates"`
 					Item    gqlWrapper `json:"item"`
 				} `json:"items"`
@@ -172,6 +177,9 @@ func (c *Client) EditablePlaylists(ctx context.Context, uris []string) ([]Editab
 	vars := map[string]any{"offset": 0, "limit": 100, "textFilter": "", "folderUri": nil, "uris": uris}
 	if err := c.query(ctx, "editablePlaylists", vars, 0, &resp); err != nil {
 		return nil, err
+	}
+	if e := resp.Me.EditablePlaylists; e.Typename == "GenericError" {
+		return nil, &Error{Op: "editablePlaylists", Err: errors.New(e.Message)}
 	}
 	out := []EditablePlaylist{}
 	for _, it := range resp.Me.EditablePlaylists.Items {

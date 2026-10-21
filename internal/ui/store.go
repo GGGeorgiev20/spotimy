@@ -277,6 +277,47 @@ func LoadSaved(uris []string) {
 	}
 }
 
+// InPlaylists holds whether a track is in one of the user's playlists
+// (loaded with LoadInPlaylists; missing = no).
+var InPlaylists = map[string]bool{}
+
+// playlistIndex is when InPlaylists was last filled.
+var playlistIndex time.Time
+
+// LoadInPlaylists indexes the user's playlists in the background, at most
+// every 10 minutes (adding to a playlist from here updates it at once).
+func LoadInPlaylists() {
+	if time.Since(playlistIndex) < 10*time.Minute {
+		return
+	}
+	playlistIndex = time.Now()
+	Async(B.PlaylistTracks, func(set map[string]bool, err error) {
+		if err != nil {
+			Log.Warn("indexing playlists", "err", err)
+			playlistIndex = time.Time{}
+			return
+		}
+		InPlaylists = set
+	})
+}
+
+// Added reports a track saved anywhere, Liked Songs or a playlist: the green
+// check the official player bar and Now Playing view show.
+func Added(uri string) bool { return Saved[uri] || InPlaylists[uri] }
+
+// AddedClicked handles that button: a song saved nowhere is liked, otherwise
+// a menu shows where it can be saved or removed.
+func AddedClicked(uri string) {
+	if !Added(uri) {
+		ToggleSaved(uri)
+		return
+	}
+	OpenMenu([]MenuItem{
+		{Label: "Liked Songs", Icon: "heart", Check: Saved[uri], Action: func() { ToggleSaved(uri) }},
+		{Label: "Add to playlist", Icon: "plus", Sub: playlistPicker([]string{uri})},
+	})
+}
+
 // ToggleSaved likes/unlikes (tracks) or adds/removes (albums, playlists...).
 func ToggleSaved(uri string) {
 	next := !Saved[uri]
