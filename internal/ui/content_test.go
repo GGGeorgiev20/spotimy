@@ -65,8 +65,8 @@ func TestEpisodeDate(t *testing.T) {
 
 func TestCarouselSnap(t *testing.T) {
 	for _, c := range []struct{ pos, pitch, max, want float32 }{
-		{0, 200, 50, 0},      // a row that nearly fits stays at the start
-		{50, 200, 50, 50},    // ...until scrolled to its end
+		{0, 200, 50, 0},   // a row that nearly fits stays at the start
+		{50, 200, 50, 50}, // ...until scrolled to its end
 		{290, 200, 1000, 200},
 		{310, 200, 1000, 400},
 		{990, 200, 1000, 1000},
