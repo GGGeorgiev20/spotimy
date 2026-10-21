@@ -135,6 +135,9 @@ type Image struct {
 	// FocusY is where a vertically cropped image is anchored, 0..1 from the
 	// top (0 = centered, like CSS object-position 50% 50%).
 	FocusY float32
+	// Contain fits the whole image inside the box (CSS object-fit: contain)
+	// instead of covering it.
+	Contain bool
 }
 
 func (im Image) Layout(gtx layout.Context, size image.Point) layout.Dimensions {
@@ -169,6 +172,9 @@ func (im Image) Layout(gtx layout.Context, size image.Point) layout.Dimensions {
 		return layout.Dimensions{Size: size}
 	}
 	sc := max(float32(size.X)/float32(e.w), float32(size.Y)/float32(e.h))
+	if im.Contain {
+		sc = min(float32(size.X)/float32(e.w), float32(size.Y)/float32(e.h))
+	}
 	fy := im.FocusY
 	if fy == 0 {
 		fy = .5

@@ -49,6 +49,16 @@ func (s gqlImages) first() []Image {
 	return s.Items[0].images()
 }
 
+func (s gqlImages) all() [][]Image {
+	out := make([][]Image, 0, len(s.Items))
+	for _, it := range s.Items {
+		if im := it.images(); len(im) > 0 {
+			out = append(out, im)
+		}
+	}
+	return out
+}
+
 func (s gqlImages) color() string {
 	if len(s.Items) == 0 {
 		return ""

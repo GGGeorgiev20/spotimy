@@ -1,6 +1,12 @@
 package artist
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	"gioui.org/layout"
+	"gioui.org/op"
+)
 
 func TestCompact(t *testing.T) {
 	for n, want := range map[int]string{
@@ -28,5 +34,24 @@ func TestAboutWidth(t *testing.T) {
 		if got := aboutWidth(w, 1); got != want {
 			t.Errorf("aboutWidth(%d) = %d, want %d", w, got, want)
 		}
+	}
+}
+
+func TestCarouselSlide(t *testing.T) {
+	var m about
+	gtx := layout.Context{Now: time.Unix(100, 0), Ops: new(op.Ops)}
+	m.slideTo(gtx, 1)
+	if p := m.pos(gtx); p != 0 {
+		t.Errorf("slide start at %v, want 0", p)
+	}
+	gtx.Now = gtx.Now.Add(slideDur / 2)
+	if p := m.pos(gtx); p <= .5 || p >= 1 {
+		t.Errorf("halfway (eased out) at %v", p)
+	}
+	// Going back mid-slide starts from where the picture is.
+	m.slideTo(gtx, 0)
+	gtx.Now = gtx.Now.Add(slideDur)
+	if p := m.pos(gtx); p != 0 {
+		t.Errorf("slide end at %v, want 0", p)
 	}
 }

@@ -169,6 +169,9 @@ func TestParseArtist(t *testing.T) {
 	if p := a.Pick; p == nil || p.Title != "Test Single" || p.Subtitle != "Single" || p.Comment == "" || len(p.Images) == 0 {
 		t.Errorf("artist pick: %+v", a.Pick)
 	}
+	if len(a.Photos) != 2 || len(a.Gallery) == 0 || a.Photos[0][0].URL != a.Gallery[0].URL {
+		t.Errorf("gallery photos: %d", len(a.Photos))
+	}
 	if len(a.Albums) == 0 || len(a.Popular) == 0 || len(a.Header) == 0 {
 		t.Errorf("discography/header missing")
 	}

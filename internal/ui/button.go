@@ -116,24 +116,24 @@ func (b *IconButton) Layout(gtx layout.Context, s IconStyle) layout.Dimensions {
 // PlayButton is the round green play/pause button.
 type PlayButton struct {
 	Click Click
+	hover Hover
 }
 
-// Layout draws a size-dp green circle with a play or pause icon.
+// Layout draws a size-dp green circle with a play or pause icon. On hover it
+// grows 4% and brightens, eased like the web player's transition; the circle
+// is drawn outside the click area's clip so the grown edge isn't cut off.
 func (b *PlayButton) Layout(gtx layout.Context, size float32, playing bool) layout.Dimensions {
 	b.Click.Label = "Play"
 	if playing {
 		b.Click.Label = "Pause"
 	}
+	b.Click.update(gtx) // this frame's hover, not the last one's
+	v := b.hover.Step(gtx, b.Click.Hovered(), 100*time.Millisecond)
+	d := Dp(gtx, size)
+	draw := d + int(float32(d)*.04*v+.5)
+	o := (d - draw) / 2
+	Offset(gtx, o, o, func() { FillCircle(gtx.Ops, draw, Mix(ColAccent, ColAccentHover, v)) })
 	return b.Click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		d := Dp(gtx, size)
-		draw := d
-		bg := ColAccent
-		if b.Click.Hovered() {
-			draw = d * 104 / 100
-			bg = ColAccentHover
-		}
-		o := (d - draw) / 2
-		Offset(gtx, o, o, func() { FillCircle(gtx.Ops, draw, bg) })
 		name := "play"
 		if playing {
 			name = "pause"

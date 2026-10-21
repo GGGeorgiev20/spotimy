@@ -3,6 +3,7 @@ package artist
 import (
 	"image"
 	"strings"
+	"time"
 
 	"gioui.org/font"
 	"gioui.org/io/event"
@@ -87,6 +88,12 @@ type about struct {
 	close ui.Click
 	links []ui.Click
 	box   bool
+	// The gallery carousel: the picture shown, and the slide toward it
+	// (from the position it started at, at slideAt).
+	prev, next ui.Click
+	cur        int
+	from       float32
+	slideAt    time.Time
 }
 
 func (m *about) Layout(gtx layout.Context) layout.Dimensions {
@@ -100,7 +107,8 @@ func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 			backend.OpenURL(m.a.Links[i].URL)
 		}
 	}
-	w, h := min(ui.Dp(gtx, 768), win.X*9/10), min(ui.Dp(gtx, 560), win.Y*7/10)
+	// The web player's dialog: 768px wide, at most 70vh tall.
+	w, h := min(ui.Dp(gtx, 768), win.X*9/10), win.Y*7/10
 	ui.Offset(gtx, (win.X-w)/2, (win.Y-h)/2, func() {
 		r := image.Rect(0, 0, w, h)
 		ui.Shadow(gtx.Ops, r, ui.Dp(gtx, 8), ui.Dp(gtx, 24), ui.Dp(gtx, 4), .4)
@@ -114,15 +122,17 @@ func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 		}
 		g := gtx
 		g.Constraints = layout.Exact(image.Pt(w, h))
+		photos := m.a.Photos
+		if len(photos) == 0 && len(m.a.Gallery) > 0 {
+			photos = [][]spotify.Image{m.a.Gallery}
+		}
 		n := 1
-		if len(m.a.Gallery) > 0 {
+		if len(photos) > 0 {
 			n = 2
 		}
 		m.list.Layout(g, n, func(gtx layout.Context, i int) layout.Dimensions {
 			if i == 0 && n == 2 {
-				s := image.Pt(w, w*9/16)
-				ui.Image{URL: ui.Pick(m.a.Gallery, w)}.Layout(gtx, s)
-				return layout.Dimensions{Size: s}
+				return m.carousel(gtx, photos, w)
 			}
 			return m.body(gtx)
 		})
@@ -142,6 +152,68 @@ func (m *about) Layout(gtx layout.Context) layout.Dimensions {
 		})
 	})
 	return layout.Dimensions{Size: win}
+}
+
+// carousel is the gallery: one picture at a time, fitted on black in a 16:9
+// box, with arrows that slide to the previous and next ones.
+func (m *about) carousel(gtx layout.Context, photos [][]spotify.Image, w int) layout.Dimensions {
+	if m.prev.Clicked(gtx) && m.cur > 0 {
+		m.slideTo(gtx, m.cur-1)
+	}
+	if m.next.Clicked(gtx) && m.cur < len(photos)-1 {
+		m.slideTo(gtx, m.cur+1)
+	}
+	size := image.Pt(w, w*9/16)
+	black := ui.RGB(0x000000)
+	pos := m.pos(gtx)
+	st := clip.Rect{Max: size}.Push(gtx.Ops)
+	ui.FillRect(gtx.Ops, image.Rectangle{Max: size}, 0, black)
+	for i, p := range photos {
+		if x := int((float32(i) - pos) * float32(w)); x > -w && x < w {
+			ui.Offset(gtx, x, 0, func() { ui.Image{URL: ui.Pick(p, w), Contain: true, Placeholder: black}.Layout(gtx, size) })
+		}
+	}
+	st.Pop()
+	bs := ui.Dp(gtx, 32)
+	arrow := func(c *ui.Click, x int, icon, label string) {
+		c.Label = label
+		ui.Offset(gtx, x, (size.Y-bs)/2, func() {
+			c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				bg, fg := ui.Alpha(black, .7), ui.Alpha(ui.ColText, .7)
+				if c.Hovered() {
+					bg, fg = ui.ColSurface, ui.ColText
+				}
+				ui.FillCircle(gtx.Ops, bs, bg)
+				ui.Offset(gtx, bs/4, bs/4, func() { ui.IconPx(gtx, icon, bs/2, fg) })
+				return layout.Dimensions{Size: image.Pt(bs, bs)}
+			})
+		})
+	}
+	if m.cur > 0 {
+		arrow(&m.prev, ui.Dp(gtx, 48), "chevron-left", "Previous image")
+	}
+	if m.cur < len(photos)-1 {
+		arrow(&m.next, size.X-ui.Dp(gtx, 48)-bs, "chevron-right", "Next image")
+	}
+	return layout.Dimensions{Size: size}
+}
+
+// slideDur is the carousel's slide (the web player's transform 0.5s).
+const slideDur = 500 * time.Millisecond
+
+func (m *about) slideTo(gtx layout.Context, i int) {
+	m.from, m.cur, m.slideAt = m.pos(gtx), i, gtx.Now
+}
+
+// pos is the carousel's position in pictures, easing toward cur.
+func (m *about) pos(gtx layout.Context) float32 {
+	t := float32(gtx.Now.Sub(m.slideAt)) / float32(slideDur)
+	if m.slideAt.IsZero() || t >= 1 {
+		return float32(m.cur)
+	}
+	gtx.Execute(op.InvalidateCmd{})
+	t = 1 - (1-t)*(1-t)*(1-t) // ease out
+	return m.from + (float32(m.cur)-m.from)*t
 }
 
 // body is the stats column and the bio.
