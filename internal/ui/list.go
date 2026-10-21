@@ -2,8 +2,10 @@ package ui
 
 import (
 	"image"
+	"time"
 
 	"gioui.org/gesture"
+	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -29,6 +31,60 @@ type List struct {
 	StickyTop   int
 	// NoBar hides the overlay scrollbar (the library's icon rail).
 	NoBar bool
+
+	// Mouse-wheel notches glide instead of jumping: wheel is the distance
+	// still to scroll, reached linearly by wheelEnd.
+	wheel             float32
+	wheelAt, wheelEnd time.Time
+}
+
+// wheelGlide is how long one wheel notch takes to scroll, like Chromium's
+// smooth scrolling.
+const wheelGlide = 150 * time.Millisecond
+
+// scrollWheel applies wheel and touchpad scrolling. Touchpads already send
+// small, continuous deltas, so only big (wheel notch) deltas are animated.
+func (l *List) scrollWheel(gtx layout.Context) {
+	for {
+		e, ok := gtx.Event(pointer.Filter{Target: &l.wheel, Kinds: pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1e6, Max: 1e6}})
+		if !ok {
+			break
+		}
+		dy := e.(pointer.Event).Scroll.Y
+		if dy > -float32(Dp(gtx, 40)) && dy < float32(Dp(gtx, 40)) {
+			l.Position.Offset += int(dy)
+			l.Position.BeforeEnd = true
+			continue
+		}
+		if l.wheel == 0 {
+			l.wheelAt = gtx.Now
+		}
+		l.wheel += dy
+		l.wheelEnd = gtx.Now.Add(wheelGlide)
+	}
+	if l.wheel == 0 {
+		return
+	}
+	atTop := l.Position.First == 0 && l.Position.Offset <= 0
+	atEnd := !l.Position.BeforeEnd && l.Position.First+l.Position.Count >= l.n
+	if l.wheel < 0 && atTop || l.wheel > 0 && atEnd {
+		l.wheel = 0
+		return
+	}
+	step := l.wheel
+	if left := l.wheelEnd.Sub(l.wheelAt); left > 0 && gtx.Now.Before(l.wheelEnd) {
+		step *= float32(gtx.Now.Sub(l.wheelAt)) / float32(left)
+	}
+	l.wheelAt = gtx.Now
+	px := int(step)
+	l.Position.Offset += px
+	l.Position.BeforeEnd = true
+	l.wheel -= float32(px)
+	if l.wheel > -1 && l.wheel < 1 {
+		l.wheel = 0
+	} else {
+		gtx.Execute(op.InvalidateCmd{})
+	}
 }
 
 func (l *List) height(i, avg int) int {
@@ -109,6 +165,7 @@ func (l *List) Layout(gtx layout.Context, n int, item layout.ListElement) layout
 		l.Position.Offset += int(d * float32(total))
 		l.Position.BeforeEnd = true
 	}
+	l.scrollWheel(gtx)
 
 	gtx.Constraints.Min = image.Point{}
 	dims := l.List.Layout(gtx, n, func(gtx layout.Context, i int) layout.Dimensions {
@@ -165,6 +222,13 @@ func (l *List) Layout(gtx layout.Context, n int, item layout.ListElement) layout
 			}
 		})
 	}
+	// Take the wheel before the list's own scroll gesture does (this area is
+	// on top), passing every other event through to the items.
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	wa := clip.Rect{Max: size}.Push(gtx.Ops)
+	event.Op(gtx.Ops, &l.wheel)
+	wa.Pop()
+	pass.Pop()
 	return layout.Dimensions{Size: size, Baseline: dims.Baseline}
 }
 

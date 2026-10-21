@@ -203,7 +203,7 @@ func (p *panel) recentBody(gtx layout.Context) layout.Dimensions {
 	}
 	return p.recentList.Layout(gtx, len(ts), func(gtx layout.Context, i int) layout.Dimensions {
 		return ui.Pad(gtx, 0, 8, 0, 8, func(gtx layout.Context) layout.Dimensions {
-			return p.recentRows[i].layout(gtx, ts[i], ui.IsCurrent(ts[i].URI, ""), nil)
+			return p.recentRows[i].layout(gtx, ts[i], ui.IsCurrentTrack(ts[i], ""), nil)
 		})
 	})
 }

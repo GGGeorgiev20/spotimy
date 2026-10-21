@@ -43,6 +43,7 @@ func RefreshPlayer() {
 				}
 				Player.Status, Player.FetchedAt = s, time.Now()
 				Player.Version++
+				noteAlias(s.ContextURI)
 			})
 		})
 	})
@@ -96,7 +97,14 @@ func IsContext(uri string) bool {
 	if uri == "spotify:collection:tracks" {
 		return len(ctx) > 11 && ctx[len(ctx)-11:] == ":collection"
 	}
-	return ctx == uri
+	return sameEntity(ctx, uri) || contextAliases[ctx] == uri
+}
+
+// sameEntity compares URIs by type and id, so the legacy
+// spotify:user:<owner>:playlist:<id> form some players report matches
+// spotify:playlist:<id>.
+func sameEntity(a, b string) bool {
+	return a == b || URIType(a) == URIType(b) && URIID(a) == URIID(b)
 }
 
 // CtxPlaying reports whether uri is the context playing right now.
@@ -106,6 +114,13 @@ func CtxPlaying(uri string) bool { return IsContext(uri) && Playing() }
 func IsCurrent(trackURI, contextURI string) bool {
 	t := NowTrack()
 	return t != nil && t.URI == trackURI && (contextURI == "" || IsContext(contextURI))
+}
+
+// IsCurrentTrack is IsCurrent for a row's track, which matches under either
+// its own or its relinked URI: a playlist row may hold the original track
+// while the player reports the relinked one, or the other way round.
+func IsCurrentTrack(t spotify.Track, contextURI string) bool {
+	return IsCurrent(t.URI, contextURI) || t.LinkedURI != "" && IsCurrent(t.LinkedURI, contextURI)
 }
 
 func playerCall(name string, f func() error) {
@@ -122,7 +137,29 @@ func PlayContext(uri string) {
 }
 
 func Play(uri, skipTo string) {
+	playRequest, playRequestAt = uri, time.Now()
 	playerCall("play", func() error { return B.Play(uri, skipTo) })
+}
+
+// The player may report a context under another URI than the one we asked
+// it to play: Spotify resolves some playlists to other contexts (the "Liked
+// Songs" playlist to spotify:user:<name>:collection). Remember what each
+// reported context was started as, so the page that started it still shows
+// as playing.
+var (
+	playRequest    string
+	playRequestAt  time.Time
+	contextAliases = map[string]string{}
+)
+
+func noteAlias(ctx string) {
+	if playRequest == "" || ctx == "" || time.Since(playRequestAt) > 15*time.Second {
+		return
+	}
+	if !sameEntity(ctx, playRequest) {
+		contextAliases[ctx] = playRequest
+	}
+	playRequest = ""
 }
 
 // PlayPause toggles optimistically; the event refresh confirms.

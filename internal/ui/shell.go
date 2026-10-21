@@ -167,6 +167,7 @@ var (
 	resizeX  float32
 	resizeW  int
 	resizeOn bool
+	resizerX int // the handle's window x as last laid out
 )
 
 func layoutApp(gtx layout.Context) {
@@ -245,13 +246,15 @@ func layoutResizer(gtx layout.Context, x, y, w, h int) {
 		}
 		switch e.Kind {
 		case pointer.Press:
-			resizeOn, resizeX = true, e.Position.X
+			// Positions are relative to the handle, which moves as the library
+			// resizes; track the window x instead or the drag feeds back on itself.
+			resizeOn, resizeX = true, float32(resizerX)+e.Position.X
 			resizeW = Prefs.LibWidth
 			if Prefs.LibCollapsed {
 				resizeW = collapsed
 			}
 		case pointer.Drag:
-			nw := resizeW + int((e.Position.X-resizeX)/gtx.Metric.PxPerDp)
+			nw := resizeW + int((float32(resizerX)+e.Position.X-resizeX)/gtx.Metric.PxPerDp)
 			if nw < minW-80 {
 				Prefs.LibCollapsed = true
 			} else {
@@ -262,6 +265,7 @@ func layoutResizer(gtx layout.Context, x, y, w, h int) {
 			resizeOn = false
 		}
 	}
+	resizerX = x
 	Offset(gtx, x, y, func() {
 		r := image.Rect(0, 0, w, h)
 		st := clip.Rect(r).Push(gtx.Ops)

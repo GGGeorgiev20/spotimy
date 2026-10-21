@@ -245,7 +245,7 @@ func (tt *TrackTable) play(t spotify.Track) {
 		tt.OnPlayed(t)
 	}
 	switch {
-	case IsCurrent(t.URI, tt.ContextURI):
+	case IsCurrentTrack(t, tt.ContextURI):
 		PlayPause()
 	case tt.ContextURI != "":
 		Play(tt.ContextURI, t.URI)
@@ -276,7 +276,7 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 	}
 	tr := *t
 	key := LikeKey(tr)
-	current := IsCurrent(tr.URI, tt.ContextURI)
+	current := IsCurrentTrack(tr, tt.ContextURI)
 	playingNow := current && Playing()
 
 	if r.play.Clicked(gtx) {

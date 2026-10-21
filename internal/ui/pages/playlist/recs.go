@@ -189,7 +189,7 @@ func (r *recs) layoutRow(gtx layout.Context, pl *spotify.Playlist, t spotify.Tra
 			}
 		})
 		nameCol := ui.ColText
-		if ui.IsCurrent(t.URI, "") {
+		if ui.IsCurrentTrack(t, "") {
 			nameCol = ui.ColAccent
 		}
 		sub := ui.ColText2

@@ -23,7 +23,7 @@ func SongRowHeight(gtx layout.Context) int {
 func (tt *TrackTable) compactRow(gtx layout.Context, i int, tr spotify.Track, r *trackRow) layout.Dimensions {
 	w, h := gtx.Constraints.Max.X, SongRowHeight(gtx)
 	art := h - Dp(gtx, 16)
-	current := IsCurrent(tr.URI, tt.ContextURI)
+	current := IsCurrentTrack(tr, tt.ContextURI)
 	playingNow := current && Playing()
 	return r.row.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		hov := r.row.Hovered()
