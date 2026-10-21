@@ -6,6 +6,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
 )
@@ -21,6 +22,22 @@ var fs struct {
 	ctxName  ui.Res[string]
 	title    ui.Link
 	artists  []ui.Link
+	// The lyrics mode: the lyrics page's content, and the button that
+	// switches to and from it.
+	lyrics    ui.Page
+	lyricsBtn ui.IconButton
+}
+
+// lyricsPage is the lyrics shown in lyrics mode, and their background.
+func lyricsPage() (ui.Page, color.NRGBA) {
+	if fs.lyrics == nil {
+		fs.lyrics = ui.NewPage("/lyrics")
+	}
+	bg := ui.RGB(0x535353)
+	if b, ok := fs.lyrics.(interface{ Background() color.NRGBA }); ok {
+		bg = b.Background()
+	}
+	return fs.lyrics, bg
 }
 
 // layoutFullScreen draws full screen mode and reports whether it's active.
@@ -34,6 +51,10 @@ func layoutFullScreen(gtx layout.Context) bool {
 	if fs.exit.Click.Clicked(gtx) {
 		ui.SetFullscreen(false)
 	}
+	if fs.lyricsBtn.Click.Clicked(gtx) {
+		ui.FullscreenLyrics = !ui.FullscreenLyrics
+	}
+	lyricsMode := ui.FullscreenLyrics && t != nil
 
 	col := ui.RGB(0x535353)
 	if t != nil {
@@ -43,11 +64,18 @@ func layoutFullScreen(gtx layout.Context) bool {
 		}
 		col = fs.color
 	}
-	ui.VGradient(gtx.Ops, image.Rectangle{Max: size}, col, ui.Scale(col, .3))
+	var lyr ui.Page
+	var lyrBg color.NRGBA
+	if lyricsMode {
+		lyr, lyrBg = lyricsPage()
+		ui.FillRect(gtx.Ops, image.Rectangle{Max: size}, 0, lyrBg)
+	} else {
+		ui.VGradient(gtx.Ops, image.Rectangle{Max: size}, col, ui.Scale(col, .3))
+	}
 
 	pad := dp(48)
 	// Playing from <context>.
-	if name := contextName(); name != "" {
+	if name := contextName(); name != "" && !lyricsMode {
 		ui.Offset(gtx, pad, dp(40), func() {
 			g := gtx
 			g.Constraints.Max.X = size.X - 2*pad
@@ -64,7 +92,12 @@ func layoutFullScreen(gtx layout.Context) bool {
 	g.Constraints = layout.Exact(image.Pt(size.X-2*pad, ctlH))
 	ui.Offset(gtx, pad, ctlY, func() {
 		fs.tr.controls(g, 48)
-		right := dp(32) + dp(120) + dp(8) + dp(32)
+		right := dp(32) + dp(8) + dp(32) + dp(120) + dp(8) + dp(32)
+		ui.Offset(g, g.Constraints.Max.X-right, (ctlH-dp(32))/2, func() {
+			d := fs.lyricsBtn.Layout(g, ui.IconStyle{Icon: "lyrics", Label: "Lyrics", Active: ui.FullscreenLyrics, Dot: ui.FullscreenLyrics})
+			ui.Tip(g, &fs.lyricsBtn.Click, d, "Lyrics", false)
+		})
+		right -= dp(32 + 8)
 		ui.Offset(g, g.Constraints.Max.X-right, (ctlH-dp(32))/2, func() {
 			fs.vol.layout(g, dp(120))
 			ui.Offset(g, dp(32+120+8), 0, func() {
@@ -78,7 +111,11 @@ func layoutFullScreen(gtx layout.Context) bool {
 	if t == nil {
 		return true
 	}
-	cs := max(dp(120), min(dp(300), size.Y*28/100))
+	// The cover, title and artists; small under the lyrics in lyrics mode.
+	cs, titleSize, artistSize := max(dp(120), min(dp(300), size.Y*28/100)), float32(32), float32(16)
+	if lyricsMode {
+		cs, titleSize, artistSize = dp(56), 20, 14
+	}
 	bottom := progY - dp(32)
 	ui.Offset(gtx, pad, bottom-cs, func() { ui.Cover(gtx, t.Images, cs, dp(8), false, "note") })
 	for len(fs.artists) < len(t.Artists) {
@@ -102,7 +139,7 @@ func layoutFullScreen(gtx layout.Context) bool {
 		g.Constraints = layout.Constraints{Max: image.Pt(size.X-x-pad, size.Y)}
 		md = layout.Flex{Axis: layout.Vertical}.Layout(g,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return fs.title.Layout(gtx, t.Name, 32, ui.Bold, ui.ColText, ui.ColNone)
+				return fs.title.Layout(gtx, t.Name, titleSize, ui.Bold, ui.ColText, ui.ColNone)
 			}),
 			layout.Rigid(ui.Gap(0, 4)),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -113,12 +150,22 @@ func layoutFullScreen(gtx layout.Context) bool {
 					}
 					segs = append(segs, ui.Seg{Text: a.Name, Link: &fs.artists[i]})
 				}
-				return ui.Inline(gtx, 16, ui.Regular, ui.ColText2, ui.ColText, segs...)
+				return ui.Inline(gtx, artistSize, ui.Regular, ui.ColText2, ui.ColText, segs...)
 			}),
 		)
 	}
 	call := m.Stop()
 	ui.Offset(gtx, x, bottom-md.Size.Y, func() { call.Add(gtx.Ops) })
+	if lyricsMode {
+		g := gtx
+		g.Constraints = layout.Exact(image.Pt(size.X, max(0, bottom-cs-dp(24))))
+		st := clip.Rect{Max: g.Constraints.Max}.Push(gtx.Ops)
+		lyr.Layout(g)
+		st.Pop()
+		// Lines fade out above the track info rather than being cut.
+		lh := g.Constraints.Max.Y
+		ui.VGradient(gtx.Ops, image.Rect(0, max(0, lh-dp(48)), size.X, lh), ui.Alpha(lyrBg, 0), lyrBg)
+	}
 	return true
 }
 

@@ -45,6 +45,10 @@ type Entry struct {
 	page Page
 }
 
+// NewPage creates the page for path outside the history, for views that
+// show a page's content elsewhere (the full screen lyrics).
+func NewPage(path string) Page { return (&Entry{Path: path}).Page() }
+
 // Page returns the entry's page, creating it on first use.
 func (e *Entry) Page() Page {
 	if e.page == nil {

@@ -46,6 +46,9 @@ type page struct {
 	lastFrame time.Time
 }
 
+// Background is the page's color, for views that frame it.
+func (p *page) Background() color.NRGBA { return p.color }
+
 // activeLine is the index of the line being sung at ms, -1 before the first.
 func activeLine(lines []spotify.LyricLine, ms int64) int {
 	return sort.Search(len(lines), func(i int) bool { return lines[i].StartMs > ms }) - 1

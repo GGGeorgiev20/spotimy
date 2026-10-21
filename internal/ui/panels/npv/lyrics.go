@@ -37,8 +37,11 @@ type lyricsCard struct {
 	h float64
 
 	toggle ui.Pill
-	hover  ui.HoverArea
-	btn    ui.Hover // the toggle's fade-in while the card is hovered
+	// full and cinema open the full screen lyrics, full screen or in the
+	// window; the open card shows them in its title row while hovered.
+	full, cinema ui.IconButton
+	hover        ui.HoverArea
+	btn          ui.Hover // the toggle's fade-in while the card is hovered
 }
 
 // load switches to the track's lyrics and cover color.
@@ -69,6 +72,12 @@ func (c *lyricsCard) layout(gtx layout.Context) layout.Dimensions {
 	if c.toggle.Click.Clicked(gtx) {
 		lyricsExpanded = !lyricsExpanded
 		c.scroll = 0
+	}
+	if c.full.Click.Clicked(gtx) {
+		ui.OpenLyricsView(true)
+	}
+	if c.cinema.Click.Clicked(gtx) {
+		ui.OpenLyricsView(false)
 	}
 	open := lyricsExpanded
 	l := c.res.V
@@ -182,6 +191,25 @@ func (c *lyricsCard) layout(gtx layout.Context) layout.Dimensions {
 		title = "Lyrics"
 	}
 	ui.Offset(gtx, dp(16), dp(16), func() { ui.Text(gtx, title, 16, ui.Bold, ui.ColText) })
+	if open && c.hover.Hovered() {
+		// 32dp round buttons centered on the 25dp title row, 8dp apart, the
+		// last 4dp past the padding.
+		b := dp(32)
+		x, y := w-dp(16)+dp(4)-b, dp(16)+(dp(25)-b)/2
+		for _, ib := range []struct {
+			btn       *ui.IconButton
+			icon, tip string
+		}{{&c.cinema, "maximize", "Open in cinema mode"}, {&c.full, "fullscreen", "Enter full screen"}} {
+			ui.Offset(gtx, x, y, func() {
+				if ib.btn.Click.Hovered() {
+					ui.FillCircle(gtx.Ops, b, ui.Alpha(ui.ColText, .1))
+				}
+				d := ib.btn.Layout(gtx, ui.IconStyle{Icon: ib.icon, Label: ib.tip})
+				ui.Tip(gtx, &ib.btn.Click, d, ib.tip, false)
+			})
+			x -= b + dp(8)
+		}
+	}
 	st := clip.Rect(image.Rect(0, head, w, h)).Push(gtx.Ops)
 	ui.Offset(gtx, dp(16), head+dp(16)-int(math.Round(c.scroll)), func() { lines.Add(gtx.Ops) })
 	st.Pop()

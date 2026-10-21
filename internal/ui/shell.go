@@ -57,13 +57,36 @@ var (
 // IsFullscreen reports full screen mode (the FullScreen slot draws the window).
 func IsFullscreen() bool { return fullscreen }
 
+// FullscreenLyrics makes the full screen view show the lyrics.
+var FullscreenLyrics bool
+
+// nativeFull is whether the native window was made full screen.
+var nativeFull bool
+
 // SetFullscreen enters or leaves full screen mode, also making the native
 // window full screen (a no-op in the harness).
 func SetFullscreen(on bool) {
+	FullscreenLyrics = false
+	showFullView(on, on)
+}
+
+// OpenLyricsView opens the full screen view on the lyrics: full screen, or
+// in the window (the official "cinema mode") when native is false.
+func OpenLyricsView(native bool) {
+	FullscreenLyrics = true
+	showFullView(true, native)
+}
+
+func showFullView(on, native bool) {
 	fullscreen = on
+	native = on && native
+	if native == nativeFull {
+		return
+	}
+	nativeFull = native
 	if w := window; w != nil {
 		opt := app.Windowed.Option()
-		if on {
+		if native {
 			opt = app.Fullscreen.Option()
 		}
 		go w.Option(opt)
