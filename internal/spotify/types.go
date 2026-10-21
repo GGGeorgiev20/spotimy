@@ -89,14 +89,14 @@ type Album struct {
 
 // Card is a generic tile: playlists, albums, artists, shows in shelves.
 type Card struct {
-	URI      string  `json:"uri"`
-	Type     string  `json:"type"` // playlist, album, artist, show, episode, user, collection, folder
-	Name     string  `json:"name"`
-	Subtitle string  `json:"subtitle"`
+	URI      string `json:"uri"`
+	Type     string `json:"type"` // playlist, album, artist, show, episode, user, collection, folder
+	Name     string `json:"name"`
+	Subtitle string `json:"subtitle"`
 	// Detail is the web player's "Type • Who" line ("Song • Radiohead"),
 	// used where items of mixed types are listed (recent searches).
-	Detail string `json:"detail,omitempty"`
-	Images   []Image `json:"images"`
+	Detail string  `json:"detail,omitempty"`
+	Images []Image `json:"images"`
 }
 
 type LibraryItem struct {
