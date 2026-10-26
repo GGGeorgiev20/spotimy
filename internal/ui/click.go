@@ -30,6 +30,9 @@ type Click struct {
 	wantsRight bool
 	pressAt    time.Duration // Time of the last primary press seen
 	hoverSince time.Time
+	// at is the pointer's last position over it, in its own coordinates:
+	// with PointerPos it places the clickable in the window.
+	at f32.Point
 
 	// Label is the accessible name (also how the test harness finds it).
 	Label string
@@ -71,12 +74,13 @@ func PointerPos() image.Point { return pointerPos.Round() }
 
 func (c *Click) update(gtx layout.Context) {
 	for {
-		e, ok := gtx.Event(pointer.Filter{Target: c, Kinds: pointer.Press})
+		e, ok := gtx.Event(pointer.Filter{Target: c, Kinds: pointer.Press | pointer.Move | pointer.Enter})
 		if !ok {
 			break
 		}
 		pe := e.(pointer.Event)
-		if c.Disabled {
+		c.at = pe.Position
+		if pe.Kind != pointer.Press || c.Disabled {
 			continue
 		}
 		switch {
@@ -145,6 +149,10 @@ func (c *Click) RightClicked(gtx layout.Context) (image.Point, bool) {
 	c.right = false
 	return c.rightAt, r
 }
+
+// origin is where the clickable's top-left corner is in the window, from
+// where the pointer is over it.
+func (c *Click) origin() image.Point { return pointerPos.Sub(c.at).Round() }
 
 func (c *Click) Hovered() bool { return !c.Disabled && c.gesture.Hovered() }
 func (c *Click) Pressed() bool { return !c.Disabled && c.gesture.Pressed() }

@@ -542,11 +542,7 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 		return tipLine(gtx, text, Regular, ColText)
 	})
 	call := m.Stop()
-	x := (d.Size.X - td.Size.X) / 2
-	y := -td.Size.Y - Dp(gtx, 8)
-	if below {
-		y = d.Size.Y + Dp(gtx, 8)
-	}
+	x, y := tipPos(c.origin(), d.Size, td.Size, WindowSize, Dp(gtx, 8), below)
 	m = op.Record(gtx.Ops)
 	Offset(gtx, x, y, func() {
 		defer paint.PushOpacity(gtx.Ops, v).Pop()
@@ -556,6 +552,24 @@ func Tip(gtx layout.Context, c *Click, d layout.Dimensions, text string, below b
 		call.Add(gtx.Ops)
 	})
 	op.Defer(gtx.Ops, m.Stop())
+}
+
+// tipPos places a tooltip of size tip centered on an element of size el at
+// origin (window px): above it, or below, and moved or flipped by as much as
+// keeps it gap px inside a window of size win.
+func tipPos(origin, el, tip, win image.Point, gap int, below bool) (x, y int) {
+	x = (el.X - tip.X) / 2
+	x = max(gap-origin.X, min(x, win.X-gap-tip.X-origin.X))
+	above, under := -tip.Y-gap, el.Y+gap
+	switch {
+	case below && origin.Y+under+tip.Y > win.Y:
+		return x, above
+	case below:
+		return x, under
+	case origin.Y+above < 0:
+		return x, under
+	}
+	return x, above
 }
 
 // paintAll fills the current clip with c.
