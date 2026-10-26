@@ -305,3 +305,17 @@ func TestInitStateVolume(t *testing.T) {
 	require.Equal(t, uint32(player.MaxStateVolume), p.state.device.Volume,
 		"without external volume the session sets its own level once the dealer connects")
 }
+
+// A long song played straight through keeps counting past ten minutes, and
+// stops at its end.
+func TestTrackPositionLongSong(t *testing.T) {
+	start := time.Now().Add(-11 * time.Minute).UnixMilli()
+	s := &State{player: &connectpb.PlayerState{IsPlaying: true, Timestamp: start, Duration: 17 * 60 * 1000}}
+	if pos := s.trackPosition(); pos < 11*60*1000 || pos > 11*60*1000+1000 {
+		t.Errorf("11 minutes in: %d", pos)
+	}
+	s.player.Duration = 10 * 60 * 1000
+	if pos := s.trackPosition(); pos != 10*60*1000 {
+		t.Errorf("past the end: %d", pos)
+	}
+}

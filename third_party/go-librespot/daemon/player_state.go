@@ -101,19 +101,18 @@ func (s *State) trackPosition() int64 {
 	now := time.Now().UnixMilli()
 	elapsed := now - s.player.Timestamp
 
-	// Validate timestamp freshness: if elapsed time exceeds 10 minutes (600000ms),
-	// timestamp is likely stale (e.g., from a previous session), use raw position
-	const maxReasonableElapsed = 10 * 60 * 1000 // 10 minutes in milliseconds
-	if elapsed > maxReasonableElapsed || elapsed < 0 {
+	if elapsed < 0 {
 		return s.player.PositionAsOfTimestamp
 	}
 
+	// The timestamp is only as old as the last load, seek or resume: a long
+	// song played straight through can be well past ten minutes, which used
+	// to be taken for a stale timestamp and reported as its start. A song
+	// can't play past its end, though.
 	calculated := s.player.PositionAsOfTimestamp + elapsed
-	// Ensure position is non-negative (shouldn't happen, but defensive)
-	if calculated < 0 {
-		return s.player.PositionAsOfTimestamp
+	if d := s.player.Duration; d > 0 && calculated > d {
+		return d
 	}
-
 	return calculated
 }
 
