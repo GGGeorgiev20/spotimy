@@ -1,129 +1,96 @@
 # personal-spotify
 
-A lightweight Spotify desktop client for Linux, for personal use. It looks like the official client but is a native Go app: the interface is drawn with [Gio](https://gioui.org) on the GPU (no web view), and [go-librespot](https://github.com/devgianlu/go-librespot) is embedded for login, playback and Spotify Connect. Spotify Premium is required.
+A lightweight Spotify app for Linux that looks and behaves like the official desktop client, but is a small native program instead of a bundled web browser. It uses less memory, starts and skips songs quickly, and runs natively on Wayland.
 
-It talks to Spotify's internal API (pathfinder GraphQL, spclient and the dealer), the same API the official client uses. It does not use the public Web API.
-
-## System dependencies (openSUSE Tumbleweed)
-
-```bash
-sudo zypper in go wayland-devel libxkbcommon-devel Mesa-libEGL-devel alsa-devel libogg-devel libvorbis-devel flac-devel mpg123-devel ffmpeg
-```
-
-- Gio draws through EGL/OpenGL ES on Wayland. The build uses the tags `nox11,novulkan` (no X11 backend, no Vulkan headers needed); the Makefile sets them.
-- go-librespot needs `libogg`, `libvorbis`, `flac`, `mpg123` and `alsa`. Audio goes out through PulseAudio, and PipeWire's pulse server handles it on PipeWire systems.
-- Canvas videos (the looping clips in the Now Playing view) are decoded by the `ffmpeg` binary. Without it the Now Playing view shows the cover art instead.
-- Color emoji come from Noto Color Emoji if it's installed.
-- Login credentials are stored in the Secret Service keyring (KWallet/ksecretd or GNOME Keyring), so one has to be running.
-
-## Development
-
-```bash
-make run
-```
-
-Environment variables:
-
-- `PERSONAL_SPOTIFY_LOG=debug` turns on verbose logging, including every player request and go-librespot's debug output.
-- `PERSONAL_SPOTIFY_HARNESS=127.0.0.1:<port>` runs the interface headless for automated UI testing, controlled over HTTP (navigate, click, type, screenshot, read the accessibility tree). It runs in sandbox mode: no player session, and anything that would change the account or playback is recorded instead of sent. See `internal/ui/harness.go`.
-
-Tests:
-
-```bash
-make test
-```
-
-go-librespot is vendored in `third_party/go-librespot` (go.mod replaces the module with it), patched to start tracks faster:
-
-- the track's metadata and its audio files come in one request;
-- the audio key is fetched while storage resolves and the first chunk downloads;
-- a play request's track starts loading while its context resolves;
-- the next track is readied ten seconds into the current one rather than 30 seconds before its end, so skipping plays at once;
-- when Spotify throttles audio keys (code 2) playback stops and keys aren't asked for again for 15 seconds, instead of skipping through the whole context asking for a key per track;
-- status reports the track that is loading when its metadata is known;
-- set_queue reorders the upcoming context tracks too (moving songs around "Next from", and between it and the queue), not just the queue.
-- set_audio_options changes the listening settings while it runs: the streaming bitrate and autoplay (next track), volume normalisation and its level (next track), crossfade (at once, or from the next track change while audio is buffered ahead) and a mono downmix (at once).
-
-Its own tests run with `cd third_party/go-librespot && go test -tags test_unit ./...`.
-
-`cmd/spdev` is a development tool. It logs in with the credentials the app stored and calls the internal API directly. Use it to probe variables, capture fixtures, or check a broken operation:
-
-```bash
-go run ./cmd/spdev query getAlbum '{"uri":"spotify:album:4LH4d3cOWNNsVw41Gqt2kv","locale":"","offset":0,"limit":50}'
-go run ./cmd/spdev get '/color-lyrics/v2/track/4oXg7xT4ksBxHTx8PcmSXw?format=json'
-go run ./cmd/spdev cluster
-```
-
-A missing GraphQL variable comes back as an error that names it, for example ``missing variable `$enableWatchFeedEntrypoint` ``. Strip tokens, user IDs, names and lyrics from any response before saving it under `internal/spotify/testdata`.
-
-## Features
-
-- Home with your personalized feed and filter chips, Search with every result tab (Songs, Playlists, Artists, Genres & Moods, Albums, Profiles, Podcasts & Shows, Episodes), recent searches and Browse all, genre and mood pages, and What's New.
-- Album, playlist, artist (discography in list or grid view, every "Show all" page, On Tour, merch, About with links), profile (followers, following, follow and unfollow) and podcast pages. Playlists include Spotify-made ones such as Discover Weekly and the Daily Mixes.
-- Your Library: filters, sort, search, list/compact/grid views, pins and folders. It can be resized and collapsed to a rail.
-- Playlist editing: create, rename, delete, add, remove, drag-reorder, search and sort within a list, recommended songs, and "Exclude from your taste profile".
-- Queue (view, add, remove, reorder, clear) and Recently played, radio for songs, artists, albums and playlists, and autoplay.
-- Lyrics: time-synced, the current line highlighted, auto-scrolling, click a line to seek.
-- Now Playing view with the Canvas video, About the artist, credits and next in queue; full-screen mode.
-- Friend Activity.
-- Spotify Connect: list devices, transfer playback, and control whichever device is playing.
-- MPRIS (media keys and desktop widgets), served by go-librespot under the name `go-librespot`.
-- The official keyboard shortcuts. Press Ctrl+/ for the list.
-- Single instance: launching it again, or opening a `spotify:` or open.spotify.com link with it, goes to the running app.
+It's a personal project: unofficial, not affiliated with or endorsed by Spotify, and it needs a **Spotify Premium** account.
 
 ## Install
 
-Packages for each release are on the GitHub releases page:
+Download the file for your system from the [releases page](https://github.com/GGGeorgiev20/personal-spotify/releases).
+
+**openSUSE**
 
 ```bash
-sudo zypper in ./personal-spotify-0.1.0-1.x86_64.rpm         # openSUSE
-sudo pacman -U personal-spotify-0.1.0-1-x86_64.pkg.tar.zst   # Arch
-chmod +x personal-spotify-0.1.0-x86_64.AppImage && ./personal-spotify-0.1.0-x86_64.AppImage   # other distros (glibc 2.34+)
+sudo zypper in ./personal-spotify-0.1.0-1.x86_64.rpm
 ```
 
-Both install the binary, the desktop entry (which also gives the window its icon) and the icon. Building them:
+**Arch Linux**
 
 ```bash
-git tag v0.1.0      # the version comes from the latest tag
-make rpm            # openSUSE package, with rpmbuild, into build/dist
-make arch           # Arch package, with makepkg in an archlinux Docker container, into build/dist
-make appimage APPIMAGETOOL=/path/to/appimagetool   # AppImage, built in a debian:bookworm container
+sudo pacman -U personal-spotify-0.1.0-1-x86_64.pkg.tar.zst
 ```
 
-`packaging/opensuse/personal-spotify.spec` and `packaging/arch/PKGBUILD` build from the source tarball `make dist` makes. Without packages:
+**Any other distribution** (Ubuntu 22.04+, Debian 12+, Fedora 35+, or anything with glibc 2.34 or newer)
 
 ```bash
-make build
-make install PREFIX=~/.local
+chmod +x personal-spotify-0.1.0-x86_64.AppImage
+./personal-spotify-0.1.0-x86_64.AppImage
 ```
 
-## Where things live
+Then open **Personal Spotify** from your app launcher. The first time, it opens Spotify's login page in your browser; once you've logged in there, the app takes over and remembers you.
 
-| What | Where |
-|---|---|
-| Login credentials | OS keyring, service `personal-spotify` (or `state.json` with mode 0600 if no keyring is available) |
-| Device id, volume, player event state | `~/.config/personal-spotify/state.json` (mode 0600) |
-| User config and pathfinder hash overrides | `~/.config/personal-spotify/` |
-| Audio and image cache | `~/.cache/personal-spotify/` |
+### What you need
 
-Log out from the profile menu to delete the credentials, the state and the cache.
+- A **Wayland** desktop (KDE Plasma, GNOME, Sway, Hyprland…). X11-only sessions aren't supported.
+- A **keyring** (KWallet or GNOME Keyring), where your login is stored. Most desktops already run one.
+- **Optional:** `ffmpeg` for the looping Canvas videos behind songs (without it you see the cover instead), and a color emoji font for emoji in playlist names.
 
-## Updating a broken pathfinder hash
+## What it can do
 
-Pathfinder queries are persisted queries identified by a sha256 hash. When Spotify ships a new web player, a hash can go stale. The affected section then shows as unavailable, and the log names the operation:
+- **Everything you browse in Spotify:** Home with its filters, search with live suggestions and every result tab, artists (discography, tour dates, merch, the About dialog with photos), albums, playlists (including Discover Weekly and the Daily Mixes), profiles, podcasts, genres and moods, and What's New.
+- **Your Library:** filters, sorting, search, list, compact and grid views, pinned items and folders. It can be resized or collapsed to an icon rail.
+- **Playlists:** create, rename, delete, add and remove songs, drag songs onto playlists in the sidebar, reorder by dragging, sort by any column, recommended songs.
+- **Playback:** the full player bar, shuffle, repeat, radio, autoplay, the queue (drag songs between "Next in queue" and "Next from", click one to skip to it), and Recently played.
+- **Now Playing:** the side view with Canvas videos, lyrics that follow the song, About the artist and credits; full screen and cinema mode with large synced lyrics.
+- **Spotify Connect:** see your other devices, move playback between them, and control whichever one is playing.
+- **Friend Activity**, right-click menus everywhere, the official keyboard shortcuts (Ctrl+/ lists them), and media keys and desktop media widgets.
+- **Settings:** audio quality, volume normalization and level, crossfade, mono audio, autoplay, zoom level, compact library, start on login, and clearing the cache.
+- **Picks up where you left off:** after a restart, your last song is loaded, paused at the moment you stopped.
+- Opening a `spotify:` or open.spotify.com link brings it up in the app.
 
-```
-level=WARN msg="spotify request failed" op=fetchPlaylist status=400 body="...PersistedQueryNotFound..."
-```
+## Compared to the official client
 
-All hashes live in one registry, `internal/spotify/operations.json`. To fix a broken one:
+### What's better
 
-1. Open open.spotify.com in a browser, open DevTools, go to Network, filter by `pathfinder`, and trigger the broken view. Copy `extensions.persistedQuery.sha256Hash` from the request with the matching `operationName`.
-2. Either put it in `~/.config/personal-spotify/operations.json` as `{"fetchPlaylist": "<hash>"}`, which takes effect on restart with no rebuild, or update `internal/spotify/operations.json` and rebuild.
+- **Memory:** about **310 MB** while playing, and around 450 MB at most after browsing many pages full of pictures. The official client bundles a whole Chromium browser and usually uses considerably more.
+- **CPU:** about **3% of one core** while a song plays with the window open (measured on an Intel i5-13500T).
+- **Small:** one program of about 25 MB, with no web browser inside.
+- **Native Wayland:** sharp on scaled displays, without the XWayland workarounds the official client needs.
+- **Faster playing and skipping:** the next song is prepared shortly after the current one starts, so skipping plays at once, and starting a song fetches what it needs in parallel instead of one piece at a time.
+- **Calmer when Spotify throttles:** if Spotify briefly refuses to play, the app stops and tells you instead of rapidly skipping through your playlist.
+- **Settings apply while playing:** quality, normalization, crossfade and mono change without restarting playback.
 
-To check a fix without the app, run `go run ./cmd/spdev query <operationName> '<variables>'`. If the variables or the response shape changed as well, the operation's typed method in `internal/spotify` has to be updated.
+### What's missing
 
-The registry was extracted from the web player's JavaScript, the main bundle plus every lazy chunk listed in its `.u=` chunk map, by matching `"<name>","query|mutation","<sha256>"`. Redo that if many hashes break at once.
+- **Downloads and offline listening.**
+- **Local files** from your computer.
+- **Jams, Blends and Spotify DJ** can't be started from the app, though Blend playlists play normally.
+- **Music videos and video podcasts** play as audio only.
+- **Audiobooks** are untested and may not play.
+- **Equalizer, Automix, Smart Shuffle, sleep timer and the mini player.**
+- **Privacy and social settings:** private session, sharing your listening activity, and what your profile shows. Changes made in another Spotify app still apply.
+- **Some settings:** the lowest and lossless audio qualities, the explicit content filter, proxy settings and the download location.
+- **Translations:** the app's own text is English only. Choosing a language in the settings only changes the language Spotify's content comes in, such as section titles on Home.
+- **X11, Windows and macOS.**
+
+## How it works
+
+- **The interface** is written in Go with [Gio](https://gioui.org), which draws everything directly on the GPU. Every page, menu and animation is drawn by the app itself, matched to the official client's spacing, colors and wording, instead of being a web page.
+- **Playback, login and Spotify Connect** come from [go-librespot](https://github.com/devgianlu/go-librespot), an open-source Spotify player, built into the app. Its copy here carries several changes: faster starts and skips, reordering the queue, and settings that apply while playing.
+- **Data** comes from the same internal Spotify services the official app uses, not Spotify's public developer API. That's how it gets things the public API doesn't offer, such as lyrics, Canvas videos, Friend Activity and the full Home feed.
+- **Your data stays on your computer:** your login lives in the system keyring, and settings and the play history live in `~/.config/personal-spotify`. Pictures and songs are cached in `~/.cache/personal-spotify`. Logging out from the profile menu deletes your login, the play history and the caches.
+
+Because it relies on Spotify's internal services, a change on Spotify's side can break a section of the app until it's updated. Using an unofficial client may also go against Spotify's terms of service, so use it at your own risk.
+
+Building from source and other developer notes are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## Updates
+
+I made this for myself, so don't expect regular updates: I'll change things when I notice something I don't like while using it.
+
+## Made with Claude
+
+This app was vibe coded: Claude, Anthropic's AI, wrote the code in Claude Code, while I directed what it should do, tested it and reported what was wrong.
 
 ## License
 
