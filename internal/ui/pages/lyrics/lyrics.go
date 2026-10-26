@@ -14,6 +14,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	"github.com/GGGeorgiev20/personal-spotify/internal/ui"
@@ -30,9 +31,6 @@ func upcoming(bg color.NRGBA) color.NRGBA { return ui.Mix(bg, ui.ColBg, .55) }
 func past(bg color.NRGBA) color.NRGBA     { return ui.Mix(bg, ui.ColText, .7) }
 func hover(bg color.NRGBA) color.NRGBA    { return ui.Mix(bg, ui.ColText, .9) }
 
-// followIdle is how long a manual scroll keeps the view from jumping back.
-const followIdle = 4 * time.Second
-
 type page struct {
 	uri   string
 	res   *ui.Res[*spotify.Lyrics]
@@ -42,8 +40,12 @@ type page struct {
 
 	heights   []int // height of each list item seen so far (0 = not laid out yet)
 	scrollTag bool
-	userAt    time.Time
 	lastFrame time.Time
+	// free is set by a manual scroll: the view stops following the song
+	// until "Sync" is clicked, a line is, or the track changes.
+	free     bool
+	sync     ui.Pill
+	syncFade ui.Hover
 }
 
 // Background is the page's color, for views that frame it.
@@ -58,7 +60,7 @@ func activeLine(lines []spotify.LyricLine, ms int64) int {
 func (p *page) load(t string, imgs []spotify.Image) {
 	p.uri, p.color = t, ui.RGB(0x535353)
 	p.res = &ui.Res[*spotify.Lyrics]{}
-	p.lines, p.heights = nil, nil
+	p.lines, p.heights, p.free = nil, nil, false
 	p.list.ScrollToTop()
 	if t == "" {
 		return
@@ -124,7 +126,7 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	for i := range p.lines {
 		if p.lines[i].Clicked(gtx) && l.Synced {
-			p.userAt = time.Time{}
+			p.free = false
 			ui.Seek(l.Lines[i].StartMs)
 		}
 	}
@@ -132,9 +134,12 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 		if _, ok := gtx.Event(pointer.Filter{Target: &p.scrollTag, Kinds: pointer.Scroll}); !ok {
 			break
 		}
-		p.userAt = gtx.Now
+		p.free = true
 	}
-	if l.Synced && active >= 0 && gtx.Now.Sub(p.userAt) > followIdle {
+	if p.sync.Click.Clicked(gtx) {
+		p.free = false
+	}
+	if l.Synced && active >= 0 && !p.free {
 		p.follow(gtx, active+1, size.Y)
 	}
 	p.lastFrame = gtx.Now
@@ -154,7 +159,25 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	event.Op(gtx.Ops, &p.scrollTag)
 	st.Pop()
 	pass.Pop()
+	p.syncButton(gtx, size, l.Synced && p.free)
 	return d
+}
+
+// syncButton is the white "Sync" pill at the bottom of the view while it has
+// been scrolled away from the song; it fades and rises in.
+func (p *page) syncButton(gtx layout.Context, size image.Point, show bool) {
+	v := p.syncFade.Step(gtx, show, 200*time.Millisecond)
+	if v == 0 {
+		return
+	}
+	m := op.Record(gtx.Ops)
+	d := p.sync.Layout(gtx, ui.PillStyle{Text: "Sync", Weight: ui.Bold, Selected: true, Icon: "lyrics"})
+	btn := m.Stop()
+	lift := int(float32(d.Size.Y) * .8 * (1 - v))
+	ui.Offset(gtx, (size.X-d.Size.X)/2, size.Y-ui.Dp(gtx, 32)-d.Size.Y+lift, func() {
+		defer paint.PushOpacity(gtx.Ops, v).Pop()
+		btn.Add(gtx.Ops)
+	})
 }
 
 // follow eases the list so item (the active line) sits a third of the way

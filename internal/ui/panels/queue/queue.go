@@ -217,18 +217,23 @@ func (p *panel) item(gtx layout.Context, n int, items []item, next []backend.Que
 		default:
 			q := next[it.i]
 			inCtx := it.i >= queued
-			line := 0
+			line, toQueue := 0, false
 			if code, ok := ui.DropHover(queueGroup); ok {
-				if row, below, ok := lineFor(decode(code), len(next), queued); ok && row == it.i {
+				s := decode(code)
+				if row, below, ok := lineFor(s, len(next), queued); ok && row == it.i {
 					line = -1
 					if below {
 						line = 1
 					}
+					// An empty queue's line sits over the first upcoming track,
+					// where the top of "Next from" would put it too.
+					toQueue = !s.ctx && inCtx
 				}
 			}
 			h := &hooks{
 				index: it.i,
 				line:  line,
+				queue: toQueue,
 				above: spot{at: it.i, ctx: inCtx},
 				below: spot{at: it.i + 1, ctx: inCtx},
 				onDrop: func(pl *ui.DragPayload, code int) {
@@ -596,6 +601,7 @@ type hooks struct {
 	index        int // in the upcoming tracks
 	remove       func()
 	line         int  // draw the drop line above (-1) or below (1) this row
+	queue        bool // the line puts tracks in the queue: it says so
 	above, below spot // where drops on the row's halves land
 	onDrop       func(pl *ui.DragPayload, code int)
 }
@@ -664,6 +670,9 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 				y = rh - lh
 			}
 			ui.FillRect(gtx.Ops, image.Rect(0, y, w, y+lh), 0, ui.ColAccent)
+			if h.queue {
+				queueTag(gtx, w, y+lh/2)
+			}
 		}
 		pl := ui.TrackPayload(t)
 		if h != nil {
@@ -684,6 +693,19 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		}
 		return layout.Dimensions{Size: image.Pt(w, rh)}
 	})
+}
+
+// queueTag is the green "Add to queue" tag on a drop line, right-aligned and
+// centered on y.
+func queueTag(gtx layout.Context, w, y int) {
+	m := op.Record(gtx.Ops)
+	d := ui.Text(gtx, "Add to queue", 12, ui.Bold, ui.ColBg)
+	txt := m.Stop()
+	px, th := ui.Dp(gtx, 8), ui.Dp(gtx, 20)
+	tw := d.Size.X + 2*px
+	x, top := w-tw, y-th/2
+	ui.FillRect(gtx.Ops, image.Rect(x, top, x+tw, top+th), th/2, ui.ColAccent)
+	ui.Offset(gtx, x+px, top+(th-d.Size.Y)/2, func() { txt.Add(gtx.Ops) })
 }
 
 // text is the title and artists, vertically centered.
