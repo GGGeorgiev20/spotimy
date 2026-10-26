@@ -495,7 +495,25 @@ loop:
 			// FIXME: this is called even if not needed, like when autoplay starts
 			p.ev <- Event{Type: EventTypeStop, StreamGen: p.streamGen.Load(), Err: err}
 		case <-source.Done():
-			p.ev <- Event{Type: EventTypeNotPlaying, StreamGen: p.streamGen.Load()}
+			// The track ended in the decoder, but the output still holds its
+			// last samples (PulseAudio's default buffer is two seconds). Say
+			// so when they have played, or the next track shows as playing,
+			// and its position counts, that much early.
+			ev := Event{Type: EventTypeNotPlaying, StreamGen: p.streamGen.Load()}
+			var delay int64
+			if out != nil {
+				delay, _ = out.DelayMs()
+			}
+			if delay <= 0 {
+				p.ev <- ev
+				break
+			}
+			time.AfterFunc(time.Duration(delay)*time.Millisecond, func() {
+				select {
+				case p.ev <- ev:
+				case <-p.closed:
+				}
+			})
 		}
 	}
 

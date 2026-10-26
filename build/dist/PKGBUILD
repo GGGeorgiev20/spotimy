@@ -1,5 +1,5 @@
 # Maintainer: Galin Georgiev
-pkgname=personal-spotify
+pkgname=spotimy
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="Lightweight native Spotify client (Gio, embedded go-librespot)"
@@ -8,6 +8,9 @@ url="https://github.com/GGGeorgiev20/personal-spotify"
 license=('GPL-3.0-only')
 depends=('wayland' 'libxkbcommon' 'libglvnd' 'alsa-lib' 'libogg' 'libvorbis' 'flac' 'mpg123' 'glibc')
 makedepends=('go' 'git')
+# The app was called personal-spotify before.
+replaces=('personal-spotify')
+conflicts=('personal-spotify')
 optdepends=('ffmpeg: Canvas videos in the Now Playing view'
             'noto-fonts-emoji: color emoji'
             'org.freedesktop.secrets: keyring for the login (GNOME Keyring or KWallet)')

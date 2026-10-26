@@ -31,6 +31,8 @@ type recordingOutput struct {
 	// devices records, in order, the device names manageLoop opened the output
 	// on (captured by the newOutput hook).
 	devices []string
+	// delayMs is the latency DelayMs reports.
+	delayMs int64
 }
 
 func (o *recordingOutput) record(name string) {
@@ -57,7 +59,7 @@ func (o *recordingOutput) Drop() error {
 	return nil
 }
 
-func (o *recordingOutput) DelayMs() (int64, error) { return 0, nil }
+func (o *recordingOutput) DelayMs() (int64, error) { return o.delayMs, nil }
 func (o *recordingOutput) SetVolume(float32)       {}
 func (o *recordingOutput) Error() <-chan error     { return make(chan error) }
 func (o *recordingOutput) Close() error            { o.record("Close"); return nil }
@@ -433,5 +435,36 @@ func TestStartPosition(t *testing.T) {
 	// clamp it replaces did too.
 	if got := StartPosition(47480, 0); got != 0 {
 		t.Fatalf("StartPosition with no duration = %d, want 0", got)
+	}
+}
+
+// A track's end is reported once the output has played what it buffered of
+// it, not when the decoder runs out: until then its tail is still audible.
+func TestTrackEndWaitsForOutputDelay(t *testing.T) {
+	out := &recordingOutput{delayMs: 80}
+	p := newTestPlayer(t, out)
+	if err := p.SetPrimaryStream(rampSource(100, 0, 0), false, false); err != nil {
+		t.Fatal(err)
+	}
+	if ev := <-p.Receive(); ev.Type != EventTypePlay {
+		t.Fatalf("expected play, got %v", ev.Type)
+	}
+	buf := make([]float32, 256)
+	ended := time.Now()
+	for {
+		if _, err := out.source.Read(buf); err != nil {
+			break
+		}
+	}
+	select {
+	case ev := <-p.Receive():
+		if ev.Type != EventTypeNotPlaying {
+			t.Fatalf("expected not playing, got %v", ev.Type)
+		}
+		if d := time.Since(ended); d < 70*time.Millisecond {
+			t.Fatalf("track end reported after %v, before the output's 80ms delay", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("track end never reported")
 	}
 }
