@@ -268,6 +268,12 @@ func (p *AppPlayer) newApiResponseStatusTrack(stream *player.Stream, position in
 	media := stream.Media
 
 	resp := p.newApiResponseStatusMedia(media, position)
+	// A track relinked to its regional alternative is reported as the one
+	// asked for: that's the one the context lists, and what the status said
+	// while it loaded.
+	if len(stream.RequestedId.Id()) > 0 {
+		resp.Uri = stream.RequestedId.Uri()
+	}
 
 	// The file is what actually got decoded, so report from it rather than from
 	// the requested bitrate: they differ whenever the preferred format was not

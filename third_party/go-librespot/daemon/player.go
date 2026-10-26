@@ -708,6 +708,7 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 			// metadata is already known, rather than no track at all.
 			if media := p.app.metaCache.get(t.Uri); media != nil {
 				resp.Track = p.newApiResponseStatusMedia(media, 0)
+				resp.Track.Uri = t.Uri // not a relinked alternative's
 			}
 		}
 

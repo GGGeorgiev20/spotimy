@@ -67,5 +67,23 @@ func HistoryTracks(uris []string) ([]spotify.Track, error) {
 			out = append(out, t)
 		}
 	}
-	return out, nil
+	return collapseRepeats(out), nil
+}
+
+// collapseRepeats drops a track that follows the same song: a play the
+// history once noted twice, under both its own id and the regional
+// alternative's it was relinked to.
+func collapseRepeats(ts []spotify.Track) []spotify.Track {
+	out := ts[:0:0]
+	for _, t := range ts {
+		if n := len(out); n > 0 && sameSong(out[n-1], t) {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+func sameSong(a, b spotify.Track) bool {
+	return a.Name == b.Name && len(a.Artists) > 0 && len(b.Artists) > 0 && a.Artists[0].Name == b.Artists[0].Name
 }
