@@ -78,6 +78,7 @@ Packages for each release are on the GitHub releases page:
 ```bash
 sudo zypper in ./personal-spotify-0.1.0-1.x86_64.rpm         # openSUSE
 sudo pacman -U personal-spotify-0.1.0-1-x86_64.pkg.tar.zst   # Arch
+chmod +x personal-spotify-0.1.0-x86_64.AppImage && ./personal-spotify-0.1.0-x86_64.AppImage   # other distros (glibc 2.34+)
 ```
 
 Both install the binary, the desktop entry (which also gives the window its icon) and the icon. Building them:
@@ -86,6 +87,7 @@ Both install the binary, the desktop entry (which also gives the window its icon
 git tag v0.1.0      # the version comes from the latest tag
 make rpm            # openSUSE package, with rpmbuild, into build/dist
 make arch           # Arch package, with makepkg in an archlinux Docker container, into build/dist
+make appimage APPIMAGETOOL=/path/to/appimagetool   # AppImage, built in a debian:bookworm container
 ```
 
 `packaging/opensuse/personal-spotify.spec` and `packaging/arch/PKGBUILD` build from the source tarball `make dist` makes. Without packages:

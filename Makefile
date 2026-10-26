@@ -48,4 +48,18 @@ test:
 vet:
 	go vet -tags $(TAGS) ./...
 
-.PHONY: build run test vet install dist rpm arch
+# appimage builds the AppImage into build/dist: the AppDir in a Debian 12
+# container (this machine's Go and module cache mounted in), then
+# appimagetool (APPIMAGETOOL, the AppImage project's tool) packs it with
+# the AppImage runtime (APPIMAGE_RUNTIME, else it downloads one).
+APPIMAGETOOL ?= appimagetool
+# openSUSE's Go keeps its sources under /usr/share/go, linked from GOROOT.
+GOROOT := $(shell go env GOROOT)
+appimage:
+	mkdir -p build/dist
+	docker run --rm -e OWNER=$(shell id -u):$(shell id -g) -v $(CURDIR):/src:ro -v $(CURDIR)/build/dist:/out \
+		-v $(GOROOT):$(GOROOT):ro -v /usr/share/go:/usr/share/go:ro -e GOROOT=$(GOROOT) \
+		-v $(shell go env GOMODCACHE):/gomod:ro debian:bookworm sh /src/packaging/appimage/build.sh
+	ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 $(APPIMAGETOOL) --no-appstream $(if $(APPIMAGE_RUNTIME),--runtime-file $(APPIMAGE_RUNTIME)) build/dist/AppDir build/dist/personal-spotify-$(VERSION)-x86_64.AppImage
+
+.PHONY: build run test vet install dist rpm arch appimage
