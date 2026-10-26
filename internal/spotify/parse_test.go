@@ -264,3 +264,24 @@ func TestParseArtistAbout(t *testing.T) {
 		t.Errorf("bio entities not decoded: %q", a.Bio)
 	}
 }
+
+// A response with errors next to its data is used but not cached, and a
+// profile without a name (its service failed) is an error.
+func TestPartialProfileNotCached(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Write([]byte(`{"data":{"me":{"profile":{"uri":"spotify:user:31abc","username":"31abc","name":null}}},"errors":[{"message":"profile unavailable","path":["me","profile","name"]}]}`))
+	}))
+	defer srv.Close()
+	c := testClient(t)
+	c.pathfinderURL = srv.URL
+	for i := 0; i < 2; i++ {
+		if _, err := c.Me(context.Background()); err == nil {
+			t.Fatal("a profile without a name should fail")
+		}
+	}
+	if hits != 2 {
+		t.Errorf("partial response was cached: %d requests", hits)
+	}
+}

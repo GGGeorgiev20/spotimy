@@ -47,6 +47,7 @@ func loadOperations(overridePath string, log *slog.Logger) map[string]string {
 
 type gqlError struct {
 	Message string `json:"message"`
+	Path    []any  `json:"path"`
 }
 
 // query runs a persisted pathfinder query and decodes `data` into out. A
@@ -92,6 +93,12 @@ func (c *Client) query(ctx context.Context, op string, vars map[string]any, ttl 
 	}
 	if err := json.Unmarshal(resp.Data, out); err != nil {
 		return c.fail(op, body, fmt.Errorf("decoding data: %w", err))
+	}
+	if len(resp.Errors) > 0 {
+		// Partial data (a field's service failed): use it, but don't keep it,
+		// so the next call asks again.
+		c.log.Warn("spotify returned partial data", "op", op, "error", resp.Errors[0].Message, "path", resp.Errors[0].Path, "errors", len(resp.Errors))
+		return nil
 	}
 	if !cached && ttl > 0 {
 		c.cache.put(key, body, ttl)

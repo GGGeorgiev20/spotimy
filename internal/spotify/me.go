@@ -30,6 +30,11 @@ func (c *Client) Me(ctx context.Context) (*Me, error) {
 		return nil, err
 	}
 	p := resp.Me.Profile
+	if p.Name == "" {
+		// Spotify always sends a name (the username when there's no display
+		// name); none means its profile service failed this time.
+		return nil, &Error{Op: "profileAttributes", Err: errors.New("the profile came without a name")}
+	}
 	me := &Me{User: p.user(), Username: p.Username, Color: fmt.Sprintf("#%06x", p.AvatarBackgroundColor&0xffffff)}
 	c.mu.Lock()
 	c.userURI = me.URI

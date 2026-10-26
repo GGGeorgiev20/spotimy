@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
+	"github.com/GGGeorgiev20/personal-spotify/internal/player"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 )
 
@@ -499,11 +500,21 @@ func URIType(uri string) string { return spotify.URIType(uri) }
 // Me is the logged-in user (nil until loaded).
 var Me *spotify.Me
 
+// loadMe fetches the user's profile, asking again in 30 seconds while it fails.
 func loadMe() {
 	Async(B.Me, func(m *spotify.Me, err error) {
-		if err == nil {
-			Me = m
+		if err != nil {
+			Log.Warn("profile", "err", err)
+			time.AfterFunc(30*time.Second, func() {
+				Post(func() {
+					if appState.State == player.StateReady && Me == nil {
+						loadMe()
+					}
+				})
+			})
+			return
 		}
+		Me = m
 	})
 }
 
