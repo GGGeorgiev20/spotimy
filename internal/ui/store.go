@@ -47,6 +47,7 @@ func RefreshPlayer() {
 				}
 				loadingTrack(s, Player.Status, time.Now())
 				notePlayed(s)
+				noteLast(s)
 				Player.Status, Player.FetchedAt = s, time.Now()
 				Player.Version++
 				noteAlias(s.ContextURI)
@@ -550,6 +551,8 @@ var Prefs = struct {
 	NPVHidden bool `json:"npvHidden"`
 	// History is the play history, newest first (see history.go).
 	History []string `json:"history,omitempty"`
+	// Last is the playback to pick up after a restart (see resume.go).
+	Last *backend.LastPlayback `json:"last,omitempty"`
 }{LibSort: "Recents", LibView: "list", LibWidth: 340}
 
 var (

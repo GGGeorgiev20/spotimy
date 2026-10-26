@@ -106,3 +106,15 @@ func TestNotePlayed(t *testing.T) {
 		t.Fatalf("history kept %d", len(Prefs.History))
 	}
 }
+
+func TestKeepPosition(t *testing.T) {
+	defer func() { Player.Status, Prefs.Last = nil, nil }()
+	now := time.Now()
+	Player.Status = &backend.PlayerStatus{Playing: true, PositionMs: 61000, Track: &backend.NowTrack{URI: "spotify:track:a", DurationMs: 300000}}
+	Player.FetchedAt = now
+	noteLast(Player.Status)
+	keepPosition(now.Add(13 * time.Second))
+	if Prefs.Last.PositionMs != 70000 {
+		t.Errorf("kept %d, want 70000 (74s in 5s steps)", Prefs.Last.PositionMs)
+	}
+}

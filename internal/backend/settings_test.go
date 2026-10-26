@@ -28,3 +28,14 @@ func TestWriteAutostart(t *testing.T) {
 		t.Errorf("entry:\n%s", data)
 	}
 }
+
+func TestResumePlay(t *testing.T) {
+	p := resumePlay(LastPlayback{Context: "spotify:album:a", Track: "spotify:track:t", PositionMs: 61000})
+	if p.Uri != "spotify:album:a" || p.SkipToUri != "spotify:track:t" || p.Position != 61000 || !p.Paused {
+		t.Errorf("in a context: %+v", p)
+	}
+	p = resumePlay(LastPlayback{Context: "spotify:track:t", Track: "spotify:track:t"})
+	if p.Uri != "spotify:track:t" || p.SkipToUri != "" || !p.Paused {
+		t.Errorf("on its own: %+v", p)
+	}
+}

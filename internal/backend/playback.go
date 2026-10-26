@@ -463,3 +463,61 @@ func (a *App) fakePlay(uri, skipTo string) {
 		}
 	})
 }
+
+// LastPlayback is what was playing when the app closed, to pick up again.
+type LastPlayback struct {
+	Context    string `json:"context"`
+	Track      string `json:"track"`
+	PositionMs int64  `json:"positionMs"`
+	Shuffle    bool   `json:"shuffle"`
+	Repeat     string `json:"repeat"` // off, context, track
+}
+
+// Resume loads last on this device, paused at its position, like the
+// desktop client after a restart. It waits for Connect to know the account's
+// devices and does nothing if anything already plays here or elsewhere:
+// starting on this device would take playback over from it.
+func (a *App) Resume(last LastPlayback) error {
+	if last.Track == "" || a.sandboxed("Resume", last) {
+		return nil
+	}
+	deadline := time.Now().Add(20 * time.Second)
+	var cn *spotify.Connect
+	for cn = a.conn(); cn == nil || !cn.Known(); cn = a.conn() {
+		if time.Now().After(deadline) {
+			return errNoConnect
+		}
+		select {
+		case <-time.After(250 * time.Millisecond):
+		case <-a.ctx.Done():
+			return a.ctx.Err()
+		}
+	}
+	if cn.State().ActiveDevice != "" {
+		return nil
+	}
+	if s, err := a.Status(); err != nil || s.Track != nil {
+		return err
+	}
+	if _, err := a.do(daemon.ApiRequestTypePlay, resumePlay(last)); err != nil {
+		return err
+	}
+	var errs []error
+	if last.Shuffle {
+		errs = append(errs, a.SetShuffle(true))
+	}
+	if last.Repeat == "context" || last.Repeat == "track" {
+		errs = append(errs, a.SetRepeat(last.Repeat))
+	}
+	return errors.Join(errs...)
+}
+
+// resumePlay is the paused play request that picks last up: its context at
+// its track and position (the track alone when it played without one).
+func resumePlay(last LastPlayback) daemon.ApiPlay {
+	play := daemon.ApiPlay{Uri: last.Context, SkipToUri: last.Track, Position: last.PositionMs, Paused: true}
+	if play.Uri == "" || play.Uri == last.Track {
+		play.Uri, play.SkipToUri = last.Track, ""
+	}
+	return play
+}

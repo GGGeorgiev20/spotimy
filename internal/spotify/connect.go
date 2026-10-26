@@ -182,6 +182,14 @@ type ConnectState struct {
 	QueueRev     string      `json:"queueRevision"`
 }
 
+// Known reports whether the cluster (the account's devices and what plays
+// where) has arrived.
+func (cn *Connect) Known() bool {
+	cn.mu.Lock()
+	defer cn.mu.Unlock()
+	return cn.cluster != nil
+}
+
 // State returns a snapshot of the cluster.
 func (cn *Connect) State() *ConnectState {
 	cn.mu.Lock()

@@ -119,6 +119,7 @@ func OnState(s backend.AppState) {
 		if s.State == player.StateReady && was != player.StateReady {
 			loadMe()
 			RefreshPlayer()
+			resumeLast()
 		}
 	})
 }
@@ -153,6 +154,7 @@ func Run() {
 			if e.Err != nil {
 				Log.Error("window", "err", e.Err)
 			}
+			saveLastNow()
 			return
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
@@ -201,6 +203,7 @@ func Frame(gtx layout.Context) {
 	layoutHoverTip(gtx)
 	KeepDragSource(gtx)
 	flushClipboard(gtx)
+	keepPosition(gtx.Now)
 	savePrefs()
 }
 
@@ -439,7 +442,7 @@ func layoutTopBar(gtx layout.Context) layout.Dimensions {
 			{Label: "Settings", Action: func() { Navigate("/preferences") }},
 			{Divider: true},
 			{Label: "Log out", Action: func() {
-				Go("Couldn't log out", B.Logout, func() { Me, Prefs.History = nil, nil })
+				Go("Couldn't log out", B.Logout, func() { Me, Prefs.History, Prefs.Last = nil, nil, nil })
 			}},
 		})
 	}
