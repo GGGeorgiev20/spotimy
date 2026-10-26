@@ -71,13 +71,28 @@ A missing GraphQL variable comes back as an error that names it, for example ``m
 - The official keyboard shortcuts. Press Ctrl+/ for the list.
 - Single instance: launching it again, or opening a `spotify:` or open.spotify.com link with it, goes to the running app.
 
-## Release build and desktop entry
+## Install
+
+Packages for each release are on the GitHub releases page:
+
+```bash
+sudo zypper in ./personal-spotify-0.1.0-1.x86_64.rpm         # openSUSE
+sudo pacman -U personal-spotify-0.1.0-1-x86_64.pkg.tar.zst   # Arch
+```
+
+Both install the binary, the desktop entry (which also gives the window its icon) and the icon. Building them:
+
+```bash
+git tag v0.1.0      # the version comes from the latest tag
+make rpm            # openSUSE package, with rpmbuild, into build/dist
+make arch           # Arch package, with makepkg in an archlinux Docker container, into build/dist
+```
+
+`packaging/opensuse/personal-spotify.spec` and `packaging/arch/PKGBUILD` build from the source tarball `make dist` makes. Without packages:
 
 ```bash
 make build
-install -Dm755 build/bin/personal-spotify ~/.local/bin/personal-spotify
-install -Dm644 packaging/personal-spotify.desktop ~/.local/share/applications/personal-spotify.desktop
-install -Dm644 packaging/personal-spotify.svg ~/.local/share/icons/hicolor/scalable/apps/personal-spotify.svg
+make install PREFIX=~/.local
 ```
 
 ## Where things live
