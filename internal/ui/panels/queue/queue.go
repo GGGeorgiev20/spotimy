@@ -207,42 +207,42 @@ func (p *panel) item(gtx layout.Context, n int, items []item, next []backend.Que
 				return p.clear.Layout(gtx, "Clear queue", 14, ui.Bold, ui.ColText2, ui.ColText)
 			})
 		case itemNextHead:
-			return heading(gtx, func(gtx layout.Context) layout.Dimensions {
+			d := heading(gtx, func(gtx layout.Context) layout.Dimensions {
 				if ctxName == "" {
 					return ui.Text(gtx, "Next up", 16, ui.Bold, ui.ColText)
 				}
 				return ui.Inline(gtx, 16, ui.Bold, ui.ColText, ui.ColText,
 					ui.Seg{Text: "Next from: "}, ui.Seg{Text: ctxName, Link: &p.ctxLink})
 			}, nil)
+			// A drop into the empty queue: its line goes above the heading,
+			// where the queue would start.
+			if code, ok := ui.DropHover(queueGroup); ok && queued == 0 && !decode(code).ctx {
+				y := ui.Dp(gtx, 7)
+				ui.FillRect(gtx.Ops, image.Rect(0, y, d.Size.X, y+ui.Dp(gtx, 2)), 0, ui.ColAccent)
+			}
+			return d
 		default:
 			q := next[it.i]
 			inCtx := it.i >= queued
-			line, toQueue := 0, false
+			line := 0
 			if code, ok := ui.DropHover(queueGroup); ok {
-				s := decode(code)
-				if row, below, ok := lineFor(s, len(next), queued); ok && row == it.i {
+				if row, below, ok := lineFor(decode(code), len(next), queued); ok && row == it.i {
 					line = -1
 					if below {
 						line = 1
 					}
-					// An empty queue's line sits over the first upcoming track,
-					// where the top of "Next from" would put it too.
-					toQueue = !s.ctx && inCtx
 				}
 			}
 			h := &hooks{
 				index: it.i,
 				line:  line,
-				queue: toQueue,
 				above: spot{at: it.i, ctx: inCtx},
 				below: spot{at: it.i + 1, ctx: inCtx},
 				onDrop: func(pl *ui.DragPayload, code int) {
 					p.dropAt(pl, decode(code), next, queued)
 				},
 			}
-			if q.Provider == "queue" {
-				h.remove = func() { p.set(removeAt(next, it.i)) }
-			}
+			h.remove = func() { p.set(removeAt(next, it.i)) }
 			var d layout.Dimensions
 			ui.Offset(gtx, 0, p.slide(gtx, key(q)), func() { d = p.rows[n].layout(gtx, q.Track, false, h) })
 			return d
@@ -272,8 +272,8 @@ func (s spot) code() int {
 func decode(c int) spot { return spot{at: c / 2, ctx: c%2 == 1} }
 
 // lineFor is where the drop line goes for s: over the row it lands before,
-// or under the last row of its section; ok is false with no rows at all.
-// An empty queue's line goes over the first track.
+// or under the last row of its section; ok is false with no rows at all,
+// and for the empty queue, whose line goes above the "Next from" heading.
 func lineFor(s spot, n, queued int) (row int, below, ok bool) {
 	lo, hi := 0, queued
 	if s.ctx {
@@ -285,8 +285,8 @@ func lineFor(s spot, n, queued int) (row int, below, ok bool) {
 		return at, false, true
 	case hi > lo:
 		return hi - 1, true, true
-	case n > 0 && !s.ctx:
-		return 0, false, true
+	case !s.ctx:
+		return 0, false, false
 	case n > 0:
 		return n - 1, true, true
 	}
@@ -593,6 +593,7 @@ type row struct {
 	drag        ui.TrackDrag
 	// above and below take drops on the row's halves: before it, after it.
 	above, below ui.DropTarget
+	remove       ui.IconButton // shown on hover for upcoming rows
 }
 
 // hooks make an upcoming row draggable (to reorder the queue) and a drop
@@ -601,7 +602,6 @@ type hooks struct {
 	index        int // in the upcoming tracks
 	remove       func()
 	line         int  // draw the drop line above (-1) or below (1) this row
-	queue        bool // the line puts tracks in the queue: it says so
 	above, below spot // where drops on the row's halves land
 	onDrop       func(pl *ui.DragPayload, code int)
 }
@@ -625,6 +625,9 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 			ui.OpenURI(a.URI)
 		}
 	}
+	if r.remove.Click.Clicked(gtx) && remove != nil {
+		remove()
+	}
 	if _, ok := r.click.RightClicked(gtx); ok {
 		ui.OpenMenu(ui.TrackMenu(t, ui.TrackMenuOpts{RemoveFromQue: remove}))
 	}
@@ -632,7 +635,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 	w, rh := gtx.Constraints.Max.X, ui.Dp(gtx, rowDp)
 	r.click.Label, r.click.Arrow = t.Name, true
 	return r.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		hov := r.click.Hovered() || r.play.Hovered()
+		hov := r.click.Hovered() || r.play.Hovered() || r.remove.Click.Hovered()
 		if hov {
 			ui.FillRect(gtx.Ops, image.Rect(0, 0, w, rh), ui.Dp(gtx, 4), ui.ColRowHover)
 		}
@@ -658,11 +661,22 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		})
 		tx := pad + is + ui.Dp(gtx, 12)
 		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(max(0, w-tx-pad), rh)}
+		bw := 0 // the remove button's room
+		if hov && remove != nil {
+			bw = ui.Dp(gtx, 32+8)
+		}
+		g.Constraints = layout.Constraints{Max: image.Pt(max(0, w-tx-pad-bw), rh)}
 		m := op.Record(gtx.Ops)
 		d := r.text(g, t, current)
 		call := m.Stop()
 		ui.Offset(gtx, tx, (rh-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
+		if bw > 0 {
+			b := ui.Dp(gtx, 32)
+			ui.Offset(gtx, w-pad-b, (rh-b)/2, func() {
+				bd := r.remove.Layout(gtx, ui.IconStyle{Icon: "close", Label: "Remove from queue"})
+				ui.Tip(gtx, &r.remove.Click, bd, "Remove from queue", false)
+			})
+		}
 		if h != nil && h.line != 0 {
 			lh := ui.Dp(gtx, 2)
 			y := 0
@@ -670,9 +684,6 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 				y = rh - lh
 			}
 			ui.FillRect(gtx.Ops, image.Rect(0, y, w, y+lh), 0, ui.ColAccent)
-			if h.queue {
-				queueTag(gtx, w, y+lh/2)
-			}
 		}
 		pl := ui.TrackPayload(t)
 		if h != nil {
@@ -693,19 +704,6 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		}
 		return layout.Dimensions{Size: image.Pt(w, rh)}
 	})
-}
-
-// queueTag is the green "Add to queue" tag on a drop line, right-aligned and
-// centered on y.
-func queueTag(gtx layout.Context, w, y int) {
-	m := op.Record(gtx.Ops)
-	d := ui.Text(gtx, "Add to queue", 12, ui.Bold, ui.ColBg)
-	txt := m.Stop()
-	px, th := ui.Dp(gtx, 8), ui.Dp(gtx, 20)
-	tw := d.Size.X + 2*px
-	x, top := w-tw, y-th/2
-	ui.FillRect(gtx.Ops, image.Rect(x, top, x+tw, top+th), th/2, ui.ColAccent)
-	ui.Offset(gtx, x+px, top+(th-d.Size.Y)/2, func() { txt.Add(gtx.Ops) })
 }
 
 // text is the title and artists, vertically centered.

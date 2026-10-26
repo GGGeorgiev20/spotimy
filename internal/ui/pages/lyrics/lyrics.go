@@ -159,19 +159,19 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	event.Op(gtx.Ops, &p.scrollTag)
 	st.Pop()
 	pass.Pop()
-	p.syncButton(gtx, size, l.Synced && p.free)
+	p.syncButton(gtx, size, l.Synced && p.free && active >= 0)
 	return d
 }
 
 // syncButton is the white "Sync" pill at the bottom of the view while it has
-// been scrolled away from the song; it fades and rises in.
+// been scrolled away from the song once it has started; it fades and rises in.
 func (p *page) syncButton(gtx layout.Context, size image.Point, show bool) {
 	v := p.syncFade.Step(gtx, show, 200*time.Millisecond)
 	if v == 0 {
 		return
 	}
 	m := op.Record(gtx.Ops)
-	d := p.sync.Layout(gtx, ui.PillStyle{Text: "Sync", Weight: ui.Bold, Selected: true, Icon: "lyrics"})
+	d := p.sync.Layout(gtx, ui.PillStyle{Text: "Sync", Size: 16, Height: 44, PadX: 24, Weight: ui.Bold, Selected: true, Icon: "lyrics"})
 	btn := m.Stop()
 	lift := int(float32(d.Size.Y) * .8 * (1 - v))
 	ui.Offset(gtx, (size.X-d.Size.X)/2, size.Y-ui.Dp(gtx, 32)-d.Size.Y+lift, func() {

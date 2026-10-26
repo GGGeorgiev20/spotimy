@@ -111,8 +111,8 @@ func TestLineFor(t *testing.T) {
 			t.Errorf("lineFor(%+v) = %d %v %v, want %d %v", c.s, row, below, ok, c.row, c.below)
 		}
 	}
-	if row, below, _ := lineFor(spot{0, false}, 2, 0); row != 0 || below { // empty queue: over the first track
-		t.Errorf("empty queue: %d %v", row, below)
+	if _, _, ok := lineFor(spot{0, false}, 2, 0); ok { // empty queue: above the Next from heading instead
+		t.Error("empty queue got a row line")
 	}
 }
 

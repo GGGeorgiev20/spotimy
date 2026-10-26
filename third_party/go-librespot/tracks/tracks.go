@@ -440,7 +440,12 @@ func sameTrack(a, b *connectpb.ContextTrack) bool {
 // that order, as set_queue asks when a controller moves tracks around "Next
 // from": the tracks are taken from where they were in the context, tracks
 // it doesn't have (moved out of the queue) are put in, and the rest follow
-// in their own order. A track now in the queue leaves the context.
+// in their own order. A track now in the queue leaves the context, and so
+// does one left out from among the tracks next does cover: the controller
+// removed it.
+// ponytail: "covered" is up to the furthest track next names, so removing the
+// very last track a controller knows of doesn't stick; a window size in the
+// command would fix it.
 func (tl *List) reorderUpcoming(next []*connectpb.ContextTrack) {
 	l := tl.tracks
 	if l.pos < 0 || len(next) == 0 {
@@ -448,6 +453,7 @@ func (tl *List) reorderUpcoming(next []*connectpb.ContextTrack) {
 	}
 	tail := l.list[l.pos+1:]
 	used := make([]bool, len(tail))
+	covered := 0 // tail[:covered] is what next spans
 	out := make([]pagedListItem[*connectpb.ContextTrack], 0, len(tail)+len(next))
 	for _, t := range next {
 		found := -1
@@ -459,6 +465,7 @@ func (tl *List) reorderUpcoming(next []*connectpb.ContextTrack) {
 		}
 		if found >= 0 {
 			used[found] = true
+			covered = max(covered, found+1)
 			out = append(out, tail[found])
 			continue
 		}
@@ -467,7 +474,7 @@ func (tl *List) reorderUpcoming(next []*connectpb.ContextTrack) {
 		out = append(out, pagedListItem[*connectpb.ContextTrack]{cp, -1, -1})
 	}
 	for k, it := range tail {
-		if used[k] || slices.ContainsFunc(tl.queue, func(q *connectpb.ContextTrack) bool { return sameTrack(q, it.item) }) {
+		if used[k] || k < covered || slices.ContainsFunc(tl.queue, func(q *connectpb.ContextTrack) bool { return sameTrack(q, it.item) }) {
 			continue
 		}
 		out = append(out, it)

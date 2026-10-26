@@ -314,3 +314,21 @@ func (suite *TrackListInternalSuite) TestSetQueueReordersUpcoming() {
 	suite.Equal([]string{"u2", "u3", "q9", "u1"}, got)
 	suite.Len(suite.list.queue, 1)
 }
+
+// A track left out of a set_queue, from among the ones it lists, is removed;
+// the ones past its last track stay.
+func (suite *TrackListInternalSuite) TestSetQueueRemovesLeftOut() {
+	suite.resolver.EXPECT().Page(mock.Anything, 0).Return([]*connectpb.ContextTrack{
+		{Uri: trackUri(0), Uid: "u0"}, {Uri: trackUri(1), Uid: "u1"}, {Uri: trackUri(2), Uid: "u2"}, {Uri: trackUri(3), Uid: "u3"},
+	}, nil).Once()
+	suite.resolver.EXPECT().Page(mock.Anything, 1).Return(nil, io.EOF).Maybe()
+	suite.Require().NoError(suite.list.tracks.moveStart(context.Background()))
+
+	suite.list.SetQueue(nil, []*connectpb.ContextTrack{{Uri: trackUri(2), Uid: "u2"}}) // u1 removed
+
+	var got []string
+	for _, t := range suite.list.NextTracks(context.Background(), nil) {
+		got = append(got, t.Uid)
+	}
+	suite.Equal([]string{"u2", "u3"}, got)
+}
