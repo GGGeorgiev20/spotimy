@@ -673,8 +673,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		if bw > 0 {
 			b := ui.Dp(gtx, 32)
 			ui.Offset(gtx, w-pad-b, (rh-b)/2, func() {
-				bd := r.remove.Layout(gtx, ui.IconStyle{Icon: "close", Label: "Remove from queue"})
-				ui.Tip(gtx, &r.remove.Click, bd, "Remove from queue", false)
+				r.remove.Layout(gtx, ui.IconStyle{Icon: "close", Label: "Remove from queue"})
 			})
 		}
 		if h != nil && h.line != 0 {
