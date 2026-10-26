@@ -104,7 +104,7 @@ func (b *bridge) Close() error                      { return nil }
 
 func (p *Player) config() *daemon.Config {
 	cfg := &daemon.Config{
-		DeviceName:       "Personal Spotify",
+		DeviceName:       "Spotimy",
 		DeviceType:       "computer",
 		AudioBackend:     "pulseaudio", // PipeWire serves the pulse protocol too
 		Bitrate:          320,

@@ -116,7 +116,7 @@ func (cn *Connect) register(ctx context.Context, connID string) error {
 		PutStateReason: connectpb.PutStateReason_NEW_DEVICE,
 		Device: &connectpb.Device{DeviceInfo: &connectpb.DeviceInfo{
 			CanPlay:    false,
-			Name:       "Personal Spotify (observer)",
+			Name:       "Spotimy (observer)",
 			DeviceId:   cn.self,
 			DeviceType: devicespb.DeviceType_COMPUTER,
 			ClientId:   cn.c.id.ClientID,

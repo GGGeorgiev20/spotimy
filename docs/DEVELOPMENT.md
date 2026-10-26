@@ -1,6 +1,6 @@
 # Development
 
-Notes for building and working on personal-spotify. The [README](../README.md) is the user-facing overview.
+Notes for building and working on Spotimy. The [README](../README.md) is the user-facing overview.
 
 ## System dependencies (openSUSE Tumbleweed)
 
@@ -22,8 +22,8 @@ make run
 
 Environment variables:
 
-- `PERSONAL_SPOTIFY_LOG=debug` turns on verbose logging, including every player request and go-librespot's debug output.
-- `PERSONAL_SPOTIFY_HARNESS=127.0.0.1:<port>` runs the interface headless for automated UI testing, controlled over HTTP (navigate, click, type, screenshot, read the accessibility tree). It runs in sandbox mode: no player session, and anything that would change the account or playback is recorded instead of sent. See `internal/ui/harness.go`.
+- `SPOTIMY_LOG=debug` turns on verbose logging, including every player request and go-librespot's debug output.
+- `SPOTIMY_HARNESS=127.0.0.1:<port>` runs the interface headless for automated UI testing, controlled over HTTP (navigate, click, type, screenshot, read the accessibility tree). It runs in sandbox mode: no player session, and anything that would change the account or playback is recorded instead of sent. See `internal/ui/harness.go`.
 
 Tests:
 
@@ -65,7 +65,7 @@ make arch           # Arch package, with makepkg in an archlinux Docker containe
 make appimage APPIMAGETOOL=/path/to/appimagetool   # AppImage, built in a debian:bookworm container
 ```
 
-`packaging/opensuse/personal-spotify.spec` and `packaging/arch/PKGBUILD` build from the source tarball `make dist` makes. Without packages:
+`packaging/opensuse/spotimy.spec` and `packaging/arch/PKGBUILD` build from the source tarball `make dist` makes. Without packages:
 
 ```bash
 make build
@@ -76,10 +76,10 @@ make install PREFIX=~/.local
 
 | What | Where |
 |---|---|
-| Login credentials | OS keyring, service `personal-spotify` (or `state.json` with mode 0600 if no keyring is available) |
-| Device id, volume, player event state | `~/.config/personal-spotify/state.json` (mode 0600) |
-| User config and pathfinder hash overrides | `~/.config/personal-spotify/` |
-| Audio and image cache | `~/.cache/personal-spotify/` |
+| Login credentials | OS keyring, service `spotimy` (or `state.json` with mode 0600 if no keyring is available) |
+| Device id, volume, player event state | `~/.config/spotimy/state.json` (mode 0600) |
+| User config and pathfinder hash overrides | `~/.config/spotimy/` |
+| Audio and image cache | `~/.cache/spotimy/` |
 
 Log out from the profile menu to delete the credentials, the state and the cache.
 
@@ -94,7 +94,7 @@ level=WARN msg="spotify request failed" op=fetchPlaylist status=400 body="...Per
 All hashes live in one registry, `internal/spotify/operations.json`. To fix a broken one:
 
 1. Open open.spotify.com in a browser, open DevTools, go to Network, filter by `pathfinder`, and trigger the broken view. Copy `extensions.persistedQuery.sha256Hash` from the request with the matching `operationName`.
-2. Either put it in `~/.config/personal-spotify/operations.json` as `{"fetchPlaylist": "<hash>"}`, which takes effect on restart with no rebuild, or update `internal/spotify/operations.json` and rebuild.
+2. Either put it in `~/.config/spotimy/operations.json` as `{"fetchPlaylist": "<hash>"}`, which takes effect on restart with no rebuild, or update `internal/spotify/operations.json` and rebuild.
 
 To check a fix without the app, run `go run ./cmd/spdev query <operationName> '<variables>'`. If the variables or the response shape changed as well, the operation's typed method in `internal/spotify` has to be updated.
 

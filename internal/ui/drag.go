@@ -43,7 +43,7 @@ func (r *Reorder) DropLine(i int) int {
 }
 
 // TracksMime is the transfer type of dragged tracks.
-const TracksMime = "application/x-personal-spotify-tracks"
+const TracksMime = "application/x-spotimy-tracks"
 
 // DragPayload is what a dragged row carries.
 type DragPayload struct {

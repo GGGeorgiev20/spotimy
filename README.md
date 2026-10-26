@@ -1,8 +1,8 @@
-# personal-spotify
+# Spotimy
 
 A lightweight Spotify app for Linux that looks and behaves like the official desktop client, but is a small native program instead of a bundled web browser. It uses less memory, starts and skips songs quickly, and runs natively on Wayland.
 
-It's a personal project: unofficial, not affiliated with or endorsed by Spotify, and it needs a **Spotify Premium** account.
+It's a personal project (it used to be called personal-spotify): unofficial, not affiliated with or endorsed by Spotify, and it needs a **Spotify Premium** account.
 
 ## Install
 
@@ -11,23 +11,23 @@ Download the file for your system from the [releases page](https://github.com/GG
 **openSUSE**
 
 ```bash
-sudo zypper in ./personal-spotify-0.1.0-1.x86_64.rpm
+sudo zypper in ./spotimy-0.1.0-1.x86_64.rpm
 ```
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U personal-spotify-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U spotimy-0.1.0-1-x86_64.pkg.tar.zst
 ```
 
 **Any other distribution** (Ubuntu 22.04+, Debian 12+, Fedora 35+, or anything with glibc 2.34 or newer)
 
 ```bash
-chmod +x personal-spotify-0.1.0-x86_64.AppImage
-./personal-spotify-0.1.0-x86_64.AppImage
+chmod +x spotimy-0.1.0-x86_64.AppImage
+./spotimy-0.1.0-x86_64.AppImage
 ```
 
-Then open **Personal Spotify** from your app launcher. The first time, it opens Spotify's login page in your browser; once you've logged in there, the app takes over and remembers you.
+Then open **Spotimy** from your app launcher. The first time, it opens Spotify's login page in your browser; once you've logged in there, the app takes over and remembers you.
 
 ### What you need
 
@@ -78,7 +78,7 @@ Then open **Personal Spotify** from your app launcher. The first time, it opens 
 - **The interface** is written in Go with [Gio](https://gioui.org), which draws everything directly on the GPU. Every page, menu and animation is drawn by the app itself, matched to the official client's spacing, colors and wording, instead of being a web page.
 - **Playback, login and Spotify Connect** come from [go-librespot](https://github.com/devgianlu/go-librespot), an open-source Spotify player, built into the app. Its copy here carries several changes: faster starts and skips, reordering the queue, and settings that apply while playing.
 - **Data** comes from the same internal Spotify services the official app uses, not Spotify's public developer API. That's how it gets things the public API doesn't offer, such as lyrics, Canvas videos, Friend Activity and the full Home feed.
-- **Your data stays on your computer:** your login lives in the system keyring, and settings and the play history live in `~/.config/personal-spotify`. Pictures and songs are cached in `~/.cache/personal-spotify`. Logging out from the profile menu deletes your login, the play history and the caches.
+- **Your data stays on your computer:** your login lives in the system keyring, and settings and the play history live in `~/.config/spotimy`. Pictures and songs are cached in `~/.cache/spotimy`. Logging out from the profile menu deletes your login, the play history and the caches.
 
 Because it relies on Spotify's internal services, a change on Spotify's side can break a section of the app until it's updated. Using an unofficial client may also go against Spotify's terms of service, so use it at your own risk.
 

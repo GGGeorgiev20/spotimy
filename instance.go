@@ -12,23 +12,31 @@ import (
 // state file and the keyring entry. A second launch (e.g. a spotify: link
 // from the browser) hands its arguments to the running instance and exits.
 
-func socketPath() string {
+func socketPath() string { return runtimePath("spotimy.sock") }
+
+// runtimePath is name in the user's runtime dir.
+func runtimePath(name string) string {
 	dir := os.Getenv("XDG_RUNTIME_DIR")
 	if dir == "" {
 		dir = os.TempDir()
 	}
-	return filepath.Join(dir, "personal-spotify.sock")
+	return filepath.Join(dir, name)
 }
 
 // forwardToRunning sends args to a running instance; false if none answers.
+// A copy still running under the app's old name (personal-spotify) counts:
+// two would play as the same device.
 func forwardToRunning(args []string) bool {
-	c, err := net.Dial("unix", socketPath())
-	if err != nil {
-		return false
+	for _, p := range []string{socketPath(), runtimePath("personal-spotify.sock")} {
+		c, err := net.Dial("unix", p)
+		if err != nil {
+			continue
+		}
+		_, err = c.Write([]byte(strings.Join(args, "\n") + "\n"))
+		c.Close()
+		return err == nil
 	}
-	defer c.Close()
-	_, err = c.Write([]byte(strings.Join(args, "\n") + "\n"))
-	return err == nil
+	return false
 }
 
 // listenForInstances accepts arguments from later launches and passes each

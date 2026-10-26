@@ -70,7 +70,7 @@ func startVideo(url string, w, h int) *canvasVideo {
 	v := &canvasVideo{url: url, cancel: cancel}
 	v.seen.Store(time.Now().UnixNano())
 	dir, _ := os.UserCacheDir()
-	dir = filepath.Join(dir, "personal-spotify", "canvas")
+	dir = filepath.Join(dir, "spotimy", "canvas")
 	go func() {
 		pl, err := video.New(ctx, url, dir, w, h, func() {
 			if time.Since(time.Unix(0, v.seen.Load())) > time.Second {

@@ -1,30 +1,30 @@
 # Gio needs these tags here: Wayland only (no xkbcommon-x11) and GL only (no
 # Vulkan headers).
 TAGS := nox11,novulkan
-GOFLAGS_BUILD := -tags $(TAGS) -trimpath -ldflags "-s -w -X gioui.org/app.ID=personal-spotify"
+GOFLAGS_BUILD := -tags $(TAGS) -trimpath -ldflags "-s -w -X gioui.org/app.ID=spotimy"
 
 VERSION ?= $(shell git describe --tags --always 2>/dev/null | sed 's/^v//')
 PREFIX ?= /usr/local
 DESTDIR ?=
 
 build:
-	go build $(GOFLAGS_BUILD) -o build/bin/personal-spotify .
+	go build $(GOFLAGS_BUILD) -o build/bin/spotimy .
 
 # install puts the binary, the desktop entry (which is also how the window
 # finds its icon: Gio's app id matches its name) and the icon under PREFIX.
 install:
-	install -Dm755 build/bin/personal-spotify $(DESTDIR)$(PREFIX)/bin/personal-spotify
-	install -Dm644 packaging/personal-spotify.desktop $(DESTDIR)$(PREFIX)/share/applications/personal-spotify.desktop
-	install -Dm644 packaging/personal-spotify.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/personal-spotify.svg
+	install -Dm755 build/bin/spotimy $(DESTDIR)$(PREFIX)/bin/spotimy
+	install -Dm644 packaging/spotimy.desktop $(DESTDIR)$(PREFIX)/share/applications/spotimy.desktop
+	install -Dm644 packaging/spotimy.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/spotimy.svg
 
 # dist is the source tarball the packages build from.
 dist:
 	mkdir -p build/dist
-	git archive --format=tar.gz --prefix=personal-spotify-$(VERSION)/ -o build/dist/personal-spotify-$(VERSION).tar.gz HEAD
+	git archive --format=tar.gz --prefix=spotimy-$(VERSION)/ -o build/dist/spotimy-$(VERSION).tar.gz HEAD
 
 # rpm builds the openSUSE package into build/dist.
 rpm: dist
-	rpmbuild -bb packaging/opensuse/personal-spotify.spec \
+	rpmbuild -bb packaging/opensuse/spotimy.spec \
 		--define "_sourcedir $(CURDIR)/build/dist" --define "_rpmdir $(CURDIR)/build/dist" \
 		--define "_builddir $(CURDIR)/build/rpm" --define "version $(VERSION)"
 
@@ -60,6 +60,6 @@ appimage:
 	docker run --rm -e OWNER=$(shell id -u):$(shell id -g) -v $(CURDIR):/src:ro -v $(CURDIR)/build/dist:/out \
 		-v $(GOROOT):$(GOROOT):ro -v /usr/share/go:/usr/share/go:ro -e GOROOT=$(GOROOT) \
 		-v $(shell go env GOMODCACHE):/gomod:ro debian:bookworm sh /src/packaging/appimage/build.sh
-	ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 $(APPIMAGETOOL) --no-appstream $(if $(APPIMAGE_RUNTIME),--runtime-file $(APPIMAGE_RUNTIME)) build/dist/AppDir build/dist/personal-spotify-$(VERSION)-x86_64.AppImage
+	ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 $(APPIMAGETOOL) --no-appstream $(if $(APPIMAGE_RUNTIME),--runtime-file $(APPIMAGE_RUNTIME)) build/dist/AppDir build/dist/spotimy-$(VERSION)-x86_64.AppImage
 
 .PHONY: build run test vet install dist rpm arch appimage

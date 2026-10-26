@@ -1,6 +1,12 @@
 package main
 
-import "testing"
+import (
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestSpotifyURI(t *testing.T) {
 	for in, want := range map[string]string{
@@ -14,5 +20,23 @@ func TestSpotifyURI(t *testing.T) {
 		if got := spotifyURI(in); got != want {
 			t.Errorf("%s: got %q want %q", in, got, want)
 		}
+	}
+}
+
+func TestMoveDir(t *testing.T) {
+	base := t.TempDir()
+	old, dir := filepath.Join(base, "personal-spotify"), filepath.Join(base, "spotimy")
+	os.MkdirAll(old, 0o700)
+	os.WriteFile(filepath.Join(old, "ui.json"), []byte("{}"), 0o600)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	if got := moveDir(old, dir, log); got != dir {
+		t.Fatalf("moved to %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "ui.json")); err != nil {
+		t.Fatal("the old folder's files didn't move:", err)
+	}
+	os.MkdirAll(old, 0o700) // both exist: the new one wins, the old one is left alone
+	if got := moveDir(old, dir, log); got != dir {
+		t.Fatalf("got %s", got)
 	}
 }

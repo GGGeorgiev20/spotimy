@@ -19,7 +19,7 @@ import (
 
 func main() {
 	level := slog.LevelInfo
-	if os.Getenv("PERSONAL_SPOTIFY_LOG") == "debug" {
+	if os.Getenv("SPOTIMY_LOG") == "debug" {
 		level = slog.LevelDebug
 	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
@@ -38,15 +38,17 @@ func main() {
 		log.Error("no cache dir", "err", err)
 		os.Exit(1)
 	}
-	configDir = filepath.Join(configDir, "personal-spotify")
-	cacheDir = filepath.Join(cacheDir, "personal-spotify")
-
-	// PERSONAL_SPOTIFY_HARNESS=127.0.0.1:port runs the UI headless in sandbox
+	// SPOTIMY_HARNESS=127.0.0.1:port runs the UI headless in sandbox
 	// mode for automated testing (see internal/ui/harness.go).
-	harness := os.Getenv("PERSONAL_SPOTIFY_HARNESS")
+	harness := os.Getenv("SPOTIMY_HARNESS")
 	if harness == "" && forwardToRunning(os.Args[1:]) {
 		log.Info("already running; passed the arguments on")
 		return
+	}
+	oldConfig, oldCache := filepath.Join(configDir, "personal-spotify"), filepath.Join(cacheDir, "personal-spotify")
+	configDir, cacheDir = filepath.Join(configDir, "spotimy"), filepath.Join(cacheDir, "spotimy")
+	if harness == "" { // the harness may run next to the real app: it never moves its folders
+		configDir, cacheDir = moveDir(oldConfig, configDir, log), moveDir(oldCache, cacheDir, log)
 	}
 	b := backend.New(backend.Options{
 		Config:          backend.LoadConfig(configDir, cacheDir, log),
@@ -66,7 +68,7 @@ func main() {
 	b.Start()
 
 	if harness != "" {
-		w, h, scale := envInt("PERSONAL_SPOTIFY_HARNESS_W", 1280), envInt("PERSONAL_SPOTIFY_HARNESS_H", 800), float32(1)
+		w, h, scale := envInt("SPOTIMY_HARNESS_W", 1280), envInt("SPOTIMY_HARNESS_H", 800), float32(1)
 		if err := ui.RunHarness(harness, w, h, scale); err != nil {
 			log.Error("harness", "err", err)
 			os.Exit(1)
@@ -111,4 +113,21 @@ func envInt(k string, def int) int {
 		return v
 	}
 	return def
+}
+
+// moveDir renames the folder of the app's old name (personal-spotify) to
+// its new one the first time Spotimy runs, keeping the settings, play
+// history and cache, and returns the new one.
+func moveDir(old, dir string, log *slog.Logger) string {
+	if _, err := os.Stat(dir); err == nil {
+		return dir
+	}
+	if _, err := os.Stat(old); err != nil {
+		return dir
+	}
+	if err := os.Rename(old, dir); err != nil {
+		log.Warn("couldn't move the old folder", "from", old, "to", dir, "err", err)
+		return old
+	}
+	return dir
 }

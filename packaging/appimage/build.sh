@@ -16,12 +16,12 @@ rm -rf "$app"
 mkdir -p "$app/usr/bin" "$app/usr/lib"
 # The bundled libraries are found next to the binary through its runpath.
 go build -tags nox11,novulkan -trimpath \
-	-ldflags '-s -w -X gioui.org/app.ID=personal-spotify -extldflags "-Wl,-rpath,$ORIGIN/../lib"' \
-	-o "$app/usr/bin/personal-spotify" .
+	-ldflags '-s -w -X gioui.org/app.ID=spotimy -extldflags "-Wl,-rpath,$ORIGIN/../lib"' \
+	-o "$app/usr/bin/spotimy" .
 for lib in libxkbcommon.so.0 libmpg123.so.0 libFLAC.so.12 libvorbisenc.so.2 libvorbis.so.0 libogg.so.0; do
 	cp -L "/usr/lib/x86_64-linux-gnu/$lib" "$app/usr/lib/"
 done
-cp packaging/personal-spotify.desktop packaging/personal-spotify.svg "$app/"
-ln -s personal-spotify.svg "$app/.DirIcon"
-ln -s usr/bin/personal-spotify "$app/AppRun"
+cp packaging/spotimy.desktop packaging/spotimy.svg "$app/"
+ln -s spotimy.svg "$app/.DirIcon"
+ln -s usr/bin/spotimy "$app/AppRun"
 chown -R "$OWNER" /out/AppDir

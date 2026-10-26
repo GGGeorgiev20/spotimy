@@ -113,7 +113,7 @@ func autostartPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "autostart", "personal-spotify.desktop"), nil
+	return filepath.Join(dir, "autostart", "spotimy.desktop"), nil
 }
 
 // setAutostart writes or removes the autostart entry ("minimized" starts the
@@ -123,6 +123,8 @@ func setAutostart(mode string) error {
 	if err != nil {
 		return err
 	}
+	// The entry of the app's old name goes; this one replaces it.
+	_ = os.Remove(filepath.Join(filepath.Dir(path), "personal-spotify.desktop"))
 	if mode != "on" && mode != "minimized" {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
@@ -141,7 +143,7 @@ func writeAutostart(path, exe string, minimized bool) error {
 	if minimized {
 		cmd += " --minimized"
 	}
-	entry := fmt.Sprintf("[Desktop Entry]\nType=Application\nName=Spotify\nExec=%s\nIcon=spotify\nX-GNOME-Autostart-enabled=true\n", cmd)
+	entry := fmt.Sprintf("[Desktop Entry]\nType=Application\nName=Spotimy\nExec=%s\nIcon=spotimy\nX-GNOME-Autostart-enabled=true\n", cmd)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

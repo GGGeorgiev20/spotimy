@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=Personal Spotify
+Name=Spotimy
 Comment=Lightweight Spotify client
-Exec=personal-spotify %U
-Icon=personal-spotify
+Exec=spotimy %U
+Icon=spotimy
 Terminal=false
 Categories=AudioVideo;Audio;Player;
 MimeType=x-scheme-handler/spotify;
-StartupWMClass=personal-spotify
+StartupWMClass=spotimy

@@ -42,7 +42,7 @@ func main() {
 	defer cancel()
 
 	cfg, _ := os.UserConfigDir()
-	cfg = filepath.Join(cfg, "personal-spotify")
+	cfg = filepath.Join(cfg, "spotimy")
 	user, cred, deviceID, err := player.StoredCredentials(cfg)
 	check(err)
 

@@ -1,7 +1,7 @@
 #
-# spec file for personal-spotify
+# spec file for spotimy
 #
-Name:           personal-spotify
+Name:           spotimy
 Version:        %{version}
 Release:        1
 Summary:        Lightweight native Spotify client
@@ -20,6 +20,8 @@ BuildRequires:  pkgconfig(ogg)
 BuildRequires:  pkgconfig(vorbis)
 BuildRequires:  pkgconfig(flac)
 BuildRequires:  pkgconfig(libmpg123)
+# The app was called personal-spotify in its first 0.1.0 packages: replace them.
+Obsoletes:      personal-spotify <= 0.1.0
 Recommends:     ffmpeg
 Recommends:     noto-coloremoji-fonts
 # The Go binary carries no build ids worth a debuginfo package.
@@ -42,8 +44,8 @@ make install DESTDIR=%{buildroot} PREFIX=%{_prefix}
 %files
 %license LICENSE
 %doc README.md
-%{_bindir}/personal-spotify
-%{_datadir}/applications/personal-spotify.desktop
-%{_datadir}/icons/hicolor/scalable/apps/personal-spotify.svg
+%{_bindir}/spotimy
+%{_datadir}/applications/spotimy.desktop
+%{_datadir}/icons/hicolor/scalable/apps/spotimy.svg
 
 %changelog

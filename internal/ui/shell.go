@@ -132,7 +132,7 @@ func Run() {
 	w := new(app.Window)
 	window = w
 	w.Option(
-		app.Title("Spotify"),
+		app.Title("Spotimy"),
 		app.Size(unit.Dp(1280), unit.Dp(800)),
 		app.MinSize(unit.Dp(800), unit.Dp(600)),
 	)

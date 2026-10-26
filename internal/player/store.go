@@ -11,7 +11,11 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-const keyringService = "personal-spotify"
+const keyringService = "spotimy"
+
+// oldKeyringService is where the login was kept when the app was called
+// personal-spotify; Load moves it over.
+const oldKeyringService = "personal-spotify"
 
 type credentials struct {
 	Username string `json:"username"`
@@ -54,7 +58,14 @@ func (s *stateStore) Load() (*librespot.AppState, error) {
 	st.DeviceId, st.EventManager, st.LastVolume = fs.DeviceId, fs.EventManager, fs.LastVolume
 
 	cred := fs.Credentials
-	if raw, err := keyring.Get(keyringService, "credentials"); err == nil {
+	raw, err := keyring.Get(keyringService, "credentials")
+	if errors.Is(err, keyring.ErrNotFound) {
+		if old, oerr := keyring.Get(oldKeyringService, "credentials"); oerr == nil && keyring.Set(keyringService, "credentials", old) == nil {
+			_ = keyring.Delete(oldKeyringService, "credentials")
+			raw, err = old, nil
+		}
+	}
+	if err == nil {
 		var c credentials
 		if json.Unmarshal([]byte(raw), &c) == nil {
 			cred = &c
@@ -103,6 +114,7 @@ func (s *stateStore) wipe() error {
 	if errors.Is(err, keyring.ErrNotFound) {
 		err = nil
 	}
+	_ = keyring.Delete(oldKeyringService, "credentials")
 	if rmErr := os.Remove(s.path); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
 		err = errors.Join(err, rmErr)
 	}
