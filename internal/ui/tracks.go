@@ -406,14 +406,20 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 			Offset(gtx, x, 0, func() {
 				g := gtx
 				g.Constraints = layout.Exact(image.Pt(c.idx, h))
+				num := FmtNumber(i + 1)
+				if tt.Variant == "album" && tr.TrackNumber > 0 {
+					num = FmtNumber(tr.TrackNumber)
+				}
 				switch {
 				case hov:
 					icon := "play"
 					if playingNow {
 						icon = "pause"
 					}
+					// Centered where the number is (right-aligned in the column).
 					is := Dp(gtx, 16)
-					Offset(gtx, c.idx-is+Dp(gtx, 4), (h-is)/2, func() {
+					nw := Measure(gtx, num, 16, Regular)
+					Offset(gtx, c.idx-(nw+is)/2, (h-is)/2, func() {
 						r.play.Label = "Play " + tr.Name
 						r.play.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							return IconPx(gtx, icon, is, ColText)
@@ -422,10 +428,6 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 				case playingNow:
 					Offset(gtx, c.idx-Dp(gtx, 14), (h-Dp(gtx, 14))/2, func() { Equalizer(gtx, Dp(gtx, 14)) })
 				default:
-					num := FmtNumber(i + 1)
-					if tt.Variant == "album" && tr.TrackNumber > 0 {
-						num = FmtNumber(tr.TrackNumber)
-					}
 					col := sub
 					if current {
 						col = ColAccent
