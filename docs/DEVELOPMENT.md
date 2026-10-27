@@ -42,6 +42,7 @@ go-librespot is vendored in `third_party/go-librespot` (go.mod replaces the modu
 - set_queue reorders the upcoming context tracks too (moving songs around "Next from", and between it and the queue), not just the queue, and removes a context track left out from among the ones it lists.
 - A playing track's position keeps counting past ten minutes from its last load, seek or resume (it was taken for a stale timestamp and reported as the start), capped at the track's length.
 - The status reports a track relinked to its regional alternative under the id that was asked for, while it loads and once it plays.
+- Listening is reported: a real event manager replaces the empty one and sends a RawCoreStream per track played to the event service (shape and desktop identifiers from librespot-org/librespot#1759), so plays count in the listening history, stats and Friend Activity.
 - a track's end is reported once the audio output has played what it buffered of it (PulseAudio keeps two seconds), so the next track doesn't show, and count its position, that much early;
 - set_audio_options changes the listening settings while it runs: the streaming bitrate and autoplay (next track), volume normalisation and its level (next track), crossfade (at once, or from the next track change while audio is buffered ahead) and a mono downmix (at once).
 
