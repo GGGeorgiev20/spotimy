@@ -74,9 +74,22 @@ func text(s string) string { return html.UnescapeString(tag.ReplaceAllString(s, 
 
 // setup runs when a playlist (re)loads.
 func (p *page) setup(pl *spotify.Playlist) {
+	refresh := p.cur != nil // the same playlist reloaded after a change
 	p.cur = pl
 	ui.Saved[p.uri] = pl.Following
 	p.desc = text(pl.Description)
+	p.lengthG = -1
+	if len(pl.Banner) > 0 {
+		p.color = ui.RGB(0x535353) // the official wash under a banner is plain gray
+	} else {
+		ui.ExtractedColor(pl.Color, pl.Images, func(c color.NRGBA) { p.color = c })
+	}
+	if refresh {
+		// In place, so the list doesn't blank and refill.
+		p.tracks.Refresh(pl.Tracks)
+		p.table.CanEdit, p.table.NoCheck = pl.CanEdit, pl.CanEdit
+		return
+	}
 	p.tracks = ui.NewPaged(func(off, lim int) (*spotify.TrackPage, error) {
 		r, err := ui.B.Playlist(p.uri, off, lim)
 		if err != nil {
@@ -85,7 +98,6 @@ func (p *page) setup(pl *spotify.Playlist) {
 		return &r.Tracks, nil
 	}, pageSize)
 	p.tracks.Seed(pl.Tracks)
-	p.lengthG = -1
 	p.table = ui.TrackTable{Variant: "playlist", ContextURI: p.uri, PlaylistURI: p.uri, CanEdit: pl.CanEdit, NoAdded: true, NoCheck: pl.CanEdit, Sort: &p.ctl}
 	for _, t := range pl.Tracks.Items {
 		if t.AddedAt != "" {
@@ -96,11 +108,6 @@ func (p *page) setup(pl *spotify.Playlist) {
 	ui.LoadTasteExcluded(p.uri)
 	if pl.CanEdit && !p.recs.res.Done {
 		p.recs.fetch(p.uri, p.haveURIs())
-	}
-	if len(pl.Banner) > 0 {
-		p.color = ui.RGB(0x535353) // the official wash under a banner is plain gray
-	} else {
-		ui.ExtractedColor(pl.Color, pl.Images, func(c color.NRGBA) { p.color = c })
 	}
 }
 

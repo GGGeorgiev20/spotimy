@@ -58,3 +58,18 @@ func TestHeaderSort(t *testing.T) {
 		t.Fatalf("got %s desc=%v", l.Sort, l.Desc)
 	}
 }
+
+// A refreshed list keeps the rows past its first page until they reload.
+func TestPagedRefreshKeepsRows(t *testing.T) {
+	tr := func(uri string) spotify.Track { return spotify.Track{URI: uri} }
+	for _, u := range []string{"a", "b", "c", "d"} {
+		Saved[LikeKey(tr(u))] = false // known: no lookup without a backend
+	}
+	p := &Paged{size: 2}
+	p.Seed(spotify.TrackPage{Total: 4, Items: []spotify.Track{tr("a"), tr("b")}})
+	p.put(2, []spotify.Track{tr("c"), tr("d")})
+	p.Refresh(spotify.TrackPage{Total: 3, Items: []spotify.Track{tr("a"), tr("c")}}) // b removed
+	if len(p.Items) != 3 || p.Items[1].URI != "c" || p.Items[2] == nil || p.Items[2].URI != "c" {
+		t.Errorf("items after refresh: %v", p.Items)
+	}
+}

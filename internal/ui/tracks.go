@@ -59,19 +59,43 @@ func (p *Paged) Ensure(start, end int) {
 	}
 	end = min(end, p.Total)
 	for pg := max(0, start) / p.size; pg*p.size < end; pg++ {
-		off := pg * p.size
-		if p.Items[off] != nil || p.busy[pg] {
-			continue
+		if p.Items[pg*p.size] == nil {
+			p.load(pg)
 		}
-		p.busy[pg] = true
-		Async(func() (*spotify.TrackPage, error) { return p.fetch(off, p.size) }, func(tp *spotify.TrackPage, err error) {
-			delete(p.busy, pg)
-			if err != nil {
-				p.Err = err
-				return
-			}
-			p.put(off, tp.Items)
-		})
+	}
+}
+
+func (p *Paged) load(pg int) {
+	if p.busy[pg] {
+		return
+	}
+	p.busy[pg] = true
+	off := pg * p.size
+	Async(func() (*spotify.TrackPage, error) { return p.fetch(off, p.size) }, func(tp *spotify.TrackPage, err error) {
+		delete(p.busy, pg)
+		if err != nil {
+			p.Err = err
+			return
+		}
+		p.put(off, tp.Items)
+	})
+}
+
+// Refresh takes the list's reloaded first page. The rows past it stay
+// shown, where they were, while the pages they're on reload too.
+func (p *Paged) Refresh(page spotify.TrackPage) {
+	old := p.Items
+	p.Total = page.Total
+	p.Items = make([]*spotify.Track, page.Total)
+	copy(p.Items, old)
+	p.put(page.Offset, page.Items)
+	if p.fetch == nil || p.size == 0 {
+		return
+	}
+	for pg := 1; pg*p.size < min(len(old), p.Total); pg++ {
+		if old[pg*p.size] != nil {
+			p.load(pg)
+		}
 	}
 }
 
