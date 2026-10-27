@@ -19,7 +19,7 @@ config.local.*
 /log.txt
 
 # Build output
-/build/bin/
+/build/
 
 # Editor / OS
 .vscode/
