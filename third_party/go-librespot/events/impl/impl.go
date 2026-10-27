@@ -51,6 +51,9 @@ type Impl struct{}
 
 func (Impl) NewEventManager(log librespot.Logger, store librespot.StateStore, _ *mercury.Client, sp *spclient.Spclient, _ string) (player.EventManager, error) {
 	m := &manager{log: log, sp: sp, sessionId: random(16), sequenceId: random(20), clock: time.Now()}
+	if store == nil {
+		return m, nil
+	}
 	if st, err := store.Load(); err == nil && st != nil {
 		m.deviceId = st.DeviceId
 	}

@@ -17,17 +17,23 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/player"
 	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 	librespot "github.com/devgianlu/go-librespot"
 	"github.com/devgianlu/go-librespot/apresolve"
+	"github.com/devgianlu/go-librespot/audio"
 	"github.com/devgianlu/go-librespot/dealer"
 	"github.com/devgianlu/go-librespot/login5"
+	lplayer "github.com/devgianlu/go-librespot/player"
+	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"
 	credentialspb "github.com/devgianlu/go-librespot/proto/spotify/login5/v3/credentials"
+	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
+	"github.com/devgianlu/go-librespot/tracks"
 )
 
 var l5tok librespot.GetLogin5TokenFunc
@@ -116,6 +122,19 @@ func main() {
 		check(err)
 		out, err = sess.Mercury().Request(ctx, "GET", os.Args[2], nil, nil)
 		sess.Close()
+	case "stream": // time a cold track start without playing it: spdev stream <track uri>...
+		var sess *session.Session
+		sess, err = session.NewSessionFromOptions(ctx, &session.Options{
+			Log: &librespot.NullLogger{}, DeviceType: devicespb.DeviceType_COMPUTER, DeviceId: deviceID,
+			Credentials: session.StoredCredentials{Username: user, Data: cred}, ClientToken: ct,
+		})
+		check(err)
+		if os.Args[2] == "ctx" { // spdev stream ctx <context uri> <track uri>
+			err = timeContext(ctx, sess, os.Args[3], os.Args[4])
+		} else {
+			err = timeStreams(ctx, sess, os.Args[2:])
+		}
+		sess.Close()
 	case "dealer": // dealer only (no device registered): spdev dealer <secs> <path>... GETs each path with the connection id, prints pushes
 		out, err = dealerProbe(ctx, client, os.Args[2:])
 	case "cluster":
@@ -169,3 +188,76 @@ func dealerProbe(ctx context.Context, client *spotify.Client, args []string) ([]
 		}
 	}
 }
+
+// nopEvents swallows the stream events NewStream raises.
+type nopEvents struct{ lplayer.EventManager }
+
+func (nopEvents) PreStreamLoadNew([]byte, librespot.SpotifyId, int64)                               {}
+func (nopEvents) PostStreamResolveAudioFile([]byte, int32, *librespot.Media, *metadatapb.AudioFile) {}
+func (nopEvents) PostStreamRequestAudioKey([]byte)                                                  {}
+func (nopEvents) PostStreamResolveStorage([]byte)                                                   {}
+func (nopEvents) PostStreamInitHttpChunkReader([]byte, *audio.HttpChunkedReader)                    {}
+
+// timeStreams opens each track's stream and decodes two seconds of it, the
+// amount the output wants before it starts, printing how long each took.
+func timeStreams(ctx context.Context, sess *session.Session, uris []string) error {
+	p, err := lplayer.NewPlayer(&lplayer.Options{
+		Spclient: sess.Spclient(), AudioKey: sess.AudioKey(), Events: nopEvents{},
+		Log: debugLog{&librespot.NullLogger{}}, CountryCode: func() string { return "" },
+	})
+	if err != nil {
+		return err
+	}
+	defer p.Close()
+	for _, uri := range uris {
+		id, err := librespot.SpotifyIdFromUri(uri)
+		if err != nil {
+			return err
+		}
+		start := time.Now()
+		st, err := p.NewStream(ctx, http.DefaultClient, *id, 320, 0)
+		if err != nil {
+			return err
+		}
+		opened := time.Since(start)
+		buf := make([]float32, lplayer.SampleRate*lplayer.Channels*2)
+		for n := 0; n < len(buf); {
+			k, err := st.Source.Read(buf[n:])
+			if err != nil {
+				return err
+			}
+			n += k
+		}
+		fmt.Printf("%s: stream %v, 2s decoded %v\n", st.Media.Name(), opened.Round(time.Millisecond), time.Since(start).Round(time.Millisecond))
+	}
+	return nil
+}
+
+// timeContext times what playing a track in a context waits on before its
+// stream: resolving the context and walking it to the track.
+func timeContext(ctx context.Context, sess *session.Session, ctxUri, trackUri string) error {
+	start := time.Now()
+	ctxUri = strings.ReplaceAll(ctxUri, "USER", sess.Username())
+	spotCtx, err := sess.Spclient().ContextResolve(ctx, ctxUri)
+	if err != nil {
+		return err
+	}
+	fmt.Println("context resolve", time.Since(start).Round(time.Millisecond))
+	list, err := tracks.NewTrackListFromContext(ctx, &librespot.NullLogger{}, sess.Spclient(), spotCtx)
+	if err != nil {
+		return err
+	}
+	fmt.Println("track list", time.Since(start).Round(time.Millisecond))
+	err = list.Seek(ctx, func(t *connectpb.ContextTrack) bool { return t.Uri == trackUri })
+	fmt.Println("seek", time.Since(start).Round(time.Millisecond), err)
+	return nil
+}
+
+// debugLog prints go-librespot's debug lines with a timestamp.
+type debugLog struct{ *librespot.NullLogger }
+
+func (debugLog) Debugf(f string, a ...any) {
+	fmt.Printf("  %s %s\n", time.Now().Format("15:04:05.000"), fmt.Sprintf(f, a...))
+}
+func (l debugLog) WithField(string, any) librespot.Logger { return l }
+func (l debugLog) WithError(error) librespot.Logger       { return l }

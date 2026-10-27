@@ -102,6 +102,7 @@ const (
 	playerCmdPosition
 	playerCmdVolume
 	playerCmdReopenOutput
+	playerCmdSilence
 	playerCmdClose
 )
 
@@ -475,6 +476,13 @@ loop:
 
 				p.log.Infof("reopened output device on %q", device)
 				cmd.resp <- nil
+			case playerCmdSilence:
+				// The output stops at once, buffer and all, and stays stopped
+				// until the next stream is set: nothing reads the current one.
+				if out != nil {
+					_ = out.Drop()
+				}
+				cmd.resp <- nil
 			case playerCmdClose:
 				break loop
 			default:
@@ -623,6 +631,16 @@ func (p *Player) PositionMs() int64 {
 	}
 	pos := <-resp
 	return pos.(int64)
+}
+
+// Silence stops the audio now, while the next stream loads: the output holds
+// seconds of the current one, which would otherwise play on under the new
+// track. Setting the next stream starts the output again.
+func (p *Player) Silence() {
+	resp := make(chan any, 1)
+	if p.send(playerCmd{typ: playerCmdSilence, resp: resp}) {
+		<-resp
+	}
 }
 
 // ReopenOutput reopens the audio output on the given device without touching
@@ -825,6 +843,7 @@ func StartPosition(position, duration int64) int64 {
 
 func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId librespot.SpotifyId, bitrate int, mediaPosition int64) (*Stream, error) {
 	log := p.log.WithField("uri", spotId.Uri())
+	began := time.Now()
 
 	// Remember the id the caller asked for: spotId is reassigned below when a
 	// restricted track is relinked to an alternative.
@@ -926,6 +945,7 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 
 	p.events.PostStreamResolveAudioFile(playbackId, int32(bitrate), media, file)
 
+	resolved := time.Since(began)
 	log.Debugf("selected format %s (%x)", file.Format.String(), file.FileId)
 
 	// The key comes over the access point and the file from storage resolve
@@ -935,11 +955,12 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 	type keyResult struct {
 		key []byte
 		err error
+		at  time.Duration
 	}
 	keyCh := make(chan keyResult, 1)
 	go func() {
 		key, err := p.retrieveAudioKey(ctx, spotId, file.FileId)
-		keyCh <- keyResult{key, err}
+		keyCh <- keyResult{key, err, time.Since(began)}
 	}()
 
 	// Prefer a cached copy of the encrypted audio file when available: this
@@ -967,16 +988,19 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 	}
 
 	var httpStream *audio.HttpChunkedReader
+	var located, fetched time.Duration
 	if rawStream == nil {
 		storageResolve, err := p.sp.ResolveStorageInteractive(ctx, file.FileId, file.Format, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed resolving track storage: %w", err)
 		}
 
+		located = time.Since(began)
 		httpStream, err = p.httpChunkedReaderFromStorageResolve(log, client, storageResolve)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating chunked reader: %w", err)
 		}
+		fetched = time.Since(began)
 
 		// Persist the encrypted file to the cache once it has been fully
 		// downloaded. This is best-effort: caching failures never affect
@@ -998,6 +1022,13 @@ func (p *Player) NewStream(ctx context.Context, client *http.Client, spotId libr
 		return nil, fmt.Errorf("failed retrieving audio key: %w", kr.err)
 	}
 	audioKey := kr.key
+
+	// Each step is a network round trip that is usually well under this; say
+	// which one was not when a track is slow to start.
+	if took := time.Since(began); took > time.Second {
+		log.Infof("slow to open the stream (%dms): metadata %dms, audio key %dms, storage %dms, first chunk %dms",
+			took.Milliseconds(), resolved.Milliseconds(), kr.at.Milliseconds(), located.Milliseconds(), fetched.Milliseconds())
+	}
 
 	p.events.PostStreamRequestAudioKey(playbackId)
 	if httpStream != nil {

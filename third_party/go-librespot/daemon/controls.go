@@ -376,6 +376,12 @@ func (p *AppPlayer) loadContext(spotCtx *connectpb.Context, skipTo skipToFunc, p
 	p.state.player.PlaybackSpeed = 0
 	p.updateState()
 
+	// The new context shows as loading from here, so the old track stops
+	// here too rather than playing on under it until the new one is ready.
+	if drop {
+		p.player.Silence()
+	}
+
 	shuffle := p.state.player.Options.ShufflingContext
 	p.loadGen++
 
@@ -808,6 +814,15 @@ func (p *AppPlayer) loadCurrentTrack(paused, drop, resume bool, delay time.Durat
 		p.primaryStream = nil
 	}
 
+	// A track asked for (rather than reached by the last one ending) cuts
+	// the one playing at once, as the official clients do: the output holds
+	// seconds of it, which would otherwise go on under the new track's name
+	// for as long as that takes to load.
+	if drop {
+		p.player.Silence()
+	}
+	began := time.Now()
+
 	spotId, err := librespot.SpotifyIdFromUri(p.state.player.Track.GetUri())
 	if err != nil {
 		then(fmt.Errorf("failed parsing uri: %w", err))
@@ -911,6 +926,7 @@ func (p *AppPlayer) loadCurrentTrack(paused, drop, resume bool, delay time.Durat
 					err: err,
 					commit: func(p *AppPlayer, err error) {
 						p.emitPlaybackError(playbackErrorStageLoad, spotId.Uri(), err)
+						p.failedLoad()
 						then(err)
 					},
 				}
@@ -934,7 +950,7 @@ func (p *AppPlayer) loadCurrentTrack(paused, drop, resume bool, delay time.Durat
 				},
 				commit: func(p *AppPlayer, err error) {
 					p.forgetReplacedStreamEvents(streamGen)
-					p.commitLoad(stream, spotId.Uri(), paused, position, prefetchedStream != nil)
+					p.commitLoad(stream, spotId.Uri(), paused, position, prefetchedStream != nil, time.Since(began))
 					then(err)
 				},
 			}
@@ -1022,7 +1038,7 @@ func (p *AppPlayer) fetchTrack(ctx context.Context, spotId librespot.SpotifyId, 
 }
 
 // commitLoad reports the track the player is now on. Runs on the player loop.
-func (p *AppPlayer) commitLoad(stream *player.Stream, uri string, paused bool, trackPosition int64, prefetched bool) {
+func (p *AppPlayer) commitLoad(stream *player.Stream, uri string, paused bool, trackPosition int64, prefetched bool, took time.Duration) {
 	p.primaryStream = stream
 
 	// A play or pause that arrived while this was loading asked for a state the
@@ -1042,8 +1058,8 @@ func (p *AppPlayer) commitLoad(stream *player.Stream, uri string, paused bool, t
 	}
 
 	p.app.log.WithField("uri", uri).
-		Infof("loaded %s %s (paused: %t, position: %dms, duration: %dms, prefetched: %t)",
-			stream.RequestedId.Type(), strconv.QuoteToGraphic(stream.Media.Name()), paused,
+		Infof("loaded %s %s in %dms (paused: %t, position: %dms, duration: %dms, prefetched: %t)",
+			stream.RequestedId.Type(), strconv.QuoteToGraphic(stream.Media.Name()), took.Milliseconds(), paused,
 			trackPosition, stream.Media.Duration(), prefetched)
 
 	// Now that the media is known, publish what controllers need to draw the
@@ -1066,6 +1082,16 @@ func (p *AppPlayer) commitLoad(stream *player.Stream, uri string, paused bool, t
 		Type: ApiEventTypeMetadata,
 		Data: ApiEventDataMetadata(*p.newApiResponseStatusTrack(stream, trackPosition)),
 	})
+}
+
+// failedLoad leaves the track that could not be loaded showing as paused, with
+// nothing playing. Whatever goes on to skip past it loads the next one over
+// this; otherwise play tries it again.
+func (p *AppPlayer) failedLoad() {
+	p.player.Silence()
+	p.state.player.IsBuffering = false
+	p.state.setPaused(true)
+	p.updateState()
 }
 
 // setModes merges modes into the player options. A Jam is switched on and off
@@ -1239,6 +1265,16 @@ func (p *AppPlayer) play() error {
 		if p.loadInFlight {
 			p.state.setPaused(false)
 			p.updateState()
+			return nil
+		}
+
+		// The track failed to load: try it again.
+		if p.state.player.Track != nil {
+			p.loadCurrentTrack(false, true, true, 0, func(err error) {
+				if err != nil {
+					p.app.log.WithError(err).Warn("failed loading current track (play)")
+				}
+			})
 			return nil
 		}
 

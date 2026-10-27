@@ -11,6 +11,7 @@ import (
 	"time"
 
 	librespot "github.com/devgianlu/go-librespot"
+	"github.com/devgianlu/go-librespot/audio"
 	"github.com/devgianlu/go-librespot/dealer"
 	"github.com/devgianlu/go-librespot/mpris"
 	"github.com/devgianlu/go-librespot/player"
@@ -756,4 +757,30 @@ func TestUpcomingQueueLeavesOutThePlayingEntry(t *testing.T) {
 	upcoming := list.UpcomingQueue()
 	require.Len(t, upcoming, 1)
 	require.Equal(t, "q1", upcoming[0].GetUid())
+}
+
+// A track that fails to load used to show as loading for good, while the
+// track before it played on under its name. It shows as paused instead, and
+// play tries it again.
+func TestFailedLoadLeavesTheTrackPausedAndPlayRetries(t *testing.T) {
+	p := newTestAppPlayer(t)
+	p.state.player.Track = &connectpb.ProvidedTrack{Uri: jamTrackUri}
+
+	// A throttled key refusal is not skipped past, so it ends the load.
+	w := &warmStream{uri: jamTrackUri, done: make(chan struct{}), err: &audio.KeyProviderError{Code: 2}}
+	close(w.done)
+	p.warm.cur = w
+
+	p.loadCurrentTrack(false, true, false, 0, func(error) {})
+	require.True(t, p.state.player.IsBuffering)
+
+	runQueuedJob(t, p)
+	require.False(t, p.state.player.IsBuffering)
+	require.True(t, p.state.player.IsPaused)
+	require.Nil(t, p.primaryStream)
+
+	require.NoError(t, p.play())
+	require.True(t, p.state.player.IsBuffering, "loading it again")
+	require.False(t, p.state.player.IsPaused)
+	require.Len(t, p.loader.queue, 1)
 }

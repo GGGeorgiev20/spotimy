@@ -43,6 +43,7 @@ go-librespot is vendored in `third_party/go-librespot` (go.mod replaces the modu
 - A playing track's position keeps counting past ten minutes from its last load, seek or resume (it was taken for a stale timestamp and reported as the start), capped at the track's length.
 - The status reports a track relinked to its regional alternative under the id that was asked for, while it loads and once it plays.
 - Listening is reported: a real event manager replaces the empty one and sends a RawCoreStream per track played to the event service (shape and desktop identifiers from librespot-org/librespot#1759), so plays count in the listening history, stats and Friend Activity.
+- A track asked for (play, skip, jump) cuts the one playing at once rather than letting the output's two-second buffer, and then the whole load, play on under the new track's name. A load that fails leaves the track paused instead of loading for good with the old audio still playing, and play tries it again. Loads log how long they took, and a stream slower than a second to open logs which step was slow.
 - a track's end is reported once the audio output has played what it buffered of it (PulseAudio keeps two seconds), so the next track doesn't show, and count its position, that much early;
 - set_audio_options changes the listening settings while it runs: the streaming bitrate and autoplay (next track), volume normalisation and its level (next track), crossfade (at once, or from the next track change while audio is buffered ahead) and a mono downmix (at once).
 

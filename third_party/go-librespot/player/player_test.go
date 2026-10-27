@@ -468,3 +468,26 @@ func TestTrackEndWaitsForOutputDelay(t *testing.T) {
 		t.Fatal("track end never reported")
 	}
 }
+
+// Silence flushes the output and leaves it stopped: the next stream set is
+// what starts it again.
+func TestSilenceStopsTheOutputUntilTheNextStream(t *testing.T) {
+	out := &recordingOutput{}
+	p := newTestPlayer(t, out)
+
+	if err := p.SetPrimaryStream(rampSource(1000, 0, 0), false, false); err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	before := len(out.snapshot())
+	p.Silence()
+	if calls := out.snapshot()[before:]; !slices.Equal(calls, []string{"Drop"}) {
+		t.Fatalf("expected only a Drop, got %v", calls)
+	}
+
+	if err := p.SetPrimaryStream(rampSource(1000, 0, 0), false, true); err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if calls := out.snapshot(); calls[len(calls)-1] != "Resume" {
+		t.Fatalf("expected the next stream to resume the output, got %v", calls)
+	}
+}
