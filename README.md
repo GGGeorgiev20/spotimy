@@ -11,20 +11,20 @@ Download the file for your system from the [releases page](https://github.com/GG
 **openSUSE**
 
 ```bash
-sudo zypper in ./spotimy-0.1.0-1.x86_64.rpm
+sudo zypper in ./spotimy-0.1.1-1.x86_64.rpm
 ```
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U spotimy-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U spotimy-0.1.1-1-x86_64.pkg.tar.zst
 ```
 
 **Any other distribution** (Ubuntu 22.04+, Debian 12+, Fedora 35+, or anything with glibc 2.34 or newer)
 
 ```bash
-chmod +x spotimy-0.1.0-x86_64.AppImage
-./spotimy-0.1.0-x86_64.AppImage
+chmod +x spotimy-0.1.1-x86_64.AppImage
+./spotimy-0.1.1-x86_64.AppImage
 ```
 
 Then open **Spotimy** from your app launcher. The first time, it opens Spotify's login page in your browser; once you've logged in there, the app takes over and remembers you.

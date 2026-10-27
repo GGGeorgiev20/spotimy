@@ -1,6 +1,6 @@
 # Maintainer: Galin Georgiev
 pkgname=spotimy
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Lightweight native Spotify client (Gio, embedded go-librespot)"
 arch=('x86_64')
