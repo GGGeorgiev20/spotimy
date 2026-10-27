@@ -293,8 +293,9 @@ func Prev() {
 	WentBack = time.Now()
 }
 
-// WentBack is when Previous was last pressed (zero once another command
-// follows), so a track change it brings can be told from any other.
+// WentBack is when the player last went back a track (Previous here, media
+// keys or a remote; zero once another command follows), so a track change
+// it brings can be told from any other.
 var WentBack time.Time
 
 func Seek(ms int64) {

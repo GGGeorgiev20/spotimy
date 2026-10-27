@@ -188,6 +188,9 @@ const (
 	ApiEventTypeShuffleContext ApiEventType = "shuffle_context"
 	ApiEventTypePlaybackReady  ApiEventType = "playback_ready"
 	ApiEventTypePlaybackError  ApiEventType = "playback_error"
+	// ApiEventTypeWentBack says the track about to load was gone back to,
+	// however previous was asked for (API, MPRIS, a remote controller).
+	ApiEventTypeWentBack ApiEventType = "went_back"
 )
 
 type ApiRequest struct {

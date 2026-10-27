@@ -60,6 +60,9 @@ type Options struct {
 	// OnPlaybackError runs (off the UI goroutine) with a message for the user
 	// when a track couldn't be played.
 	OnPlaybackError func(string)
+	// OnWentBack runs (off the UI goroutine) when the player goes back a
+	// track, however that was asked for (the app, media keys, a remote).
+	OnWentBack func()
 	// OnState runs when the login/session state changes.
 	OnState func(AppState)
 }
@@ -115,6 +118,9 @@ func New(opts Options) *App {
 				if d, ok := ev.Data.(daemon.ApiEventDataPlaybackError); ok {
 					a.opts.OnPlaybackError(playbackErrorText(d))
 				}
+			}
+			if ev.Type == daemon.ApiEventTypeWentBack && a.opts.OnWentBack != nil {
+				a.opts.OnWentBack()
 			}
 			a.emitPlayer()
 		},

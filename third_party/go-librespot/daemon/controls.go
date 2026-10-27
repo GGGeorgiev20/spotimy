@@ -1429,6 +1429,7 @@ func (p *AppPlayer) skipPrev(allowSeeking bool) error {
 			p.state.player.Timestamp = time.Now().UnixMilli()
 			p.state.player.PositionAsOfTimestamp = 0
 
+			p.app.server.Emit(&ApiEvent{Type: ApiEventTypeWentBack})
 			p.loadCurrentTrack(p.state.player.IsPaused, true, true, delay, func(err error) {
 				if err != nil {
 					p.app.log.WithError(err).Warn("failed loading current track (skip prev)")

@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"syscall"
+	"time"
 
 	"gioui.org/app"
 
@@ -56,6 +57,7 @@ func main() {
 		Sandbox:         harness != "",
 		OnPlayer:        ui.OnPlayer,
 		OnPlaybackError: func(msg string) { ui.Post(func() { ui.Toast(msg) }) },
+		OnWentBack:      func() { ui.Post(func() { ui.WentBack = time.Now() }) },
 		OnState:         ui.OnState,
 	})
 	ui.Log = log
