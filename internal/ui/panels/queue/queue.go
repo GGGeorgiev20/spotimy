@@ -40,10 +40,11 @@ type panel struct {
 
 	loggedErr error // the load error last logged
 
-	// playing is the track last seen playing: when another starts, it and
-	// what was skipped to reach it leave the list at once, rather than when
-	// the queue reloads (which waits for the track to settle).
-	playing string
+	// now is the track last seen playing, as an upcoming entry. When another
+	// starts, the list changes at once rather than when the queue reloads
+	// (which waits for the track to settle): the new one leaves it with what
+	// was skipped to reach it, or, going back, now returns to it.
+	now backend.QueueTrack
 
 	// A move slides the rows from where they were: slides holds each moved
 	// row's starting offset (px), eased to 0 from slideAt. rowPx and headPx
@@ -134,10 +135,17 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 		p.loggedErr = p.res.Err // once, not every frame
 		ui.Log.Warn("queue", "err", p.res.Err)
 	}
-	if t != nil && t.URI != p.playing {
-		p.playing = t.URI
+	if t != nil && t.URI != p.now.URI {
+		prev := p.now
+		p.now = backend.QueueTrack{Track: trackOf(t)}
 		if i := upcomingIndex(next, t.URI); i >= 0 {
 			p.skipPast(i)
+		} else if prev.URI != "" && p.res.Ok() && time.Since(ui.WentBack) < 3*time.Second {
+			old := p.res.V.Next
+			p.res.V.Next = putBack(old, prev)
+			p.startSlide(old, p.res.V.Next)
+		}
+		if p.res.Ok() {
 			next = p.res.V.Next
 		}
 	}
@@ -522,8 +530,30 @@ func (p *panel) set(next []backend.QueueTrack) {
 // skipPast drops the upcoming tracks up to and including i, the one starting.
 func (p *panel) skipPast(i int) {
 	old := p.res.V.Next
+	p.now = old[i]
 	p.startSlide(old, old[i+1:])
 	p.res.V.Next = old[i+1:]
+}
+
+// putBack returns the track gone back from to the top of its section: a
+// queued one heads the queue again, any other the rest of the context.
+func putBack(next []backend.QueueTrack, q backend.QueueTrack) []backend.QueueTrack {
+	at := 0
+	if q.Provider != "queue" {
+		for at < len(next) && next[at].Provider == "queue" {
+			at++
+		}
+	}
+	return slices.Insert(slices.Clone(next), at, q)
+}
+
+// trackOf is the playing track as a list row.
+func trackOf(t *backend.NowTrack) spotify.Track {
+	out := spotify.Track{URI: t.URI, Name: t.Name, Artists: t.Artists, DurationMs: int(t.DurationMs)}
+	if t.AlbumURI != "" {
+		out.Album = &spotify.AlbumRef{URI: t.AlbumURI, Name: t.AlbumName, Images: t.Images}
+	}
+	return out
 }
 
 // upcomingIndex is where track uri first comes up in next, or -1.
@@ -642,7 +672,6 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 	}
 	if r.play.Clicked(gtx) || r.click.DoubleClicked(gtx) {
 		if h != nil { // the row itself, not an earlier copy of its track
-			p.playing = t.URI
 			p.skipPast(h.index)
 		}
 		playTrack(t, current, h != nil)

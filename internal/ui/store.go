@@ -159,6 +159,7 @@ func IsCurrentTrack(t spotify.Track, contextURI string) bool {
 }
 
 func playerCall(name string, f func() error) {
+	WentBack = time.Time{}
 	Go("Couldn't "+name, f, RefreshPlayer)
 }
 
@@ -287,7 +288,14 @@ func PlayPause() {
 }
 
 func Next() { playerCall("skip", B.Next) }
-func Prev() { playerCall("go back", B.Prev) }
+func Prev() {
+	playerCall("go back", B.Prev)
+	WentBack = time.Now()
+}
+
+// WentBack is when Previous was last pressed (zero once another command
+// follows), so a track change it brings can be told from any other.
+var WentBack time.Time
 
 func Seek(ms int64) {
 	if s := Player.Status; s != nil && s.Track != nil {

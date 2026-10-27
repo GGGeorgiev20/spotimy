@@ -140,3 +140,21 @@ func TestUpcomingIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestPutBack(t *testing.T) {
+	next := tracks("abXY")
+	for _, c := range []struct{ back, want string }{
+		{"c", "cabXY"}, // a queued track heads the queue again
+		{"Z", "abZXY"}, // a context one heads the rest of the context
+	} {
+		if got := uriString(putBack(next, tracks(c.back)[0])); got != c.want {
+			t.Errorf("%s: got %s want %s", c.back, got, c.want)
+		}
+	}
+	if got := uriString(putBack(nil, tracks("Z")[0])); got != "Z" {
+		t.Errorf("empty: got %s", got)
+	}
+	if uriString(next) != "abXY" {
+		t.Error("input modified")
+	}
+}
