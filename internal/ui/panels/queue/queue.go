@@ -40,6 +40,11 @@ type panel struct {
 
 	loggedErr error // the load error last logged
 
+	// playing is the track last seen playing: when another starts, it and
+	// what was skipped to reach it leave the list at once, rather than when
+	// the queue reloads (which waits for the track to settle).
+	playing string
+
 	// A move slides the rows from where they were: slides holds each moved
 	// row's starting offset (px), eased to 0 from slideAt. rowPx and headPx
 	// are the row and heading heights last laid out.
@@ -128,6 +133,13 @@ func (p *panel) body(gtx layout.Context) layout.Dimensions {
 	} else if p.res.Err != nil && p.res.Err != p.loggedErr {
 		p.loggedErr = p.res.Err // once, not every frame
 		ui.Log.Warn("queue", "err", p.res.Err)
+	}
+	if t != nil && t.URI != p.playing {
+		p.playing = t.URI
+		if i := upcomingIndex(next, t.URI); i >= 0 {
+			p.skipPast(i)
+			next = p.res.V.Next
+		}
 	}
 	items := layoutItems(t != nil, next)
 	queued := 0
@@ -507,6 +519,23 @@ func (p *panel) set(next []backend.QueueTrack) {
 	ui.Go("Couldn't update queue", func() error { return ui.B.SetQueue(queueItems(next)) }, nil)
 }
 
+// skipPast drops the upcoming tracks up to and including i, the one starting.
+func (p *panel) skipPast(i int) {
+	old := p.res.V.Next
+	p.startSlide(old, old[i+1:])
+	p.res.V.Next = old[i+1:]
+}
+
+// upcomingIndex is where track uri first comes up in next, or -1.
+func upcomingIndex(next []backend.QueueTrack, uri string) int {
+	for i, q := range next {
+		if q.URI == uri || q.LinkedURI == uri {
+			return i
+		}
+	}
+	return -1
+}
+
 func moveTo(next []backend.QueueTrack, from, to int) []backend.QueueTrack {
 	out := removeAt(next, from)
 	out = append(out, backend.QueueTrack{})
@@ -612,6 +641,10 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		remove = h.remove
 	}
 	if r.play.Clicked(gtx) || r.click.DoubleClicked(gtx) {
+		if h != nil { // the row itself, not an earlier copy of its track
+			p.playing = t.URI
+			p.skipPast(h.index)
+		}
 		playTrack(t, current, h != nil)
 	}
 	if r.title.Click.Clicked(gtx) && t.Album != nil {

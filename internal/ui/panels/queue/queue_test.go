@@ -130,3 +130,13 @@ func TestLayoutItems(t *testing.T) {
 		t.Errorf("empty queue has %d items", n)
 	}
 }
+
+func TestUpcomingIndex(t *testing.T) {
+	next := tracks("abcab")
+	next[2].LinkedURI = "z"
+	for uri, want := range map[string]int{"a": 0, "b": 1, "c": 2, "z": 2, "q": -1} {
+		if got := upcomingIndex(next, uri); got != want {
+			t.Errorf("%s: got %d want %d", uri, got, want)
+		}
+	}
+}
