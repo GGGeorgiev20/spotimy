@@ -170,6 +170,7 @@ type topCard struct {
 	click ui.Click
 	play  ui.PlayButton
 	hover ui.Hover
+	drag  ui.TrackDrag // a song's card drags onto the queue or a playlist
 }
 
 func typeWord(t string) string {
@@ -240,6 +241,11 @@ func (t *topCard) layout(gtx layout.Context, c spotify.Card, w int) layout.Dimen
 				t.play.Layout(gtx, 48, playing)
 				st.Pop()
 			})
+		}
+		if c.Type == "track" {
+			g := gtx
+			g.Constraints.Max.X = w
+			t.drag.Handle(g, ui.TrackPayload(ui.CardTrack(c)), nil, 0, h, nil)
 		}
 		return layout.Dimensions{Size: image.Pt(w, h)}
 	})

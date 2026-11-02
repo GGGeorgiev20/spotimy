@@ -42,6 +42,7 @@ type dropRow struct {
 	remove IconButton
 	follow Pill
 	save   IconButton
+	drag   TrackDrag // a song's row drags onto the queue or a playlist
 }
 
 const dropMax = 10
@@ -552,6 +553,9 @@ func entityRow(gtx layout.Context, r *dropRow, c spotify.Card, sel bool, trailin
 		call := m.Stop()
 		Offset(gtx, tx, (rowH-nd.Size.Y-dd.Size.Y)/2, func() { call.Add(gtx.Ops) })
 		trailing(gtx, rw, rowH)
+		if c.Type == "track" {
+			r.drag.Handle(gtx, TrackPayload(CardTrack(c)), nil, 0, rowH, nil)
+		}
 		return layout.Dimensions{Size: image.Pt(rw, rowH)}
 	})
 }
