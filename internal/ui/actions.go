@@ -175,12 +175,21 @@ type TrackMenuOpts struct {
 	PlaylistURI   string // the playlist the row is in
 	CanEdit       bool   // ...and it's editable (offers "Remove from this playlist")
 	RemoveFromQue func() // set for queue rows
+	PlayNext      func() // set for queue rows that aren't next already
+	Queueable     bool   // a queue row that can still be queued ("Next from")
 }
 
 // TrackMenu is the right-click menu of a song.
 func TrackMenu(t spotify.Track, o TrackMenuOpts) []MenuItem {
 	key := LikeKey(t)
 	items := []MenuItem{{Label: "Add to playlist", Icon: "plus", Sub: playlistPicker([]string{t.URI})}}
+	addToQueue := MenuItem{Label: "Add to queue", Icon: "queue", Action: func() { AddToQueue([]string{t.URI}) }}
+	if o.PlayNext != nil {
+		items = append(items, MenuItem{Label: "Play next", Icon: "play-next", Action: o.PlayNext})
+	}
+	if o.Queueable {
+		items = append(items, addToQueue)
+	}
 	if o.CanEdit && o.PlaylistURI != "" && t.UID != "" {
 		pl, uid := o.PlaylistURI, t.UID
 		items = append(items, MenuItem{Label: "Remove from this playlist", Icon: "trash", Action: func() {
@@ -199,7 +208,7 @@ func TrackMenu(t spotify.Track, o TrackMenuOpts) []MenuItem {
 	if o.RemoveFromQue != nil {
 		items = append(items, MenuItem{Label: "Remove from queue", Icon: "close", Action: o.RemoveFromQue})
 	} else {
-		items = append(items, MenuItem{Label: "Add to queue", Icon: "queue", Action: func() { AddToQueue([]string{t.URI}) }})
+		items = append(items, addToQueue)
 	}
 	items = append(items, MenuItem{Divider: true})
 	if !t.Episode {

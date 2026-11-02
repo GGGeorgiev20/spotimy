@@ -158,3 +158,20 @@ func TestPutBack(t *testing.T) {
 		t.Error("input modified")
 	}
 }
+
+func TestPlayNext(t *testing.T) {
+	next := tracks("abXY")
+	if got := uriString(playNext(next, 2, 1)); got != "baXY" {
+		t.Errorf("queued: got %s", got)
+	}
+	out := playNext(next, 2, 3) // from the context: it joins the queue, at its top
+	if got := uriString(out); got != "YabX" || out[0].Provider != "queue" {
+		t.Errorf("context: got %s (%s)", got, out[0].Provider)
+	}
+	if got := uriString(playNext(tracks("XY"), 0, 1)); got != "YX" {
+		t.Errorf("empty queue: got %s", got)
+	}
+	if uriString(next) != "abXY" {
+		t.Error("input modified")
+	}
+}
