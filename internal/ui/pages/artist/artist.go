@@ -200,22 +200,9 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	// The color wash continues behind the action bar.
 	top := p.headerH - p.list.ScrollTop()
-	if len(a.Header) > 0 {
-		washBanner(gtx, p.color, top)
-	} else {
-		ui.HeaderFade(gtx, p.color, top)
-	}
+	ui.HeaderFade(gtx, p.color, top)
 	p.list.Layout(gtx, len(p.items), func(gtx layout.Context, i int) layout.Dimensions { return p.items[i](gtx) })
 	return layout.Dimensions{Size: gtx.Constraints.Max}
-}
-
-// washBanner is the 173dp tint under a banner header (the banner's color at
-// 70% fading into the page).
-func washBanner(gtx layout.Context, c color.NRGBA, top int) {
-	h := ui.Dp(gtx, 173)
-	if top+h > 0 {
-		ui.VGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), ui.Mix(ui.ColSurface, c, .7), ui.ColSurface)
-	}
 }
 
 func (p *page) headerSection(gtx layout.Context) layout.Dimensions {

@@ -194,6 +194,24 @@ func VGradient(ops *op.Ops, r image.Rectangle, top, bottom color.NRGBA) {
 	paint.PaintOp{}.Add(ops)
 }
 
+// EasedVGradient is VGradient along a smoothstep curve rather than a straight
+// ramp, so it leaves both colors gently: a straight one stops changing all at
+// once where it ends, which shows as an edge. Drawn as linear bands, since a
+// gradient op takes two colors.
+func EasedVGradient(ops *op.Ops, r image.Rectangle, top, bottom color.NRGBA) {
+	const bands = 16
+	at := func(i int) (int, color.NRGBA) {
+		t := float32(i) / bands
+		return r.Min.Y + r.Dy()*i/bands, Mix(top, bottom, t*t*(3-2*t))
+	}
+	y0, c0 := at(0)
+	for i := 1; i <= bands; i++ {
+		y1, c1 := at(i)
+		VGradient(ops, image.Rect(r.Min.X, y0, r.Max.X, y1), c0, c1)
+		y0, c0 = y1, c1
+	}
+}
+
 // Shadow draws a CSS-like box-shadow under r: a black rounded rect blurred
 // by blur px, moved down by dy, at the given opacity. Masks are rendered once
 // per size and cached.

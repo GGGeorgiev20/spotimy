@@ -155,18 +155,18 @@ func Veil(a float32) color.NRGBA {
 	return Alpha(ColBg, float32(1-math.Pow(float64(1-a), 2.2)))
 }
 
-// HeaderFade paints the 173dp gradient that continues a header's color
+// HeaderFade paints the 232dp eased gradient that continues a header's color
 // (at 70%) behind the action bar. Draw it before the page list with top = the
 // header's bottom edge minus the list's scroll offset.
 func HeaderFade(gtx layout.Context, c color.NRGBA, top int) {
 	if c == ColNone {
 		c = RGB(0x535353)
 	}
-	h := Dp(gtx, 173)
+	h := Dp(gtx, 232)
 	if top+h <= 0 {
 		return
 	}
-	VGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), Mix(ColSurface, c, .7), ColSurface)
+	EasedVGradient(gtx.Ops, image.Rect(0, top, gtx.Constraints.Max.X, top+h), Mix(ColSurface, c, .7), ColSurface)
 }
 
 type artworkView struct {
