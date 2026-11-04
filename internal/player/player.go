@@ -112,6 +112,7 @@ func (p *Player) config() *daemon.Config {
 		InitialVolume:    65535,
 		AudioBufferTime:  500000,
 		AudioPeriodCount: 4,
+		ImageSize:        "large", // 640px, the official Now Playing cover
 	}
 	p.mu.Lock()
 	a := p.audio

@@ -137,7 +137,7 @@ func (a *App) Status() (*PlayerStatus, error) {
 			nt.Artists = append(nt.Artists, ar)
 		}
 		if t.AlbumCoverUrl != nil {
-			nt.Images = []spotify.Image{{URL: *t.AlbumCoverUrl, Width: 300, Height: 300}}
+			nt.Images = []spotify.Image{{URL: *t.AlbumCoverUrl, Width: 640, Height: 640}}
 		}
 		out.Track, out.PositionMs = nt, t.Position
 	}
