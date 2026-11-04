@@ -1492,7 +1492,9 @@ func (p *AppPlayer) skipNext(track *connectpb.ContextTrack) error {
 			p.state.player.Timestamp = time.Now().UnixMilli()
 			p.state.player.PositionAsOfTimestamp = 0
 
-			p.loadCurrentTrack(p.state.player.IsPaused, true, true, delay, func(err error) {
+			// A track picked out (clicked in the queue) plays, paused or not,
+			// as in the official clients; next and previous keep the state.
+			p.loadCurrentTrack(false, true, true, delay, func(err error) {
 				if err != nil {
 					p.app.log.WithError(err).Warn("failed loading current track (skip next)")
 				}

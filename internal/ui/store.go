@@ -276,15 +276,17 @@ func noteAlias(ctx string) {
 	playRequest = ""
 }
 
-// PlayPause toggles optimistically; the event refresh confirms.
+// PlayPause toggles what is shown, optimistically; the event refresh
+// confirms.
 func PlayPause() {
+	play := !Playing()
 	if s := Player.Status; s != nil {
 		now := time.Now()
 		s.PositionMs = Position(now).Milliseconds()
 		Player.FetchedAt = now
-		s.Playing = !s.Playing
+		s.Playing = play
 	}
-	playerCall("play", B.PlayPause)
+	playerCall("play", func() error { return B.SetPlaying(play) })
 }
 
 func Next() { playerCall("skip", B.Next) }

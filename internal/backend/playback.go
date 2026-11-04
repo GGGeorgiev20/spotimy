@@ -202,18 +202,25 @@ func (a *App) Play(uri, skipToURI string) error {
 	return err
 }
 
-func (a *App) PlayPause() error {
-	if a.sandboxed("PlayPause") {
-		a.fakeSet(func(s *PlayerStatus) { s.Playing = !s.Playing })
+// SetPlaying resumes (play) or pauses. It says which rather than toggling, so
+// that a press meant as Play can't pause when the player's state has moved on
+// from what the screen showed.
+func (a *App) SetPlaying(play bool) error {
+	if a.sandboxed("SetPlaying", play) {
+		a.fakeSet(func(s *PlayerStatus) { s.Playing = play })
 		return nil
 	}
-	if _, st := a.remote(); st != nil {
-		if st.Playing && !st.Paused {
-			return a.cmd("pause", nil)
+	if cn, _ := a.remote(); cn != nil {
+		if play {
+			return a.cmd("resume", nil)
 		}
-		return a.cmd("resume", nil)
+		return a.cmd("pause", nil)
 	}
-	_, err := a.do(daemon.ApiRequestTypePlayPause, nil)
+	typ := daemon.ApiRequestTypePause
+	if play {
+		typ = daemon.ApiRequestTypeResume
+	}
+	_, err := a.do(typ, nil)
 	return err
 }
 
