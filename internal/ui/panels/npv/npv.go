@@ -34,6 +34,10 @@ type panel struct {
 	vid    *canvasVideo
 	lyr    lyricsCard
 
+	frame ui.Click  // the Canvas's room in the list: toggles expand
+	grow  expansion // kept across tracks, as the official view does
+	dim   ui.Hover  // hovering the Canvas lifts its dimming
+
 	queue    ui.Res[*backend.Queue]
 	qVersion int
 
@@ -97,7 +101,10 @@ func (p *panel) layout(gtx layout.Context) layout.Dimensions {
 	if p.more.Click.Clicked(gtx) && t != nil {
 		ui.OpenMenu(ui.TrackMenu(ui.TrackOf(t), ui.TrackMenuOpts{}))
 	}
-	return ui.Column(gtx,
+	// The column is recorded so the Canvas, which scrolls with it, can be
+	// drawn beneath it at the scroll offset it ends up at.
+	m := op.Record(gtx.Ops)
+	d := ui.Column(gtx,
 		func(gtx layout.Context) layout.Dimensions {
 			return p.headerRow(gtx, t, ctxName)
 		},
@@ -111,6 +118,12 @@ func (p *panel) layout(gtx layout.Context) layout.Dimensions {
 			return p.body(gtx, t)
 		},
 	)
+	call := m.Stop()
+	if t != nil {
+		p.backdrop(gtx, t, gtx.Constraints.Max.X, p.list.ScrollTop())
+	}
+	call.Add(gtx.Ops)
+	return d
 }
 
 // headerRow is the official header: the button that collapses the view,
