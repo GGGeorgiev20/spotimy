@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 
 	librespot "github.com/devgianlu/go-librespot"
 	"github.com/jfreymuth/pulse"
@@ -21,6 +22,9 @@ type pulseAudioOutput struct {
 	volumeLock           sync.Mutex
 	externalVolumeUpdate chan float32
 	err                  chan error
+
+	// ended is set once the source has run out; see float32Reader.
+	ended atomic.Bool
 }
 
 func newPulseAudioOutput(opts *NewOutputOptions) (*pulseAudioOutput, error) {
@@ -111,12 +115,25 @@ func newPulseAudioOutput(opts *NewOutputOptions) (*pulseAudioOutput, error) {
 	return out, nil
 }
 
+// float32Reader feeds PulseAudio from the source. When the source runs out
+// the stream is kept running on silence rather than ended: the library ends a
+// stream by marking it idle, and then drops PulseAudio's report that playback
+// started, which starting it again waits for. A stream that ended before that
+// report, as a track resumed in its last two seconds does, or that was started
+// again after ending, never started: Resume waited for good and took the
+// player with it. The source is not read again until Resume, so that nothing
+// of the next track is fed in behind the silence and then flushed with it.
 func (out *pulseAudioOutput) float32Reader(buf []float32) (int, error) {
+	if out.ended.Load() {
+		clear(buf)
+		return len(buf), nil
+	}
 	n, err := out.reader.Read(buf)
 	if err != nil {
 		if err == io.EOF {
-			// Might happen, so translate this error message.
-			return n, pulse.EndOfData
+			out.ended.Store(true)
+			clear(buf[n:])
+			return len(buf), nil
 		}
 
 		// Encountered another error. This will result in a stopped player, so
@@ -155,6 +172,14 @@ func (out *pulseAudioOutput) Resume() error {
 	// Start the stream. This will start reading samples from out.reader and
 	// push it to PulseAudio. It will do nothing if the playback is already
 	// started.
+	if out.ended.Load() {
+		// Playing silence since the source ran out: flush it so the next
+		// source starts at once.
+		if err := out.Drop(); err != nil {
+			return err
+		}
+		out.ended.Store(false)
+	}
 	out.stream.Start()
 	return nil
 }
