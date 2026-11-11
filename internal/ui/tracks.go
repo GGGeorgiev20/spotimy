@@ -386,6 +386,9 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 		tt.Selected = i
 		OpenMenu(TrackMenu(tr, TrackMenuOpts{PlaylistURI: tt.PlaylistURI, CanEdit: tt.CanEdit}))
 	}
+	if r.row.MiddleClicked(gtx) {
+		AddToQueue([]string{tr.URI})
+	}
 	if len(r.artists) < len(tr.Artists) {
 		r.artists = make([]Link, len(tr.Artists))
 	}
