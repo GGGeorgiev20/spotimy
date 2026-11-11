@@ -19,7 +19,6 @@ import (
 
 const (
 	pageSize  = 50
-	maxW      = 600 // the widest the shell lets the panel get ("expanded")
 	typedWait = 250 * time.Millisecond
 	tipWait   = 375 * time.Millisecond
 	headerH   = 59 // 16 above, 35 buttons, 8 below
@@ -97,10 +96,9 @@ var st struct {
 	sortBtn        ui.Click
 	title          ui.Click
 	titleHover     ui.Hover
-	create, expand ui.Click
+	create         ui.Click
 	createPill     ui.Pill
 	viewBtns       [3]ui.Click
-	restoreW       int
 
 	listTop  int
 	tipFor   *ui.Click
@@ -246,19 +244,17 @@ func layoutPanel(gtx layout.Context, collapsed bool) layout.Dimensions {
 	return layout.Dimensions{Size: size}
 }
 
-// roundButton is a 35dp circle with an icon: filled (Create) or bare (Expand).
-func roundButton(gtx layout.Context, c *ui.Click, icon string, filled bool, tip string) layout.Dimensions {
+// roundButton is a filled 35dp circle with an icon.
+func roundButton(gtx layout.Context, c *ui.Click, icon string, tip string) layout.Dimensions {
 	c.Label = tip
 	d := c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		s := ui.Dp(gtx, 35)
 		hov := c.Hovered()
-		if filled {
-			bg := ui.ColSurface2
-			if hov {
-				bg = ui.ColSurface3
-			}
-			ui.FillRect(gtx.Ops, image.Rect(0, 0, s, s), s/2, bg)
+		bg := ui.ColSurface2
+		if hov {
+			bg = ui.ColSurface3
 		}
+		ui.FillRect(gtx.Ops, image.Rect(0, 0, s, s), s/2, bg)
 		col := ui.ColText2
 		if hov {
 			col = ui.ColText
@@ -314,7 +310,7 @@ func railHeader(gtx layout.Context, w int) int {
 	})
 	railTip(gtx, &st.title, "Expand Your Library", "", ui.Dp(gtx, 36))
 	place(gtx, (w-ui.Dp(gtx, 35))/2, ui.Dp(gtx, 64), w, ui.Dp(gtx, 35), func(gtx layout.Context) layout.Dimensions {
-		return roundButton(gtx, &st.create, "plus", true, "Create")
+		return roundButton(gtx, &st.create, "plus", "Create")
 	})
 	return ui.Dp(gtx, 64+35+8)
 }
@@ -324,29 +320,9 @@ func header(gtx layout.Context, w int) int {
 	if st.title.Clicked(gtx) {
 		ui.Prefs.LibCollapsed = true
 	}
-	if st.expand.Clicked(gtx) {
-		if ui.Prefs.LibWidth >= maxW {
-			ui.Prefs.LibWidth = 340
-			if st.restoreW > 0 {
-				ui.Prefs.LibWidth = min(maxW-1, st.restoreW)
-			}
-		} else {
-			st.restoreW, ui.Prefs.LibWidth = ui.Prefs.LibWidth, maxW
-		}
-	}
 	bw := ui.Dp(gtx, 35)
-	expanded := ui.Prefs.LibWidth >= maxW
-	exTip, exIcon := "Expand Your Library", "maximize"
-	if expanded {
-		exTip = "Minimize Your Library"
-	}
-	ex := w - pad - bw
-	place(gtx, ex, top, bw, bw, func(gtx layout.Context) layout.Dimensions {
-		return roundButton(gtx, &st.expand, exIcon, false, exTip)
-	})
-
 	// Create: icon only while narrow, "+ Create" once there is room.
-	cx := ex - ui.Dp(gtx, 8)
+	cx := w - pad
 	wide := w >= ui.Dp(gtx, 400)
 	if st.create.Clicked(gtx) || st.createPill.Click.Clicked(gtx) {
 		createMenu(gtx, cx-bw, top+bw+ui.Dp(gtx, 4))
@@ -363,7 +339,7 @@ func header(gtx layout.Context, w int) int {
 		})
 	} else {
 		place(gtx, cx-bw, top, bw, bw, func(gtx layout.Context) layout.Dimensions {
-			return roundButton(gtx, &st.create, "plus", true, "Create")
+			return roundButton(gtx, &st.create, "plus", "Create")
 		})
 	}
 
