@@ -80,7 +80,16 @@ func (s *Shelf) carousel(gtx layout.Context, items []spotify.Card, o ShelfOpts, 
 	c.last = gtx.Now
 
 	off := int(c.cur)
+	// The row is as tall as its tallest card, on screen or not (the web
+	// player's grid row), so scrolling doesn't move what's below it.
+	// ponytail: measures every card each frame (the shaper caches the text);
+	// cache per width if long shelves show up in profiles.
 	h := 0
+	for i := range items {
+		g := gtx
+		g.Constraints = layout.Constraints{Max: image.Pt(int(float32(i+1)*pitch)-int(float32(i)*pitch), 1<<20)}
+		h = max(h, CardHeight(g, items[i]))
+	}
 	m := op.Record(gtx.Ops)
 	for i := max(0, int((float32(off)-float32(lp))/pitch)); i < len(items); i++ {
 		x0, x1 := int(float32(i)*pitch), int(float32(i+1)*pitch)

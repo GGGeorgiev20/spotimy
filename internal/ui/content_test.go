@@ -3,11 +3,15 @@ package ui
 import (
 	"image"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
+
+	"github.com/GGGeorgiev20/personal-spotify/internal/spotify"
 )
 
 func gtxFor(main int) layout.Context {
@@ -126,5 +130,24 @@ func TestGlide(t *testing.T) {
 	}
 	if back != 0 {
 		t.Fatalf("down then up ended %d px away, want 0", back)
+	}
+}
+
+// A carousel is as tall as its tallest card, even one scrolled out of view,
+// so scrolling it doesn't move the rows below.
+func TestCarouselHeightCountsOffscreenCards(t *testing.T) {
+	gtx := gtxFor(600)
+	gtx.Ops = new(op.Ops)
+	items := make([]spotify.Card, 12)
+	for i := range items {
+		items[i] = spotify.Card{URI: "spotify:album:a", Type: "album", Name: "A", Subtitle: "B"}
+	}
+	items[11].Subtitle = strings.Repeat("Long artist name ", 6)
+	s := Shelf{Cards: make([]Card, len(items))}
+	got := s.carousel(gtx, items, ShelfOpts{}, 0).Size.Y
+	g := gtx
+	g.Constraints = layout.Constraints{Max: image.Pt(int(carouselPitch(600)), 1<<20)}
+	if want := CardHeight(g, items[11]); got < want {
+		t.Errorf("height %d, want the long card's %d", got, want)
 	}
 }

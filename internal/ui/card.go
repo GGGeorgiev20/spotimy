@@ -123,28 +123,7 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 		if hov && o.Overlay != nil {
 			o.Overlay(gtx, c, r)
 		}
-		y += art
-		y += Dp(gtx, 8)
-		// The text is inset 12dp from the art's right edge.
-		tw := max(0, art-Dp(gtx, 12))
-		if !madeForYou(c) {
-			Offset(gtx, pad, y, func() {
-				g := gtx
-				g.Constraints = layout.Constraints{Max: image.Pt(tw, 1<<20)}
-				d := Label{Text: c.Name, Size: 16, Color: ColText, MaxLines: 2, LineHeight: 22 / 1.2}.Layout(g)
-				y += d.Size.Y
-			})
-		}
-		if c.Subtitle != "" {
-			y += Dp(gtx, 4)
-			Offset(gtx, pad, y, func() {
-				g := gtx
-				g.Constraints = layout.Constraints{Max: image.Pt(tw, 1<<20)}
-				d := Label{Text: c.Subtitle, Size: 14, Color: ColText2, MaxLines: 2, LineHeight: 20 / 1.2}.Layout(g)
-				y += d.Size.Y
-			})
-		}
-		y += pad
+		y = cardText(gtx, c, y+art)
 		call := m.Stop()
 		if hov {
 			FillRect(gtx.Ops, image.Rect(0, 0, w, y), Dp(gtx, 6), ColSurface2)
@@ -152,6 +131,39 @@ func (k *Card) Layout(gtx layout.Context, c spotify.Card, o CardOpts) layout.Dim
 		call.Add(gtx.Ops)
 		return layout.Dimensions{Size: image.Pt(w, y)}
 	})
+}
+
+// cardText draws the card's name and subtitle under its artwork, which ends
+// at y, and returns the card's height.
+func cardText(gtx layout.Context, c spotify.Card, y int) int {
+	pad := Dp(gtx, 12)
+	y += Dp(gtx, 8)
+	// The text is inset 12dp from the art's right edge.
+	tw := max(0, gtx.Constraints.Max.X-3*pad)
+	label := func(l Label) {
+		Offset(gtx, pad, y, func() {
+			g := gtx
+			g.Constraints = layout.Constraints{Max: image.Pt(tw, 1<<20)}
+			y += l.Layout(g).Size.Y
+		})
+	}
+	if !madeForYou(c) {
+		label(Label{Text: c.Name, Size: 16, Color: ColText, MaxLines: 2, LineHeight: 22 / 1.2})
+	}
+	if c.Subtitle != "" {
+		y += Dp(gtx, 4)
+		label(Label{Text: c.Subtitle, Size: 14, Color: ColText2, MaxLines: 2, LineHeight: 20 / 1.2})
+	}
+	return y + pad
+}
+
+// CardHeight is the height Card.Layout takes at the constraint's max width.
+func CardHeight(gtx layout.Context, c spotify.Card) int {
+	art := max(0, gtx.Constraints.Max.X-2*Dp(gtx, 12))
+	m := op.Record(gtx.Ops)
+	h := cardText(gtx, c, Dp(gtx, 12)+art)
+	m.Stop()
+	return h
 }
 
 // CardGrid lays out cards in rows of equal columns at least minW dp wide
