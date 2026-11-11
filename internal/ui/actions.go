@@ -176,7 +176,7 @@ type TrackMenuOpts struct {
 	CanEdit       bool   // ...and it's editable (offers "Remove from this playlist")
 	RemoveFromQue func() // set for queue rows
 	PlayNext      func() // set for queue rows that aren't next already
-	Queueable     bool   // a queue row that can still be queued ("Next from")
+	ToQueue       func() // set for queue rows of the context ("Next from"): moves it into the queue
 }
 
 // TrackMenu is the right-click menu of a song.
@@ -187,8 +187,8 @@ func TrackMenu(t spotify.Track, o TrackMenuOpts) []MenuItem {
 	if o.PlayNext != nil {
 		items = append(items, MenuItem{Label: "Play next", Icon: "play-next", Action: o.PlayNext})
 	}
-	if o.Queueable {
-		items = append(items, addToQueue)
+	if o.ToQueue != nil {
+		items = append(items, MenuItem{Label: "Add to queue", Icon: "queue", Action: o.ToQueue})
 	}
 	if o.CanEdit && o.PlaylistURI != "" && t.UID != "" {
 		pl, uid := o.PlaylistURI, t.UID

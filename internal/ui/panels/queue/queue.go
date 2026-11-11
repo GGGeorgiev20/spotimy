@@ -695,9 +695,8 @@ type hooks struct {
 
 func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks) layout.Dimensions {
 	var remove, playNext, toQueue func()
-	var queueable bool
 	if h != nil {
-		remove, playNext, toQueue, queueable = h.remove, h.playNext, h.toQueue, h.below.ctx
+		remove, playNext, toQueue = h.remove, h.playNext, h.toQueue
 	}
 	if r.play.Clicked(gtx) || r.click.DoubleClicked(gtx) {
 		if h != nil { // the row itself, not an earlier copy of its track
@@ -726,7 +725,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		toQueue()
 	}
 	if _, ok := r.click.RightClicked(gtx); ok {
-		ui.OpenMenu(ui.TrackMenu(t, ui.TrackMenuOpts{RemoveFromQue: remove, PlayNext: playNext, Queueable: queueable}))
+		ui.OpenMenu(ui.TrackMenu(t, ui.TrackMenuOpts{RemoveFromQue: remove, PlayNext: playNext, ToQueue: toQueue}))
 	}
 
 	w, rh := gtx.Constraints.Max.X, ui.Dp(gtx, rowDp)
