@@ -66,6 +66,8 @@ type gqlEntity struct {
 	// Trait-based "Entity" shape (used by Recents and newer sections).
 	IdentityTrait *struct {
 		Name         string `json:"name"`
+		Type         string `json:"type"` // "Playlist", "Artist", "Album", "Single"...
+		Description  string `json:"description"`
 		Contributors struct {
 			Items []struct {
 				Name string `json:"name"`
@@ -158,9 +160,15 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 		if e.IdentityTrait == nil {
 			return c, false
 		}
-		c.Name = e.IdentityTrait.Name
-		if len(e.IdentityTrait.Contributors.Items) > 0 {
-			c.Subtitle = e.IdentityTrait.Contributors.Items[0].Name
+		it := e.IdentityTrait
+		c.Name = it.Name
+		switch {
+		case it.Type == "Artist":
+			c.Subtitle, c.Detail = "Artist", "Artist"
+		case it.Type == "Playlist" && it.Description != "":
+			c.Subtitle = stripHTML(it.Description) // a mix's artists, as in Made for X
+		case len(it.Contributors.Items) > 0:
+			c.Subtitle = it.Contributors.Items[0].Name
 		}
 		if v := e.VisualIdentityTrait; v != nil && v.SquareCoverImage != nil {
 			c.Images = v.SquareCoverImage.Image.Data.images()

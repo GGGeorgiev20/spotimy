@@ -285,3 +285,19 @@ func TestPartialProfileNotCached(t *testing.T) {
 		t.Errorf("partial response was cached: %d requests", hits)
 	}
 }
+
+func TestEntityTraitSubtitle(t *testing.T) {
+	for want, js := range map[string]string{
+		"A, B and more": `{"__typename":"Entity","identityTrait":{"name":"Daily Mix 1","type":"Playlist","description":"A, B and more","contributors":{"items":[{"name":"Spotify"}]}}}`,
+		"Artist":        `{"__typename":"Entity","identityTrait":{"name":"Radiohead","type":"Artist","description":"English rock band."}}`,
+		"Radiohead":     `{"__typename":"Entity","identityTrait":{"name":"OK Computer","type":"Album","contributors":{"items":[{"name":"Radiohead"}]}}}`,
+	} {
+		var e gqlEntity
+		if err := json.Unmarshal([]byte(js), &e); err != nil {
+			t.Fatal(err)
+		}
+		if c, _ := e.card("spotify:x:1"); c.Subtitle != want {
+			t.Errorf("got %q want %q", c.Subtitle, want)
+		}
+	}
+}
