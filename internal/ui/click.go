@@ -30,6 +30,8 @@ type Click struct {
 	wantsRight bool
 	middle     bool
 	wantsMid   bool
+	midPress   *pressKey     // the middle press waiting for its release
+	size       image.Point   // as last laid out
 	pressAt    time.Duration // Time of the last primary press seen
 	hoverSince time.Time
 	// at is the pointer's last position over it, in its own coordinates:
@@ -76,12 +78,24 @@ func PointerPos() image.Point { return pointerPos.Round() }
 
 func (c *Click) update(gtx layout.Context) {
 	for {
-		e, ok := gtx.Event(pointer.Filter{Target: c, Kinds: pointer.Press | pointer.Move | pointer.Enter})
+		e, ok := gtx.Event(pointer.Filter{Target: c, Kinds: pointer.Press | pointer.Release | pointer.Cancel | pointer.Move | pointer.Enter})
 		if !ok {
 			break
 		}
 		pe := e.(pointer.Event)
 		c.at = pe.Position
+		if pe.Kind == pointer.Release || pe.Kind == pointer.Cancel {
+			// A middle click fires on release over the clickable that took
+			// its press, like the browser's auxclick.
+			if k := c.midPress; k != nil && !pe.Buttons.Contain(pointer.ButtonTertiary) {
+				c.midPress = nil
+				in := image.Rectangle{Max: c.size}
+				if pe.Kind == pointer.Release && pressOwners[*k] == c.depth && pe.Position.Round().In(in) {
+					c.middle = true
+				}
+			}
+			continue
+		}
 		if pe.Kind != pointer.Press || c.Disabled {
 			continue
 		}
@@ -103,14 +117,10 @@ func (c *Click) update(gtx layout.Context) {
 				}
 			})
 		case pe.Buttons.Contain(pointer.ButtonTertiary) && c.wantsMid:
-			// Like right clicks: on press, to the innermost interested one.
+			// Goes to the innermost interested one, as right clicks do.
 			k := pressKey{pe.Time, pointer.ButtonTertiary}
 			claimPress(k, c.depth)
-			Post(func() {
-				if pressOwners[k] == c.depth {
-					c.middle = true
-				}
-			})
+			c.midPress = &k
 		}
 	}
 	for {
@@ -187,6 +197,7 @@ func (c *Click) Layout(gtx layout.Context, w layout.Widget) layout.Dimensions {
 	dims := w(gtx)
 	call := m.Stop()
 	clickDepth--
+	c.size = dims.Size
 	defer clip.Rect{Max: dims.Size}.Push(gtx.Ops).Pop()
 	if c.Label != "" {
 		semantic.DescriptionOp(c.Label).Add(gtx.Ops)
