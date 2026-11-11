@@ -266,6 +266,9 @@ func (p *panel) item(gtx layout.Context, n int, items []item, next []backend.Que
 			if it.i > 0 {
 				h.playNext = func() { p.set(playNext(next, queued, it.i)) }
 			}
+			if inCtx {
+				h.toQueue = func() { p.set(toQueueEnd(next, queued, it.i)) }
+			}
 			var d layout.Dimensions
 			ui.Offset(gtx, 0, p.slide(gtx, key(q)), func() { d = p.rows[n].layout(gtx, q.Track, false, h) })
 			return d
@@ -587,6 +590,15 @@ func playNext(next []backend.QueueTrack, queued, i int) []backend.QueueTrack {
 	return out
 }
 
+// toQueueEnd moves track i of the context to the end of the user queue.
+func toQueueEnd(next []backend.QueueTrack, queued, i int) []backend.QueueTrack {
+	out, _ := dropInto(next, queued, nil, i, spot{at: queued}, newUID)
+	if out == nil {
+		return next
+	}
+	return out
+}
+
 func removeAt(next []backend.QueueTrack, i int) []backend.QueueTrack {
 	out := make([]backend.QueueTrack, 0, len(next))
 	out = append(out, next[:i]...)
@@ -665,26 +677,27 @@ type row struct {
 	drag        ui.TrackDrag
 	// above and below take drops on the row's halves: before it, after it.
 	above, below ui.DropTarget
-	remove       ui.IconButton // shown on hover for upcoming rows
-	next         ui.IconButton // "Play next", shown on hover next to remove
+	next         ui.IconButton // "Play next", shown on hover for upcoming rows
+	queue        ui.IconButton // "Add to queue", next to it for rows of the context
 }
 
 // hooks make an upcoming row draggable (to reorder the queue) and a drop
-// target, and a row of the user queue removable.
+// target, and removable (middle click).
 type hooks struct {
 	index        int // in the upcoming tracks
 	remove       func()
 	playNext     func() // nil for the track that plays next already
+	toQueue      func() // moves a track of the context to the queue's end; nil in the queue
 	line         int    // draw the drop line above (-1) or below (1) this row
 	above, below spot   // where drops on the row's halves land
 	onDrop       func(pl *ui.DragPayload, code int)
 }
 
 func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks) layout.Dimensions {
-	var remove, playNext func()
+	var remove, playNext, toQueue func()
 	var queueable bool
 	if h != nil {
-		remove, playNext, queueable = h.remove, h.playNext, h.below.ctx
+		remove, playNext, toQueue, queueable = h.remove, h.playNext, h.toQueue, h.below.ctx
 	}
 	if r.play.Clicked(gtx) || r.click.DoubleClicked(gtx) {
 		if h != nil { // the row itself, not an earlier copy of its track
@@ -703,11 +716,14 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 			ui.OpenURI(a.URI)
 		}
 	}
-	if r.remove.Click.Clicked(gtx) && remove != nil {
+	if r.click.MiddleClicked(gtx) && remove != nil {
 		remove()
 	}
 	if r.next.Click.Clicked(gtx) && playNext != nil {
 		playNext()
+	}
+	if r.queue.Click.Clicked(gtx) && toQueue != nil {
+		toQueue()
 	}
 	if _, ok := r.click.RightClicked(gtx); ok {
 		ui.OpenMenu(ui.TrackMenu(t, ui.TrackMenuOpts{RemoveFromQue: remove, PlayNext: playNext, Queueable: queueable}))
@@ -716,7 +732,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 	w, rh := gtx.Constraints.Max.X, ui.Dp(gtx, rowDp)
 	r.click.Label, r.click.Arrow = t.Name, true
 	return r.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		hov := r.click.Hovered() || r.play.Hovered() || r.remove.Click.Hovered() || r.next.Click.Hovered()
+		hov := r.click.Hovered() || r.play.Hovered() || r.next.Click.Hovered() || r.queue.Click.Hovered()
 		if hov {
 			ui.FillRect(gtx.Ops, image.Rect(0, 0, w, rh), ui.Dp(gtx, 4), ui.ColRowHover)
 		}
@@ -742,28 +758,26 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		})
 		tx := pad + is + ui.Dp(gtx, 12)
 		g := gtx
-		bw := 0 // the buttons' room
-		if hov && remove != nil {
-			bw = ui.Dp(gtx, 32+8)
-			if playNext != nil {
-				bw += ui.Dp(gtx, 32)
-			}
+		// The hover buttons, from the right edge.
+		var btns []func()
+		if hov && playNext != nil {
+			btns = append(btns, func() { r.next.Layout(gtx, ui.IconStyle{Icon: "play-next", Label: "Play next"}) })
+		}
+		if hov && toQueue != nil {
+			btns = append(btns, func() { r.queue.Layout(gtx, ui.IconStyle{Icon: "queue", Label: "Add to queue"}) })
+		}
+		b := ui.Dp(gtx, 32)
+		bw := 0 // their room
+		if len(btns) > 0 {
+			bw = len(btns)*b + ui.Dp(gtx, 8)
 		}
 		g.Constraints = layout.Constraints{Max: image.Pt(max(0, w-tx-pad-bw), rh)}
 		m := op.Record(gtx.Ops)
 		d := r.text(g, t, current)
 		call := m.Stop()
 		ui.Offset(gtx, tx, (rh-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
-		if bw > 0 {
-			b := ui.Dp(gtx, 32)
-			ui.Offset(gtx, w-pad-b, (rh-b)/2, func() {
-				r.remove.Layout(gtx, ui.IconStyle{Icon: "close", Label: "Remove from queue"})
-			})
-			if playNext != nil {
-				ui.Offset(gtx, w-pad-2*b, (rh-b)/2, func() {
-					r.next.Layout(gtx, ui.IconStyle{Icon: "play-next", Label: "Play next"})
-				})
-			}
+		for i, btn := range btns {
+			ui.Offset(gtx, w-pad-(i+1)*b, (rh-b)/2, btn)
 		}
 		if h != nil && h.line != 0 {
 			lh := ui.Dp(gtx, 2)

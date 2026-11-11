@@ -175,3 +175,14 @@ func TestPlayNext(t *testing.T) {
 		t.Error("input modified")
 	}
 }
+
+func TestToQueueEnd(t *testing.T) {
+	out := toQueueEnd(tracks("abXYZ"), 2, 3) // Y joins the queue, after b
+	if got := uriString(out); got != "abYXZ" || out[2].Provider != "queue" {
+		t.Errorf("got %s (%s)", got, out[2].Provider)
+	}
+	out = toQueueEnd(tracks("XY"), 0, 0) // the first track of the context starts the queue
+	if got := uriString(out); got != "XY" || out[0].Provider != "queue" {
+		t.Errorf("empty queue: got %s (%s)", got, out[0].Provider)
+	}
+}

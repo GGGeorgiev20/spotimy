@@ -29,10 +29,10 @@ import (
 //	/nav?path=/album/<id>          navigate
 //	/shot?out=/tmp/x.png           wait until loads settle, save a screenshot
 //	/wait                          wait until loads settle
-//	/click?x=&y=[&button=right][&double=1]
+//	/click?x=&y=[&button=right|middle][&double=1]
 //	/drag?x=&y=&x2=&y2=[&hold=1]  press at (x,y), move to (x2,y2), release (unless hold)
 //	/release?x=&y=                 release the button held by /drag?hold=1
-//	/clicktext?text=Show all[&n=0][&button=right]   click the n-th element whose label contains text
+//	/clicktext?text=Show all[&n=0][&button=right|middle]   click the n-th element whose label contains text
 //	/move?x=&y=                    hover
 //	/scroll?x=&y=&dy=              wheel scroll (px, positive = down)
 //	/key?name=Space[&mods=ctrl,shift,alt]
@@ -159,10 +159,13 @@ func (hr *harness) pointer(kind pointer.Kind, pos f32.Point, btn pointer.Buttons
 	hr.frame()
 }
 
-func (hr *harness) click(pos f32.Point, right, double bool) {
+func (hr *harness) click(pos f32.Point, button string, double bool) {
 	btn := pointer.ButtonPrimary
-	if right {
+	switch button {
+	case "right":
 		btn = pointer.ButtonSecondary
+	case "middle":
+		btn = pointer.ButtonTertiary
 	}
 	n := 1
 	if double {
@@ -254,7 +257,7 @@ func (hr *harness) mux() *http.ServeMux {
 	})
 	m.HandleFunc("/click", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		hr.click(f32.Pt(num(r, "x"), num(r, "y")), q.Get("button") == "right", q.Get("double") == "1")
+		hr.click(f32.Pt(num(r, "x"), num(r, "y")), q.Get("button"), q.Get("double") == "1")
 		hr.settle(10 * time.Second)
 		ok(w, "ok")
 	})
@@ -267,7 +270,7 @@ func (hr *harness) mux() *http.ServeMux {
 			return
 		}
 		b := ns[n].Bounds
-		hr.click(f32.Pt(float32(b[0]+b[2])/2, float32(b[1]+b[3])/2), q.Get("button") == "right", q.Get("double") == "1")
+		hr.click(f32.Pt(float32(b[0]+b[2])/2, float32(b[1]+b[3])/2), q.Get("button"), q.Get("double") == "1")
 		hr.settle(10 * time.Second)
 		ok(w, ns[n])
 	})

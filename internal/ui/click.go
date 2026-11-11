@@ -15,8 +15,8 @@ import (
 	"gioui.org/op/clip"
 )
 
-// Click makes an area clickable: hover, left click, double click and right
-// click. Gio delivers a press to every clickable under the pointer (the
+// Click makes an area clickable: hover, left click, double click, right
+// and middle click. Gio delivers a press to every clickable under the pointer (the
 // innermost and all its ancestors); like the DOM's stopPropagation, only the
 // innermost one that cares about that button reports it.
 type Click struct {
@@ -28,6 +28,8 @@ type Click struct {
 	right      bool
 	rightAt    image.Point
 	wantsRight bool
+	middle     bool
+	wantsMid   bool
 	pressAt    time.Duration // Time of the last primary press seen
 	hoverSince time.Time
 	// at is the pointer's last position over it, in its own coordinates:
@@ -52,8 +54,8 @@ var (
 )
 
 type pressKey struct {
-	t     time.Duration
-	right bool
+	t time.Duration
+	b pointer.Buttons // 0 for a primary press (or touch)
 }
 
 func claimPress(k pressKey, depth int) {
@@ -86,18 +88,27 @@ func (c *Click) update(gtx layout.Context) {
 		switch {
 		case pe.Buttons.Contain(pointer.ButtonPrimary) || pe.Source != pointer.Mouse:
 			c.pressAt = pe.Time
-			claimPress(pressKey{pe.Time, false}, c.depth)
+			claimPress(pressKey{pe.Time, 0}, c.depth)
 		case pe.Buttons.Contain(pointer.ButtonSecondary) && c.wantsRight:
 			// Right clicks fire on press, like the browser's contextmenu event.
 			// The innermost interested clickable has the highest depth; deeper
 			// ones were laid out (and handled this event) before us only if
 			// they're siblings, so defer the decision to the next frame.
-			claimPress(pressKey{pe.Time, true}, c.depth)
-			k := pressKey{pe.Time, true}
+			k := pressKey{pe.Time, pointer.ButtonSecondary}
+			claimPress(k, c.depth)
 			at := PointerPos()
 			Post(func() {
 				if pressOwners[k] == c.depth {
 					c.right, c.rightAt = true, at
+				}
+			})
+		case pe.Buttons.Contain(pointer.ButtonTertiary) && c.wantsMid:
+			// Like right clicks: on press, to the innermost interested one.
+			k := pressKey{pe.Time, pointer.ButtonTertiary}
+			claimPress(k, c.depth)
+			Post(func() {
+				if pressOwners[k] == c.depth {
+					c.middle = true
 				}
 			})
 		}
@@ -110,7 +121,7 @@ func (c *Click) update(gtx layout.Context) {
 		if e.Kind != gesture.KindClick || c.Disabled {
 			continue
 		}
-		if d, ok := pressOwners[pressKey{c.pressAt, false}]; ok && d > c.depth {
+		if d, ok := pressOwners[pressKey{c.pressAt, 0}]; ok && d > c.depth {
 			continue // an inner clickable took it
 		}
 		if e.NumClicks >= 2 {
@@ -148,6 +159,16 @@ func (c *Click) RightClicked(gtx layout.Context) (image.Point, bool) {
 	r := c.right
 	c.right = false
 	return c.rightAt, r
+}
+
+// MiddleClicked reports (once) a middle click. Only clickables that call it
+// take part in middle clicks.
+func (c *Click) MiddleClicked(gtx layout.Context) bool {
+	c.wantsMid = true
+	c.update(gtx)
+	m := c.middle
+	c.middle = false
+	return m
 }
 
 // origin is where the clickable's top-left corner is in the window, from
