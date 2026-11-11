@@ -115,5 +115,9 @@ func (r *Res[T]) Reload(f func() (T, error)) {
 	r.Load(f)
 }
 
+// Discard drops the result of a load still running (the value was edited
+// locally since it started).
+func (r *Res[T]) Discard() { r.gen++ }
+
 // Ok reports a successful, finished load.
 func (r *Res[T]) Ok() bool { return r.Done && r.Err == nil }

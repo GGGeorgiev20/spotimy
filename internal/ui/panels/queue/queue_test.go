@@ -186,3 +186,17 @@ func TestToQueueEnd(t *testing.T) {
 		t.Errorf("empty queue: got %s (%s)", got, out[0].Provider)
 	}
 }
+
+// A move during another's slide starts each row from where it is, not from
+// its resting place: removing two tracks fast slides the third up two rows
+// smoothly instead of jumping.
+func TestSlideCarriesOn(t *testing.T) {
+	var q panel
+	q.rowPx, q.headPx = 56, 40
+	abc := tracks("abc")
+	q.startSlide(abc, abc[1:])
+	q.startSlide(abc[1:], abc[2:])
+	if d := q.offset(key(abc[2]), q.slideAt); d < 2*56-2 {
+		t.Errorf("c starts %dpx below, want about %d", d, 2*56)
+	}
+}

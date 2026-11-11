@@ -7,6 +7,8 @@ import (
 	"math"
 	"slices"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"gioui.org/layout"
@@ -53,6 +55,12 @@ type panel struct {
 	slideAt       time.Time
 	rowPx, headPx int
 
+	// Edits sent to the cluster: how many are in flight, the latest one's
+	// number, and when the queue may reload again after them.
+	sending   int
+	seq       atomic.Int64
+	holdUntil time.Time
+
 	// The "Recently played" tab.
 	recent           bool
 	tabQueue, tabRec ui.Click
@@ -78,7 +86,13 @@ type item struct {
 }
 
 func (p *panel) layout(gtx layout.Context) layout.Dimensions {
-	if p.version != ui.Player.Version+1 && (p.version == 0 || ui.Settled(gtx)) {
+	// Not while edits are on their way: the cluster would still show the
+	// list before them, and the rows would jump back for a moment.
+	held := p.sending > 0 || gtx.Now.Before(p.holdUntil)
+	if p.sending == 0 && held {
+		gtx.Execute(op.InvalidateCmd{At: p.holdUntil})
+	}
+	if p.version != ui.Player.Version+1 && !held && (p.version == 0 || ui.Settled(gtx)) {
 		p.version = ui.Player.Version + 1
 		p.res.Load(ui.B.Queue)
 	}
@@ -499,38 +513,71 @@ func (p *panel) rowTops(next []backend.QueueTrack) map[string]int {
 	return out
 }
 
-// startSlide sets the rows that move between old and next sliding.
+// startSlide sets the rows that move between old and next sliding, each
+// from where it is now (a row still sliding from the last move carries on
+// from its offset rather than jumping).
 func (p *panel) startSlide(old, next []backend.QueueTrack) {
+	now := time.Now()
 	from, to := p.rowTops(old), p.rowTops(next)
-	p.slides = map[string]int{}
+	slides := map[string]int{}
 	for k, y := range to {
-		if y0, ok := from[k]; ok && y0 != y {
-			p.slides[k] = y0 - y
+		if y0, ok := from[k]; ok {
+			if d := y0 + p.offset(k, now) - y; d != 0 {
+				slides[k] = d
+			}
 		}
 	}
-	p.slideAt = time.Now()
+	p.slides, p.slideAt = slides, now
 }
 
-// slide is row k's offset now, easing out to 0.
-func (p *panel) slide(gtx layout.Context, k string) int {
-	d, ok := p.slides[k]
-	if !ok {
+// offset is row k's slide offset at t, easing out to 0.
+func (p *panel) offset(k string, t time.Time) int {
+	f := float64(t.Sub(p.slideAt)) / float64(slideTime)
+	if f >= 1 {
 		return 0
 	}
-	t := float64(gtx.Now.Sub(p.slideAt)) / float64(slideTime)
-	if t >= 1 {
+	return int(float64(p.slides[k]) * math.Pow(1-f, 3))
+}
+
+// slide is row k's offset now.
+func (p *panel) slide(gtx layout.Context, k string) int {
+	if _, ok := p.slides[k]; !ok {
+		return 0
+	}
+	d := p.offset(k, gtx.Now)
+	if d == 0 {
 		delete(p.slides, k)
 		return 0
 	}
 	gtx.Execute(op.InvalidateCmd{})
-	return int(float64(d) * math.Pow(1-t, 3))
+	return d
 }
 
-// set shows next at once and sends it to the cluster.
+// sendMu makes queue edits reach the cluster one at a time.
+var sendMu sync.Mutex
+
+// set shows next at once and sends it to the cluster. Of the edits waiting
+// to go, only the latest is sent, so fast ones can't land out of order.
 func (p *panel) set(next []backend.QueueTrack) {
 	p.startSlide(p.res.V.Next, next)
 	p.res.V.Next = next
-	ui.Go("Couldn't update queue", func() error { return ui.B.SetQueue(queueItems(next)) }, nil)
+	p.res.Discard() // a reload started before this edit is stale
+	p.sending++
+	seq, items := p.seq.Add(1), queueItems(next)
+	ui.Async(func() (struct{}, error) {
+		sendMu.Lock()
+		defer sendMu.Unlock()
+		if seq != p.seq.Load() {
+			return struct{}{}, nil // a newer edit replaces it
+		}
+		return struct{}{}, ui.B.SetQueue(items)
+	}, func(_ struct{}, err error) {
+		p.sending--
+		p.holdUntil = time.Now().Add(time.Second)
+		if err != nil {
+			ui.Toast("Couldn't update queue: " + err.Error())
+		}
+	})
 }
 
 // skipPast drops the upcoming tracks up to and including i, the one starting.
