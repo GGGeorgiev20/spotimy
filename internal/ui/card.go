@@ -34,10 +34,11 @@ type CardOpts struct {
 // Gio scales LineHeight by 1.2, hence the divisions in Card.Layout.
 
 // madeForYou is a generated mix (Daily Mix, Discover Weekly, Release Radar):
-// its cover already carries the name, so the web player shows only the blurb.
+// its cover already carries the name, so the web player shows only the blurb
+// (not when the subtitle is the "Playlist • Spotify" line, as in Recents).
 func madeForYou(c spotify.Card) bool {
 	id := URIID(c.URI)
-	return c.Type == "playlist" && c.Subtitle != "" && (strings.HasPrefix(id, "37i9dQZF1E") || strings.HasPrefix(id, "37i9dQZEVX"))
+	return c.Type == "playlist" && c.Subtitle != "" && c.Subtitle != c.Detail && (strings.HasPrefix(id, "37i9dQZF1E") || strings.HasPrefix(id, "37i9dQZEVX"))
 }
 
 func cardRound(c spotify.Card) bool { return c.Type == "artist" || c.Type == "user" }
