@@ -67,9 +67,11 @@ type gqlEntity struct {
 	IdentityTrait *struct {
 		Name         string `json:"name"`
 		Type         string `json:"type"` // "Playlist", "Artist", "Album", "Single"...
+		Description  string `json:"description"`
 		Contributors struct {
 			Items []struct {
 				Name string `json:"name"`
+				URI  string `json:"uri"`
 			} `json:"items"`
 		} `json:"contributors"`
 	} `json:"identityTrait"`
@@ -166,8 +168,12 @@ func (e gqlEntity) card(uri string) (Card, bool) {
 			who = append(who, a.Name)
 		}
 		// The web player's "Type • Who" line: "Playlist • Spotify", "Album • Radiohead", "Artist".
-		c.Subtitle = joinDot(it.Type, strings.Join(who, ", "))
-		c.Detail = c.Subtitle
+		c.Detail = joinDot(it.Type, strings.Join(who, ", "))
+		c.Subtitle = c.Detail
+		// Spotify's own playlists show their blurb (a mix's artists), as in Made for X.
+		if it.Type == "Playlist" && it.Description != "" && len(it.Contributors.Items) > 0 && it.Contributors.Items[0].URI == "spotify:user:spotify" {
+			c.Subtitle = stripHTML(it.Description)
+		}
 		if v := e.VisualIdentityTrait; v != nil && v.SquareCoverImage != nil {
 			c.Images = v.SquareCoverImage.Image.Data.images()
 		}

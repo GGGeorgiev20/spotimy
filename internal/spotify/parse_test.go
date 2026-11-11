@@ -288,9 +288,10 @@ func TestPartialProfileNotCached(t *testing.T) {
 
 func TestEntityTraitSubtitle(t *testing.T) {
 	for want, js := range map[string]string{
-		"Playlist • Spotify": `{"__typename":"Entity","identityTrait":{"name":"Daily Mix 1","type":"Playlist","description":"A, B and more","contributors":{"items":[{"name":"Spotify"}]}}}`,
-		"Artist":             `{"__typename":"Entity","identityTrait":{"name":"Radiohead","type":"Artist","description":"English rock band."}}`,
-		"Single • A, B":      `{"__typename":"Entity","identityTrait":{"name":"X","type":"Single","contributors":{"items":[{"name":"A"},{"name":"B"}]}}}`,
+		"A, B and more": `{"__typename":"Entity","identityTrait":{"name":"Daily Mix 1","type":"Playlist","description":"A, B and more","contributors":{"items":[{"name":"Spotify","uri":"spotify:user:spotify"}]}}}`,
+		"Playlist • Me": `{"__typename":"Entity","identityTrait":{"name":"Mine","type":"Playlist","description":"https://x","contributors":{"items":[{"name":"Me","uri":"spotify:user:me"}]}}}`,
+		"Artist":        `{"__typename":"Entity","identityTrait":{"name":"Radiohead","type":"Artist","description":"English rock band."}}`,
+		"Single • A, B": `{"__typename":"Entity","identityTrait":{"name":"X","type":"Single","contributors":{"items":[{"name":"A"},{"name":"B"}]}}}`,
 	} {
 		var e gqlEntity
 		if err := json.Unmarshal([]byte(js), &e); err != nil {
