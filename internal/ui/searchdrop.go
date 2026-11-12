@@ -42,7 +42,8 @@ type dropRow struct {
 	remove IconButton
 	follow Pill
 	save   IconButton
-	drag   TrackDrag // a song's row drags onto the queue or a playlist
+	queue  IconButton // a song's "Add to queue", on hover
+	drag   TrackDrag  // a song's row drags onto the queue or a playlist
 }
 
 const dropMax = 10
@@ -270,7 +271,7 @@ func scrollIntoView(gtx layout.Context, items []dropItem, i, viewH int) {
 }
 
 func (r *dropRow) hovered() bool {
-	return r.click.Hovered() || r.play.Hovered() || r.remove.Click.Hovered() || r.follow.Click.Hovered() || r.save.Click.Hovered()
+	return r.click.Hovered() || r.play.Hovered() || r.remove.Click.Hovered() || r.follow.Click.Hovered() || r.save.Click.Hovered() || r.queue.Click.Hovered()
 }
 
 func dropRows(n int) {
@@ -386,6 +387,9 @@ func suggestionItems(gtx layout.Context) []dropItem {
 		if r.save.Click.Clicked(gtx) {
 			ToggleSaved(c.URI)
 		}
+		if r.queue.Click.Clicked(gtx) {
+			AddToQueue([]string{c.URI})
+		}
 		items = append(items, dropItem{64, func(gtx layout.Context) layout.Dimensions {
 			return entityRow(gtx, r, c, sel, func(gtx layout.Context, rw, rowH int) {
 				switch c.Type {
@@ -399,6 +403,11 @@ func suggestionItems(gtx layout.Context) []dropItem {
 					call := m.Stop()
 					Offset(gtx, rw-Dp(gtx, 12)-d.Size.X, (rowH-d.Size.Y)/2, func() { call.Add(gtx.Ops) })
 				case "track":
+					if r.hovered() || sel {
+						Offset(gtx, rw-Dp(gtx, 4+32+32), (rowH-Dp(gtx, 32))/2, func() {
+							r.queue.Layout(gtx, IconStyle{Icon: "queue", Size: 16, Box: 32, Label: "Add to queue"})
+						})
+					}
 					if !Saved[c.URI] && !r.hovered() && !sel {
 						return
 					}
@@ -528,7 +537,10 @@ func entityRow(gtx layout.Context, r *dropRow, c spotify.Card, sel bool, trailin
 		})
 		tx := Dp(gtx, 8+48+12)
 		tw := rw - tx - Dp(gtx, 4+32+12)
-		if c.Type == "artist" {
+		switch c.Type {
+		case "track":
+			tw -= Dp(gtx, 32) // Add to queue
+		case "artist":
 			tw = rw - tx - Dp(gtx, 12+100)
 		}
 		detail := c.Detail

@@ -724,12 +724,12 @@ type row struct {
 	drag        ui.TrackDrag
 	// above and below take drops on the row's halves: before it, after it.
 	above, below ui.DropTarget
-	next         ui.IconButton // "Play next", shown on hover for upcoming rows
-	queue        ui.IconButton // "Add to queue", next to it for rows of the context
+	remove       ui.IconButton // shown on hover for upcoming rows
+	next         ui.IconButton // "Play next", shown on hover next to remove
 }
 
 // hooks make an upcoming row draggable (to reorder the queue) and a drop
-// target, and removable (middle click).
+// target, and removable; middle click queues a row of the context.
 type hooks struct {
 	index        int // in the upcoming tracks
 	remove       func()
@@ -762,13 +762,13 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 			ui.OpenURI(a.URI)
 		}
 	}
-	if r.click.MiddleClicked(gtx) && remove != nil {
+	if r.remove.Click.Clicked(gtx) && remove != nil {
 		remove()
 	}
 	if r.next.Click.Clicked(gtx) && playNext != nil {
 		playNext()
 	}
-	if r.queue.Click.Clicked(gtx) && toQueue != nil {
+	if r.click.MiddleClicked(gtx) && toQueue != nil {
 		toQueue()
 	}
 	if _, ok := r.click.RightClicked(gtx); ok {
@@ -778,7 +778,7 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 	w, rh := gtx.Constraints.Max.X, ui.Dp(gtx, rowDp)
 	r.click.Label, r.click.Arrow = t.Name, true
 	return r.click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		hov := r.click.Hovered() || r.play.Hovered() || r.next.Click.Hovered() || r.queue.Click.Hovered()
+		hov := r.click.Hovered() || r.play.Hovered() || r.remove.Click.Hovered() || r.next.Click.Hovered()
 		if hov {
 			ui.FillRect(gtx.Ops, image.Rect(0, 0, w, rh), ui.Dp(gtx, 4), ui.ColRowHover)
 		}
@@ -806,11 +806,11 @@ func (r *row) layout(gtx layout.Context, t spotify.Track, current bool, h *hooks
 		g := gtx
 		// The hover buttons, from the right edge.
 		var btns []func()
+		if hov && remove != nil {
+			btns = append(btns, func() { r.remove.Layout(gtx, ui.IconStyle{Icon: "close", Label: "Remove from queue"}) })
+		}
 		if hov && playNext != nil {
 			btns = append(btns, func() { r.next.Layout(gtx, ui.IconStyle{Icon: "play-next", Label: "Play next"}) })
-		}
-		if hov && toQueue != nil {
-			btns = append(btns, func() { r.queue.Layout(gtx, ui.IconStyle{Icon: "queue", Label: "Add to queue"}) })
 		}
 		b := ui.Dp(gtx, 32)
 		bw := 0 // their room
