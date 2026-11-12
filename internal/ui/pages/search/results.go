@@ -104,7 +104,7 @@ func (p *page) layoutAll(gtx layout.Context, bar layout.Widget) layout.Dimension
 		if len(r.Tracks) > 0 {
 			p.topRows = &ui.Paged{}
 			p.topRows.SetAll(r.Tracks[:min(3, len(r.Tracks))])
-			p.topTab = ui.TrackTable{Variant: "compact", QueueButton: true, OnPlayed: func(t spotify.Track) { remember(t.URI) }}
+			p.topTab = ui.TrackTable{Variant: "compact", OnPlayed: func(t spotify.Track) { remember(t.URI) }}
 		}
 	}
 	return p.list.Layout(gtx, len(r.Groups)+3, func(gtx layout.Context, i int) layout.Dimensions {
@@ -264,7 +264,7 @@ func (p *page) layoutSongs(gtx layout.Context, bar layout.Widget) layout.Dimensi
 			return &spotify.TrackPage{Total: r.Total, Offset: off, Items: r.Tracks}, nil
 		}, 50)
 		p.paged.Seed(spotify.TrackPage{Total: r.Total, Items: r.Tracks})
-		p.table = ui.TrackTable{Variant: "search", QueueButton: true, OnPlayed: func(t spotify.Track) { remember(t.URI) }}
+		p.table = ui.TrackTable{Variant: "search", OnPlayed: func(t spotify.Track) { remember(t.URI) }}
 	}
 	switch {
 	case !p.res.Done:

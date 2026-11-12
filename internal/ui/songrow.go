@@ -92,9 +92,6 @@ func (tt *TrackTable) compactRow(gtx layout.Context, i int, tr spotify.Track, r 
 				r.more.Label = "More options for " + tr.Name
 				r.more.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return IconPx(gtx, "more", bs, ColText) })
 			})
-			if tt.QueueButton {
-				Offset(gtx, end-3*bs-2*Dp(gtx, 24), (h-bs)/2, func() { r.queueButton(gtx, bs) })
-			}
 		}
 
 		// Name over artists.

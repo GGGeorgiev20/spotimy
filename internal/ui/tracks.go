@@ -129,8 +129,6 @@ type TrackTable struct {
 	// NoCheck hides the "saved" check button: in Liked Songs and playlists
 	// you can edit every song is already saved somewhere.
 	NoCheck bool
-	// QueueButton shows an "Add to queue" button on hover (search results).
-	QueueButton bool
 	// Sort makes the Title, Album, Date added and duration headers sort
 	// the list, as clicking them does in the desktop client.
 	Sort *ListControls
@@ -142,10 +140,10 @@ type TrackTable struct {
 }
 
 type trackRow struct {
-	row, play, save, more, queue Click
-	drag                         TrackDrag
-	artists                      []Link
-	album                        Link
+	row, play, save, more Click
+	drag                  TrackDrag
+	artists               []Link
+	album                 Link
 }
 
 func (tt *TrackTable) row(i int) *trackRow {
@@ -388,7 +386,7 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 		tt.Selected = i
 		OpenMenu(TrackMenu(tr, TrackMenuOpts{PlaylistURI: tt.PlaylistURI, CanEdit: tt.CanEdit}))
 	}
-	if r.row.MiddleClicked(gtx) || r.queue.Clicked(gtx) {
+	if r.row.MiddleClicked(gtx) {
 		AddToQueue([]string{tr.URI})
 	}
 	if len(r.artists) < len(tr.Artists) {
@@ -573,9 +571,6 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 						r.save.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return IconPx(gtx, icon, bs, col) })
 					})
 				}
-				if tt.QueueButton && hov {
-					Offset(gtx, saveX-Dp(gtx, 16)-bs, (h-bs)/2, func() { r.queueButton(gtx, bs) })
-				}
 				dur := FmtDuration(int64(tr.DurationMs))
 				dw := Measure(gtx, dur, 14, Regular)
 				Offset(gtx, moreX-Dp(gtx, 16)-dw, 0, func() {
@@ -606,17 +601,6 @@ func (tt *TrackTable) Row(gtx layout.Context, i int, t *spotify.Track) layout.Di
 			return layout.Dimensions{Size: image.Pt(rw, h)}
 		})
 	})
-}
-
-// queueButton is the hover "Add to queue" icon.
-func (r *trackRow) queueButton(gtx layout.Context, bs int) {
-	col := ColText2
-	if r.queue.Hovered() {
-		col = ColText
-	}
-	r.queue.Label = "Add to queue"
-	d := r.queue.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return IconPx(gtx, "queue", bs, col) })
-	Tip(gtx, &r.queue, d, "Add to queue", true)
 }
 
 // ExplicitBadge is the small "E" tag.
