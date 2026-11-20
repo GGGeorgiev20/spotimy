@@ -1,5 +1,6 @@
-// Package home is the home page (/): filter chips, the shortcut tiles and
-// the shelves of recommendations.
+// Package home is the home page (/): the shortcut tiles and the shelves of
+// recommendations, always the Music feed (the official client's Music chip;
+// its All/Music/Podcasts/Audiobooks chips are left out).
 package home
 
 import (
@@ -21,18 +22,15 @@ var defaultTint = ui.RGB(0x535353)
 
 func init() {
 	ui.Register("", func([]string) ui.Page {
-		p := &page{tint: defaultTint, target: defaultTint, labels: []string{"All"}}
+		p := &page{tint: defaultTint, target: defaultTint}
 		p.load()
 		return p
 	})
 }
 
 type page struct {
-	facet   string
 	res     ui.Res[*spotify.Home]
 	cur     *spotify.Home // the result the fields below were built from
-	chips   ui.Chips
-	labels  []string
 	tiles   []tile
 	short   []spotify.Card
 	shelves []spotify.Shelf
@@ -45,7 +43,7 @@ type page struct {
 	covers       map[string]color.NRGBA
 }
 
-func (p *page) load() { p.res.Load(func() (*spotify.Home, error) { return ui.B.Home(p.facet) }) }
+func (p *page) load() { p.res.Load(func() (*spotify.Home, error) { return ui.B.Home("music-chip") }) }
 
 // setup rebuilds the derived lists when a (new) result arrives.
 func (p *page) setup(h *spotify.Home) {
@@ -62,10 +60,6 @@ func (p *page) setup(h *spotify.Home) {
 	p.shelf = make([]ui.Shelf, len(p.shelves))
 	p.hovered = -1
 	p.covers = map[string]color.NRGBA{}
-	p.labels = []string{"All"}
-	for _, c := range h.Chips {
-		p.labels = append(p.labels, c.Label)
-	}
 }
 
 // cover makes shortcut i's cover color the gradient's target.
@@ -88,7 +82,7 @@ func (p *page) cover(i int) {
 }
 
 const (
-	itemChips = iota
+	itemTop = iota // the space above the tiles
 	itemTiles
 	itemShelves
 )
@@ -106,8 +100,8 @@ func (p *page) Layout(gtx layout.Context) layout.Dimensions {
 	n := itemShelves + len(p.shelves) + 1
 	return p.list.Layout(gtx, n, func(gtx layout.Context, i int) layout.Dimensions {
 		switch {
-		case i == itemChips:
-			return p.chipRow(gtx)
+		case i == itemTop:
+			return ui.Gap(0, 20)(gtx)
 		case !p.res.Done && p.cur == nil:
 			if i == itemTiles {
 				return ui.Loading(gtx)
@@ -143,35 +137,6 @@ func (p *page) stepTint(gtx layout.Context) {
 	}
 	p.tint = next
 	gtx.Execute(op.InvalidateCmd{At: gtx.Now.Add(16 * time.Millisecond)})
-}
-
-func (p *page) chipRow(gtx layout.Context) layout.Dimensions {
-	sel := 0
-	if p.cur != nil {
-		for i, c := range p.cur.Chips {
-			if c.ID == p.facet {
-				sel = i + 1
-			}
-		}
-	}
-	var clicked int
-	d := ui.Pad(gtx, 20, pagePad, 16, pagePad, func(gtx layout.Context) layout.Dimensions {
-		p.chips.Base = p.gradAt(gtx, ui.Dp(gtx, 36))
-		d, c := p.chips.Layout(gtx, p.labels, sel)
-		clicked = c
-		return d
-	})
-	if clicked >= 0 && p.cur != nil {
-		facet := ""
-		if clicked > 0 {
-			facet = p.cur.Chips[clicked-1].ID
-		}
-		if facet != p.facet {
-			p.facet = facet
-			p.load()
-		}
-	}
-	return d
 }
 
 func (p *page) layoutShelf(gtx layout.Context, i int) layout.Dimensions {
@@ -210,7 +175,7 @@ func (p *page) grid(gtx layout.Context) layout.Dimensions {
 		ui.Offset(gtx, x, y, func() {
 			g := gtx
 			g.Constraints = layout.Exact(image.Pt(cw, h))
-			p.tiles[i].layout(g, p.short[i], p.gradAt(gtx, ui.Dp(gtx, 68)+(i/cols)*(h+gap)+h/2))
+			p.tiles[i].layout(g, p.short[i], p.gradAt(gtx, ui.Dp(gtx, 20)+(i/cols)*(h+gap)+h/2))
 		})
 		if p.tiles[i].click.Hovered() {
 			hovered = i
