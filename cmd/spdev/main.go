@@ -11,7 +11,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -129,9 +131,12 @@ func main() {
 			Credentials: session.StoredCredentials{Username: user, Data: cred}, ClientToken: ct,
 		})
 		check(err)
-		if os.Args[2] == "ctx" { // spdev stream ctx <context uri> <track uri>
+		switch os.Args[2] {
+		case "ctx": // spdev stream ctx <context uri> <track uri>
 			err = timeContext(ctx, sess, os.Args[3], os.Args[4])
-		} else {
+		case "decode": // spdev stream decode <track uri>...: decoded length against the stated one
+			err = decodeStreams(ctx, sess, os.Args[3:])
+		default:
 			err = timeStreams(ctx, sess, os.Args[2:])
 		}
 		sess.Close()
@@ -229,6 +234,43 @@ func timeStreams(ctx context.Context, sess *session.Session, uris []string) erro
 			n += k
 		}
 		fmt.Printf("%s: stream %v, 2s decoded %v\n", st.Media.Name(), opened.Round(time.Millisecond), time.Since(start).Round(time.Millisecond))
+	}
+	return nil
+}
+
+// decodeStreams decodes each track to its end and prints how long its audio
+// is next to the duration in its metadata.
+func decodeStreams(ctx context.Context, sess *session.Session, uris []string) error {
+	p, err := lplayer.NewPlayer(&lplayer.Options{
+		Spclient: sess.Spclient(), AudioKey: sess.AudioKey(), Events: nopEvents{},
+		Log: debugLog{&librespot.NullLogger{}}, CountryCode: func() string { return "" },
+	})
+	if err != nil {
+		return err
+	}
+	defer p.Close()
+	for _, uri := range uris {
+		id, err := librespot.SpotifyIdFromUri(uri)
+		if err != nil {
+			return err
+		}
+		st, err := p.NewStream(ctx, http.DefaultClient, *id, 320, 0)
+		if err != nil {
+			return err
+		}
+		buf := make([]float32, 64*1024)
+		samples := 0
+		for {
+			k, err := st.Source.Read(buf)
+			samples += k
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				return err
+			}
+		}
+		ms := int64(samples / lplayer.Channels * 1000 / lplayer.SampleRate)
+		fmt.Printf("%s: decoded %dms (last granule %dms), stated %dms (%+dms)\n", st.Media.Name(), ms, st.Source.PositionMs(), st.Media.Duration(), ms-int64(st.Media.Duration()))
 	}
 	return nil
 }
