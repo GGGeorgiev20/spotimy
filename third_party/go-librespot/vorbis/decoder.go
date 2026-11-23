@@ -69,6 +69,9 @@ type Decoder struct {
 	stopChan chan struct{}
 	closed   bool
 	started  bool
+	// ended is set once the end-of-stream page has been decoded: its samples
+	// are still in buf, and play before Read reports the end.
+	ended bool
 
 	lastGranulepos vorbis.OggInt64
 }
@@ -266,9 +269,18 @@ func (d *Decoder) Read(p []float32) (n int, err error) {
 			continue
 		}
 
+		if d.ended {
+			return n, io.EOF
+		}
+
 		// decode another page
 		err = d.readNextPage()
-		if err != nil {
+		if errors.Is(err, io.EOF) {
+			// The last page's samples were just decoded into buf: hand them
+			// out before ending, or a track loses its last page, up to a few
+			// seconds of audio.
+			d.ended = true
+		} else if err != nil {
 			return n, err
 		}
 	}
@@ -304,9 +316,11 @@ func (d *Decoder) readNextPage() (err error) {
 			d.log.Debugf("vorbis: corrupt or missing data in bitstream")
 			continue
 		} else if ret == 0 {
-			// need more data
-			_, err = d.readChunk()
-			if err != nil {
+			// need more data; the file's last bytes come with EOF and may
+			// complete its last page, so try them before giving up
+			var n int
+			n, err = d.readChunk()
+			if err != nil && !(errors.Is(err, io.EOF) && n > 0) {
 				return err
 			}
 		} else {
@@ -371,6 +385,7 @@ func (d *Decoder) SetPositionMs(pos int64) (err error) {
 	// empty the read buffer here, if we found the correct offset
 	// the buffer will contain the correct page data
 	d.buf = nil
+	d.ended = false
 
 	// we trust that the bytes offset we were given is accurate and process the data at this point
 	if _, err = d.readChunk(); err != nil {
