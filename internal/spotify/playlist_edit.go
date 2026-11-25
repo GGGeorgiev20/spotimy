@@ -71,6 +71,15 @@ func (c *Client) CreatePlaylist(ctx context.Context, name string) (string, error
 	if err := c.RenamePlaylist(ctx, uri, name, nil); err != nil {
 		c.log.Warn("naming new playlist failed", "err", err)
 	}
+	return uri, c.followPlaylist(ctx, uri)
+}
+
+// followPlaylist puts a playlist at the top of the user's library.
+func (c *Client) followPlaylist(ctx context.Context, uri string) error {
+	user, err := c.username()
+	if err != nil {
+		return &Error{Op: "followPlaylist", Err: err}
+	}
 	err = c.rootlistChange(ctx, user, &pb.Op{
 		Kind: pb.Op_ADD.Enum(),
 		Add: &pb.Add{AddFirst: proto.Bool(true), Items: []*pb.Item{{
@@ -79,7 +88,7 @@ func (c *Client) CreatePlaylist(ctx context.Context, name string) (string, error
 		}}},
 	})
 	c.InvalidateLibrary()
-	return uri, err
+	return err
 }
 
 // DeletePlaylist removes a playlist from the user's library (Spotify's

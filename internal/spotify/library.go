@@ -3,6 +3,7 @@ package spotify
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -195,14 +196,30 @@ func (c *Client) InvalidateLibrary() { c.cache.invalidate("pf:libraryV3:") }
 // SetSaved adds or removes items (tracks, albums, artists, shows, episodes,
 // playlists) from the library.
 func (c *Client) SetSaved(ctx context.Context, uris []string, saved bool) error {
-	op := "removeFromLibrary"
-	if saved {
-		op = "addToLibrary"
+	// Playlists are followed in the rootlist, as the official clients do:
+	// the library mutations refuse them.
+	var rest []string
+	var errs []error
+	for _, uri := range uris {
+		switch {
+		case !strings.HasPrefix(uri, "spotify:playlist:"):
+			rest = append(rest, uri)
+		case saved:
+			errs = append(errs, c.followPlaylist(ctx, uri))
+		default:
+			errs = append(errs, c.DeletePlaylist(ctx, uri))
+		}
 	}
-	err := c.mutate(ctx, op, map[string]any{"libraryItemUris": uris})
+	if len(rest) > 0 {
+		op := "removeFromLibrary"
+		if saved {
+			op = "addToLibrary"
+		}
+		errs = append(errs, c.mutate(ctx, op, map[string]any{"libraryItemUris": rest}))
+	}
 	c.InvalidateLibrary()
 	c.cache.invalidate("pf:fetchLibraryTracks:")
-	return err
+	return errors.Join(errs...)
 }
 
 // AreSaved reports whether each uri is in the library.

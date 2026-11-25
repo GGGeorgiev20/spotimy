@@ -135,3 +135,23 @@ func TestCacheByteCap(t *testing.T) {
 		t.Errorf("size after invalidate = %d", c.size)
 	}
 }
+
+// A playlist is followed and unfollowed in the rootlist: the library
+// mutations refuse playlists.
+func TestSetSavedFollowsPlaylistsInTheRootlist(t *testing.T) {
+	var paths []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.Write([]byte(`{"data":{}}`))
+	}))
+	defer srv.Close()
+	c := testClient(t)
+	c.spclientURL, c.pathfinderURL, c.userURI = srv.URL, srv.URL, "spotify:user:u"
+
+	if err := c.SetSaved(context.Background(), []string{"spotify:playlist:p", "spotify:album:a"}, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 2 || paths[0] != "/playlist/v2/user/u/rootlist/changes" || paths[1] == paths[0] {
+		t.Errorf("requests %q", paths)
+	}
+}
