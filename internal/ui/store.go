@@ -26,6 +26,7 @@ var Player struct {
 
 var (
 	refreshPending bool
+	refreshAgain   bool // asked for while one was on its way: it may predate the change
 	volSent        int
 	volPending     int
 	volTimer       *time.Timer
@@ -36,12 +37,17 @@ var (
 func RefreshPlayer() {
 	Post(func() {
 		if refreshPending {
+			refreshAgain = true
 			return
 		}
 		refreshPending = true
 		time.AfterFunc(30*time.Millisecond, func() {
 			Async(B.Status, func(s *backend.PlayerStatus, err error) {
 				refreshPending = false
+				if refreshAgain {
+					refreshAgain = false
+					RefreshPlayer()
+				}
 				if err != nil {
 					return
 				}
@@ -158,9 +164,15 @@ func IsCurrentTrack(t spotify.Track, contextURI string) bool {
 	return IsCurrent(t.URI, contextURI) || t.LinkedURI != "" && IsCurrent(t.LinkedURI, contextURI)
 }
 
+// playerCall runs a player command and re-reads the status after it, failed
+// or not: what the screen already shows of it (the play button, shuffle, the
+// position) is put right either way.
 func playerCall(name string, f func() error) {
 	WentBack = time.Time{}
-	Go("Couldn't "+name, f, RefreshPlayer)
+	Go("Couldn't "+name, func() error {
+		defer RefreshPlayer()
+		return f()
+	}, nil)
 }
 
 // PlayContext plays a context, or toggles pause if it's already the one playing.
@@ -199,6 +211,9 @@ func showStarting(context string, t spotify.Track) {
 		nt.AlbumURI, nt.AlbumName, nt.Images = t.Album.URI, t.Album.Name, t.Album.Images
 	}
 	starting.track, starting.context, starting.at = nt, context, time.Now()
+	// Looked at again once its grace is up: a play that failed fast would
+	// otherwise show it starting until the next poll.
+	time.AfterFunc(startingGrace+50*time.Millisecond, RefreshPlayer)
 	if s := Player.Status; s != nil {
 		s.Track, s.PositionMs, s.Playing, s.Buffering, s.ContextURI = nt, 0, true, true, context
 		Player.FetchedAt = time.Now()
@@ -362,6 +377,11 @@ func ToggleShuffle() {
 
 func CycleRepeat() {
 	next := map[string]string{"off": "context", "context": "track", "track": "off"}[RepeatMode()]
+	// Shown at once, so a second click goes on from it rather than from a
+	// status that hasn't caught up yet.
+	if s := Player.Status; s != nil {
+		s.RepeatContext, s.RepeatTrack = next == "context", next == "track"
+	}
 	playerCall("repeat", func() error { return B.SetRepeat(next) })
 }
 
