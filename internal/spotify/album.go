@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 )
@@ -99,6 +100,9 @@ func year(iso string) string {
 
 // Tracks returns metadata for track URIs, in order (missing ones are skipped).
 func (c *Client) Tracks(ctx context.Context, uris []string) ([]Track, error) {
+	// The query takes tracks alone: an episode or a local file among them
+	// fails the whole batch. Callers handle the ones missing from the answer.
+	uris = slices.DeleteFunc(slices.Clone(uris), func(u string) bool { return !strings.HasPrefix(u, "spotify:track:") })
 	out := []Track{}
 	for i := 0; i < len(uris); i += 50 {
 		chunk := uris[i:min(i+50, len(uris))]

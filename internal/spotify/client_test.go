@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -153,5 +154,26 @@ func TestSetSavedFollowsPlaylistsInTheRootlist(t *testing.T) {
 	}
 	if len(paths) != 2 || paths[0] != "/playlist/v2/user/u/rootlist/changes" || paths[1] == paths[0] {
 		t.Errorf("requests %q", paths)
+	}
+}
+
+// Track details are asked for tracks alone: an episode among them failed the
+// whole batch.
+func TestTracksAsksForTracksOnly(t *testing.T) {
+	var asked string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		asked += r.URL.RawQuery + string(b)
+		w.Write([]byte(`{"data":{"tracks":[]}}`))
+	}))
+	defer srv.Close()
+	c := testClient(t)
+	c.pathfinderURL = srv.URL
+
+	if _, err := c.Tracks(context.Background(), []string{"spotify:track:t", "spotify:episode:e"}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(asked, "spotify:track:t") || strings.Contains(asked, "spotify:episode:e") {
+		t.Errorf("asked %q", asked)
 	}
 }
