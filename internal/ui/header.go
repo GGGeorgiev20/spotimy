@@ -243,7 +243,7 @@ func (a *ActionBar) Layout(gtx layout.Context, o ActionOpts) layout.Dimensions {
 				if err := B.SetShuffle(true); err != nil {
 					return err
 				}
-				return B.Play(uri, "")
+				return B.Play(uri, "", "")
 			}, RefreshPlayer)
 		} else {
 			ToggleShuffle()

@@ -205,6 +205,9 @@ type ApiPlay struct {
 	// Position Position in milliseconds to start playback at within the selected track (0 starts from the beginning)
 	Position int64 `json:"position,omitempty"`
 
+	// SkipToUid The uid of the entry to skip to, which tells apart copies of a track and finds one listed under a relinked uri; skip_to_uri is used when no entry has it
+	SkipToUid string `json:"skip_to_uid,omitempty"`
+
 	// SkipToUri Spotify URI to skip to (when playing playlists)
 	SkipToUri string `json:"skip_to_uri,omitempty"`
 

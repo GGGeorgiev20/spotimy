@@ -798,21 +798,7 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 
 		var skipTo skipToFunc
 		if len(data.SkipToUri) > 0 {
-			skipToId, err := librespot.SpotifyIdFromUri(data.SkipToUri)
-			if err != nil {
-				p.app.log.WithError(err).Warnf("trying to skip to invalid uri: %s", data.SkipToUri)
-				skipToId = nil
-			}
-
-			skipTo = func(track *connectpb.ContextTrack) bool {
-				if len(track.Uri) > 0 {
-					return data.SkipToUri == track.Uri
-				} else if len(track.Gid) > 0 {
-					return bytes.Equal(skipToId.Id(), track.Gid)
-				} else {
-					return false
-				}
-			}
+			skipTo = p.skipToEntry(data.SkipToUri, data.SkipToUid)
 		}
 
 		// When starting at a position, load paused and seek before unpausing so
@@ -1325,4 +1311,26 @@ func (p *AppPlayer) flushState() {
 	p.stateDirty = false
 	p.lastStatePut = time.Now()
 	p.pushState(connectpb.PutStateReason_PLAYER_STATE_CHANGED)
+}
+
+// skipToEntry finds the context entry a play names. A playlist's entries carry
+// the uids its listing shows, which tell copies of a track apart and find one
+// listed under a relinked uri; an album's carry none, and go by uri.
+func (p *AppPlayer) skipToEntry(uri, uid string) skipToFunc {
+	id, err := librespot.SpotifyIdFromUri(uri)
+	if err != nil {
+		p.app.log.WithError(err).Warnf("trying to skip to invalid uri: %s", uri)
+	}
+
+	return func(track *connectpb.ContextTrack) bool {
+		if uid != "" && track.Uid != "" {
+			return track.Uid == uid
+		}
+		if len(track.Uri) > 0 {
+			return uri == track.Uri
+		} else if len(track.Gid) > 0 && id != nil {
+			return bytes.Equal(id.Id(), track.Gid)
+		}
+		return false
+	}
 }

@@ -347,7 +347,7 @@ func (a *App) StartRadio(seedURI string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return pl, a.Play(pl, "")
+	return pl, a.Play(pl, "", "")
 }
 
 func (a *App) Show(uri string) (*spotify.Show, error) {

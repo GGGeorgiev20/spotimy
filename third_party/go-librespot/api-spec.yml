@@ -565,6 +565,10 @@ components:
           description: Spotify URI to skip to (when playing playlists)
           type: string
           x-go-type-skip-optional-pointer: true
+        skip_to_uid:
+          description: The uid of the entry to skip to, which tells apart copies of a track and finds one listed under a relinked uri; skip_to_uri is used when no entry has it
+          type: string
+          x-go-type-skip-optional-pointer: true
         paused:
           description: Start playback as paused
           type: boolean

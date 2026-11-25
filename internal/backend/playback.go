@@ -220,7 +220,10 @@ func (a *App) cmd(endpoint string, fields map[string]any) error {
 	return cn.Command(ctx, endpoint, fields)
 }
 
-func (a *App) Play(uri, skipToURI string) error {
+// Play plays a context from the track skipToURI, or its first. skipToUID, the
+// entry's uid in a playlist, picks out which copy of a track was meant, and
+// finds one listed under its relinked uri.
+func (a *App) Play(uri, skipToURI, skipToUID string) error {
 	if a.sandboxed("Play", uri, skipToURI) {
 		a.fakePlay(uri, skipToURI)
 		return nil
@@ -228,11 +231,15 @@ func (a *App) Play(uri, skipToURI string) error {
 	if cn, _ := a.remote(); cn != nil {
 		cmd := map[string]any{"context": map[string]any{"uri": uri, "url": "context://" + uri}}
 		if skipToURI != "" {
-			cmd["options"] = map[string]any{"skip_to": map[string]any{"track_uri": skipToURI}}
+			skip := map[string]any{"track_uri": skipToURI}
+			if skipToUID != "" {
+				skip["track_uid"] = skipToUID
+			}
+			cmd["options"] = map[string]any{"skip_to": skip}
 		}
 		return a.cmd("play", cmd)
 	}
-	_, err := a.do(daemon.ApiRequestTypePlay, daemon.ApiPlay{Uri: uri, SkipToUri: skipToURI})
+	_, err := a.do(daemon.ApiRequestTypePlay, daemon.ApiPlay{Uri: uri, SkipToUri: skipToURI, SkipToUid: skipToUID})
 	return err
 }
 

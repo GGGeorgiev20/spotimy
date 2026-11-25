@@ -172,10 +172,14 @@ func PlayContext(uri string) {
 	Play(uri, "")
 }
 
-func Play(uri, skipTo string) {
+func Play(uri, skipTo string) { playEntry(uri, skipTo, "") }
+
+// playEntry plays a context from an entry, told apart from other copies of
+// its track by uid.
+func playEntry(uri, skipTo, uid string) {
 	showNPVOnPlay()
 	playRequest, playRequestAt = uri, time.Now()
-	playerCall("play", func() error { return B.Play(uri, skipTo) })
+	playerCall("play", func() error { return B.Play(uri, skipTo, uid) })
 }
 
 // SkipTo jumps to an upcoming track (queued or later in the context), as
@@ -214,7 +218,7 @@ func PlayTrack(context string, t spotify.Track) {
 	if context == "" {
 		Play(t.URI, "")
 	} else {
-		Play(context, t.URI)
+		playEntry(context, t.URI, t.UID)
 	}
 }
 

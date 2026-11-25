@@ -931,3 +931,17 @@ func TestContextEndWithoutStationLoadsTheShownTrack(t *testing.T) {
 
 	require.Len(t, p.loader.queue, 1, "the shown track loads")
 }
+
+// A played entry is found by its uid where the context lists them (the
+// second copy of a track, or one listed under its relinked uri), and by uri
+// where it doesn't (an album).
+func TestSkipToEntry(t *testing.T) {
+	p := newTestAppPlayer(t)
+	const song = "spotify:track:3j7BhP71ROCpc9R3w9P9UE"
+	second := p.skipToEntry(song, "u2")
+	require.False(t, second(&connectpb.ContextTrack{Uri: song, Uid: "u1"}), "the first copy")
+	require.True(t, second(&connectpb.ContextTrack{Uri: song, Uid: "u2"}))
+	require.True(t, second(&connectpb.ContextTrack{Uri: "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", Uid: "u2"}), "listed relinked")
+	require.True(t, second(&connectpb.ContextTrack{Uri: song}), "an album's entry")
+	require.True(t, p.skipToEntry(song, "")(&connectpb.ContextTrack{Uri: song, Uid: "u1"}))
+}
