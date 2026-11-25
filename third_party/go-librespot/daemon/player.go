@@ -1247,16 +1247,15 @@ func (p *AppPlayer) Run(apiRecv <-chan ApiRequest, mprisRecv <-chan mpris.MediaP
 			}
 
 			p.app.log.Tracef("new mpris message %v", mprisReq)
-			err := p.handleMprisEvent(mprisReq)
-			dbusError := mpris.MediaPlayer2PlayerCommandResponse{
-				Err: &dbus.Error{},
+			// A failure goes back as org.freedesktop.DBus.Error.Failed with
+			// the reason as its message: an error's name has to look like an
+			// interface name, and one that doesn't ("no primary stream") can't
+			// be sent, so the caller (a media key) waited 25s for no reply.
+			var resp mpris.MediaPlayer2PlayerCommandResponse
+			if err := p.handleMprisEvent(mprisReq); err != nil {
+				resp.Err = dbus.MakeFailedError(err)
 			}
-			if err != nil {
-				dbusError.Err.Name = err.Error()
-			} else {
-				dbusError.Err = nil
-			}
-			mprisReq.Reply(dbusError)
+			mprisReq.Reply(resp)
 		case ev, ok := <-playerRecv:
 			if !ok {
 				playerRecv = nil

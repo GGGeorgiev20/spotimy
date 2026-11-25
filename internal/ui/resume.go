@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/backend"
@@ -61,4 +62,22 @@ func saveLastNow() {
 	data, _ := json.Marshal(Prefs)
 	_ = os.MkdirAll(filepath.Dir(prefsPath), 0o700)
 	_ = os.WriteFile(prefsPath, data, 0o600)
+}
+
+// SaveOnQuit keeps where playback is for the next start, when the app quits
+// other than by closing its window (logging out, a signal). Call it from any
+// goroutine. It is done on the UI goroutine, unless no frame comes to run it
+// (a minimized window draws none): that goroutine is then idle, waiting on the
+// window.
+func SaveOnQuit() {
+	var once sync.Once
+	save := func() { once.Do(saveLastNow) }
+	done := make(chan struct{})
+	Post(func() { save(); close(done) })
+	Invalidate()
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		save()
+	}
 }

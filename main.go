@@ -102,6 +102,7 @@ func main() {
 	}
 
 	quit := func() {
+		ui.SaveOnQuit()
 		stop()
 		b.Stop()
 		os.Exit(0)
