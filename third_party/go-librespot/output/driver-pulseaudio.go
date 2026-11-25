@@ -28,6 +28,9 @@ type pulseAudioOutput struct {
 	// ended is set once the source has run out; see float32Reader.
 	ended atomic.Bool
 
+	// corked is a stream paused with what it buffered kept; see Pause.
+	corked bool
+
 	done chan struct{} // closed by Close
 }
 
@@ -186,28 +189,50 @@ var errNotStarted = errors.New("pulseaudio: playback did not start")
 // fails first, and the player, waiting on Resume, would wait with it for good.
 const startTimeout = 10 * time.Second
 
+// Pause corks the stream: it stops at once and keeps the two seconds it has
+// buffered, to play on from the very same sample. It used to stop and flush
+// them, and play then had to seek back to where it paused, which Vorbis can
+// only do to a page boundary: every resume replayed a fraction of a second.
+// The cork is asked for directly, not through the library's Pause and Resume:
+// its Resume forgets an underflow, and the server's word that playback started
+// again after it would then block the library's reader for good.
 func (out *pulseAudioOutput) Pause() error {
-	if out.stream.Running() {
-		// Stop() will stop new samples from being requested, but will continue
-		// to play whatever is in the buffer.
-		out.stream.Stop()
-
-		// To really stop playback *now*, we have to also flush everything
-		// that's in the buffer.
-		err := out.client.RawRequest(&proto.FlushPlaybackStream{
-			StreamIndex: out.stream.StreamIndex(),
-		}, nil)
-		if err != nil {
-			return fmt.Errorf("Pause: could not flush playback: %e", err)
-		}
-	} else {
-		// Nothing to do: we're already paused.
+	if !out.stream.Running() || out.corked {
+		return nil
 	}
-
+	err := out.client.RawRequest(&proto.CorkPlaybackStream{
+		StreamIndex: out.stream.StreamIndex(),
+		Corked:      true,
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("Pause: could not cork playback: %w", err)
+	}
+	out.corked = true
 	return nil
 }
 
+// Holding reports whether the stream is paused with its buffer kept.
+func (out *pulseAudioOutput) Holding() bool {
+	return out.corked
+}
+
 func (out *pulseAudioOutput) Resume() error {
+	if out.stream.Closed() {
+		return pulse.ErrConnectionClosed
+	}
+	if out.corked {
+		// Plays on what it kept, the end of a track that ran out included.
+		err := out.client.RawRequest(&proto.CorkPlaybackStream{
+			StreamIndex: out.stream.StreamIndex(),
+			Corked:      false,
+		}, nil)
+		if err != nil {
+			return fmt.Errorf("Resume: could not uncork playback: %w", err)
+		}
+		out.corked = false
+		return nil
+	}
+
 	// Start the stream. This will start reading samples from out.reader and
 	// push it to PulseAudio. It will do nothing if the playback is already
 	// started.
@@ -218,9 +243,6 @@ func (out *pulseAudioOutput) Resume() error {
 			return err
 		}
 		out.ended.Store(false)
-	}
-	if out.stream.Closed() {
-		return pulse.ErrConnectionClosed
 	}
 	started := make(chan struct{})
 	go func() {
@@ -236,6 +258,8 @@ func (out *pulseAudioOutput) Resume() error {
 }
 
 func (out *pulseAudioOutput) Drop() error {
+	// A corked stream is left corked: Start uncorks it.
+	out.corked = false
 	if out.stream.Running() {
 		// Stop and flush the buffer. We do not restart here: the caller
 		// resumes once the new source is set. Restarting raced with the
@@ -248,7 +272,7 @@ func (out *pulseAudioOutput) Drop() error {
 			return fmt.Errorf("Drop: could not flush playback: %e", err)
 		}
 	} else {
-		// Already stopped, e.g. flushed in Pause().
+		// Already stopped.
 	}
 	return nil
 }

@@ -562,3 +562,113 @@ func TestOutputThatWontResumeIsReplaced(t *testing.T) {
 		t.Errorf("outputs opened: %d, want a new one", n)
 	}
 }
+
+// holdingOutput pauses holding its buffer, as PulseAudio's cork does, until
+// it is dropped or resumed.
+type holdingOutput struct {
+	recordingOutput
+	holding bool
+}
+
+func (o *holdingOutput) Pause() error  { o.holding = true; return o.recordingOutput.Pause() }
+func (o *holdingOutput) Resume() error { o.holding = false; return o.recordingOutput.Resume() }
+func (o *holdingOutput) Drop() error   { o.holding = false; return o.recordingOutput.Drop() }
+func (o *holdingOutput) Holding() bool { return o.holding }
+
+func newHoldingPlayer(t *testing.T, out *holdingOutput) *Player {
+	p := newTestPlayer(t, &out.recordingOutput)
+	p.newOutput = func(reader librespot.Float32Reader, _ float32, _ string) (output.Output, error) {
+		out.source = reader.(*SwitchingAudioSource)
+		return out, nil
+	}
+	return p
+}
+
+// A resume after a pause that held the output's buffer plays on from it: the
+// seek to the paused position that play starts with is skipped, as seeking
+// lands on a page boundary and replayed a moment. A seek elsewhere still seeks.
+func TestResumeAfterHeldPausePlaysOn(t *testing.T) {
+	out := &holdingOutput{}
+	p := newHoldingPlayer(t, out)
+	if err := p.SetPrimaryStream(rampSource(44100*2*10, 0, 0), false, false); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]float32, 44100)
+	_, _ = out.source.Read(buf)
+
+	at := p.PositionMs()
+	if err := p.Pause(); err != nil {
+		t.Fatal(err)
+	}
+	before := len(out.snapshot())
+	if err := p.SeekMs(at); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Play(); err != nil {
+		t.Fatal(err)
+	}
+	if calls := out.snapshot()[before:]; !slices.Equal(calls, []string{"Resume"}) {
+		t.Fatalf("expected a bare resume, got %v", calls)
+	}
+	if pos := p.PositionMs(); pos != at {
+		t.Fatalf("position %d after resuming, paused at %d", pos, at)
+	}
+
+	if err := p.Pause(); err != nil {
+		t.Fatal(err)
+	}
+	before = len(out.snapshot())
+	if err := p.SeekMs(at + 2000); err != nil {
+		t.Fatal(err)
+	}
+	if calls := out.snapshot()[before:]; !slices.Equal(calls, []string{"Drop"}) {
+		t.Fatalf("expected a seek elsewhere to drop the held buffer, got %v", calls)
+	}
+}
+
+// A track's end due while the output is paused holding its last samples waits
+// for them: it comes once they have played after the resume, rather than
+// moving on to the next track while paused and losing them.
+func TestHeldPauseHoldsTheTrackEnd(t *testing.T) {
+	out := &holdingOutput{recordingOutput: recordingOutput{delayMs: 150}}
+	p := newHoldingPlayer(t, out)
+	if err := p.SetPrimaryStream(rampSource(100, 0, 0), false, false); err != nil {
+		t.Fatal(err)
+	}
+	<-p.Receive()
+	buf := make([]float32, 256)
+	for {
+		if _, err := out.source.Read(buf); err != nil {
+			break
+		}
+	}
+	time.Sleep(20 * time.Millisecond) // the end reaches the player
+	if err := p.Pause(); err != nil {
+		t.Fatal(err)
+	}
+	<-p.Receive()
+	select {
+	case ev := <-p.Receive():
+		t.Fatalf("got %v while paused", ev.Type)
+	case <-time.After(400 * time.Millisecond):
+	}
+
+	if err := p.Play(); err != nil {
+		t.Fatal(err)
+	}
+	if ev := <-p.Receive(); ev.Type != EventTypeResume {
+		t.Fatalf("expected resume, got %v", ev.Type)
+	}
+	resumed := time.Now()
+	select {
+	case ev := <-p.Receive():
+		if ev.Type != EventTypeNotPlaying {
+			t.Fatalf("expected the track's end, got %v", ev.Type)
+		}
+		if d := time.Since(resumed); d < 80*time.Millisecond {
+			t.Fatalf("end came %v after resuming, before what was held played", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the track's end never came")
+	}
+}

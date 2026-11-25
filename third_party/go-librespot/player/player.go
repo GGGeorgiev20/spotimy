@@ -300,13 +300,55 @@ func (p *Player) manageLoop() {
 	// A new stream, or the output stopping, makes that end old news: left to
 	// fire, it would end whatever plays next.
 	var endTimer *time.Timer
+	var endAt time.Time
+	var endEv Event
+	armEnd := func(ev Event, d time.Duration) {
+		endEv, endAt = ev, time.Now().Add(d)
+		endTimer = time.AfterFunc(d, func() {
+			select {
+			case p.ev <- ev:
+			case <-p.closed:
+			}
+		})
+	}
+	// endLeft is what was left of the end when the output paused holding the
+	// track's last samples: they play when it resumes, and the end after them.
+	endLeft := time.Duration(-1)
 	cancelEnd := func() {
 		if endTimer != nil {
 			endTimer.Stop()
 			endTimer = nil
 		}
+		endLeft = -1
 	}
 	defer cancelEnd()
+
+	// heldAt is the position the output paused at with its buffer kept, or -1.
+	// It plays on from there, so the seek to it that a resume starts with is
+	// skipped: seeking lands on a page boundary, replaying a moment.
+	heldAt := int64(-1)
+	release := func() {
+		heldAt = -1
+		if endLeft >= 0 {
+			armEnd(endEv, endLeft)
+			endLeft = -1
+		}
+	}
+	position := func() int64 {
+		pos := source.PositionMs()
+		if out == nil {
+			return pos
+		}
+		delay, err := out.DelayMs()
+		if err != nil {
+			p.log.WithError(err).Warnf("failed getting output device delay")
+			delay = 0
+		}
+
+		// Just after a gapless switch the source is a moment into the next
+		// track while the output still plays this one.
+		return max(pos-delay, 0)
+	}
 
 loop:
 	for {
@@ -345,6 +387,7 @@ loop:
 				// describe, and so that whoever set it can tell which that was.
 				p.streamGen.Add(1)
 				cancelEnd()
+				heldAt = -1
 
 				source.SetPrimary(data.source)
 				if data.paused {
@@ -386,11 +429,13 @@ loop:
 						p.ev <- Event{Type: EventTypeStop, StreamGen: p.streamGen.Load(), Err: err}
 					} else {
 						paused = false
+						release()
 						cmd.resp <- nil
 						p.ev <- Event{Type: EventTypeResume, StreamGen: p.streamGen.Load()}
 					}
 				} else {
 					paused = false
+					release()
 					cmd.resp <- nil
 				}
 			case playerCmdPause:
@@ -398,6 +443,15 @@ loop:
 					if err := out.Pause(); err != nil {
 						cmd.resp <- err
 					} else {
+						if h, ok := out.(output.Holder); ok && h.Holding() && heldAt < 0 {
+							heldAt = position()
+							// An end still to come waits for the samples before
+							// it, held with them. One already on its way isn't.
+							if endTimer != nil && endTimer.Stop() {
+								endLeft = max(time.Until(endAt), 0)
+							}
+							endTimer = nil
+						}
 						paused = true
 						cmd.resp <- nil
 						p.ev <- Event{Type: EventTypePause, StreamGen: p.streamGen.Load()}
@@ -408,6 +462,7 @@ loop:
 				}
 			case playerCmdStop:
 				cancelEnd()
+				heldAt = -1
 				if out != nil {
 					_ = out.Close()
 					out = nil
@@ -419,8 +474,12 @@ loop:
 				cmd.resp <- struct{}{}
 				p.ev <- Event{Type: EventTypeStop, StreamGen: p.streamGen.Load()}
 			case playerCmdSeek:
-				if out != nil {
-					if err := source.SetPositionMs(cmd.data.(int64)); err != nil {
+				if pos := cmd.data.(int64); heldAt >= 0 && max(pos-heldAt, heldAt-pos) < heldSlackMs {
+					// Already there, holding what follows.
+					cmd.resp <- nil
+				} else if out != nil {
+					release()
+					if err := source.SetPositionMs(pos); err != nil {
 						cmd.resp <- err
 					} else if err = out.Drop(); err != nil {
 						cmd.resp <- err
@@ -435,20 +494,7 @@ loop:
 					cmd.resp <- nil
 				}
 			case playerCmdPosition:
-				pos := source.PositionMs()
-				if out != nil {
-					delay, err := out.DelayMs()
-					if err != nil {
-						p.log.WithError(err).Warnf("failed getting output device delay")
-						delay = 0
-					}
-
-					// Just after a gapless switch the source is a moment into
-					// the next track while the output still plays this one.
-					cmd.resp <- max(pos-delay, 0)
-				} else {
-					cmd.resp <- pos
-				}
+				cmd.resp <- position()
 			case playerCmdVolume:
 				volume = cmd.data.(float32)
 				if out != nil {
@@ -472,6 +518,7 @@ loop:
 				// (e.g. pulseaudio) start reading from the source as soon as the
 				// output is constructed, so two live outputs would corrupt the
 				// stream. A sub-second gap from the discarded buffer is expected.
+				release()
 				_ = out.Drop()
 				_ = out.Close()
 				out = nil
@@ -508,6 +555,7 @@ loop:
 				// The output stops at once, buffer and all, and stays stopped
 				// until the next stream is set: nothing reads the current one.
 				cancelEnd()
+				heldAt = -1
 				if out != nil {
 					_ = out.Drop()
 				}
@@ -523,6 +571,7 @@ loop:
 			}
 
 			// the current output device has exited, clean it up
+			release()
 			_ = out.Close()
 			out = nil
 			outErr = make(<-chan error)
@@ -546,12 +595,12 @@ loop:
 				break
 			}
 			cancelEnd()
-			endTimer = time.AfterFunc(time.Duration(delay)*time.Millisecond, func() {
-				select {
-				case p.ev <- ev:
-				case <-p.closed:
-				}
-			})
+			if heldAt >= 0 {
+				// Read while pausing: its last samples are held with the rest.
+				endEv, endLeft = ev, time.Duration(delay)*time.Millisecond
+				break
+			}
+			armEnd(ev, time.Duration(delay)*time.Millisecond)
 		}
 	}
 
@@ -564,6 +613,11 @@ loop:
 		out = nil
 	}
 }
+
+// heldSlackMs is how near the position an output paused holding at a seek has
+// to be to be taken as asking for that very position: the position asked for
+// is the one read just before pausing, and a read may slip in between.
+const heldSlackMs = 250
 
 func (p *Player) HasBeenPlayingFor() time.Duration {
 	if p.startedPlaying.IsZero() {

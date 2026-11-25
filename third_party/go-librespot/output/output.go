@@ -30,6 +30,13 @@ type Output interface {
 	Close() error
 }
 
+// A Holder is an Output whose Pause can keep what it has buffered, so that
+// Resume plays on from the very sample it paused at, with no seek needed.
+type Holder interface {
+	// Holding reports whether it is paused with its buffer kept.
+	Holding() bool
+}
+
 type NewOutputOptions struct {
 	Log librespot.Logger
 
