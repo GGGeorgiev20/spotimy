@@ -1615,8 +1615,8 @@ func (p *AppPlayer) advanceNext(forceNext, drop bool, delay time.Duration, then 
 
 			// A skip plays what it lands on, as the official clients do; a
 			// track ending carries on as it was, paused in its last seconds
-			// or by the sleep timer.
-			p.state.player.IsPaused = !hasNextTrack || !forceNext && p.state.player.IsPaused
+			// or by the sleep timer. So does the station autoplay goes on to.
+			p.state.player.IsPaused = !forceNext && p.state.player.IsPaused
 			p.publishSnapshot(snap)
 			p.advanceTo(hasNextTrack, seed, drop, delay, then)
 		})
@@ -1730,8 +1730,11 @@ func (p *AppPlayer) startAutoplay(prevTrackUris []string, drop bool, then func(b
 					return
 				}
 
+				// Paused or played while it resolved (the track before it
+				// plays on until then), it starts as it was left: a pause
+				// was undone by the station starting to play.
 				p.app.log.Debugf("resolved autoplay station: %s", spotCtx.Uri)
-				p.loadContext(spotCtx, func(_ *connectpb.ContextTrack) bool { return true }, false, drop, func(err error) {
+				p.loadContext(spotCtx, func(_ *connectpb.ContextTrack) bool { return true }, p.state.player.IsPaused, drop, func(err error) {
 					if err != nil {
 						p.app.log.WithError(err).Warnf("failed loading station for %s", contextUri)
 						then(false, nil)

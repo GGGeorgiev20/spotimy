@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -955,4 +956,41 @@ func TestQueueWithNothingLoadedLoadsTheTrack(t *testing.T) {
 	require.Equal(t, "spotify:track:3j7BhP71ROCpc9R3w9P9UE", p.state.player.ContextUri)
 	require.True(t, p.state.player.IsPaused)
 	require.Len(t, p.loader.queue, 1, "the track resolves to be loaded")
+}
+
+// A pause while the station autoplay goes on to resolves (the track before it
+// plays on until then) is kept: the station starts paused, where it used to
+// start playing.
+func TestPauseWhileTheStationResolvesIsKept(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"uri":"spotify:station:album:3KIlhMEiSYNn8VD7e6yglU","pages":[{"tracks":[{"uri":"spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn"}]}]}`))
+	}))
+	defer srv.Close()
+	sp, err := spclient.NewSpclient(t.Context(), &librespot.NullLogger{}, srv.Client(),
+		func(context.Context) string { return srv.Listener.Addr().String() },
+		func(context.Context, bool) (string, error) { return "t", nil }, "d", "c")
+	require.NoError(t, err)
+
+	p := newTestAppPlayer(t)
+	p.app.cfg = &Config{}
+	p.sess = session.NewWithSpclient(player.NewMockEventManager(t), sp)
+	list, err := tracks.NewTrackListFromContext(t.Context(), &librespot.NullLogger{}, nil, &connectpb.Context{
+		Uri:   "spotify:album:3KIlhMEiSYNn8VD7e6yglU",
+		Pages: []*connectpb.ContextPage{{Tracks: []*connectpb.ContextTrack{{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE", Uid: "u0"}}}},
+	})
+	require.NoError(t, err)
+	require.True(t, list.GoStart(t.Context()))
+	p.state.tracks = list
+	p.state.player.Track = &connectpb.ProvidedTrack{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"}
+	p.state.player.ContextUri = "spotify:album:3KIlhMEiSYNn8VD7e6yglU"
+
+	p.advanceNext(true, true, 0, func(bool, error) {})
+	runQueuedJob(t, p) // the walk to the context's end
+	require.False(t, p.state.player.IsPaused, "the station is to play")
+
+	p.state.setPaused(true) // what pause does to the state
+	runQueuedJob(t, p)      // the station resolves
+
+	require.Equal(t, "spotify:station:album:3KIlhMEiSYNn8VD7e6yglU", p.state.player.ContextUri)
+	require.True(t, p.state.player.IsPaused)
 }
