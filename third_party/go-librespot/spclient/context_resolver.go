@@ -114,6 +114,9 @@ func NewContextResolver(ctx context.Context, log librespot.Logger, sp *Spclient,
 	for _, page := range spotCtx.Pages {
 		for _, track := range page.Tracks {
 			if autoplay {
+				if track.Metadata == nil {
+					track.Metadata = map[string]string{}
+				}
 				track.Metadata["autoplay.is_autoplay"] = "true"
 			}
 		}

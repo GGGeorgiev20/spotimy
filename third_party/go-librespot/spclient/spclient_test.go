@@ -3,8 +3,12 @@
 package spclient
 
 import (
+	"context"
 	"net/url"
 	"testing"
+
+	librespot "github.com/devgianlu/go-librespot"
+	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
 )
 
 func testSpclient(t *testing.T) *Spclient {
@@ -67,5 +71,20 @@ func TestHmRequestUrlRejectsNonHm(t *testing.T) {
 		if _, err := c.hmRequestUrl(u); err == nil {
 			t.Errorf("hmRequestUrl(%q) succeeded, want an error", u)
 		}
+	}
+}
+
+// A station's tracks are marked as autoplay even when they came with no
+// metadata, rather than panicking on the nil map.
+func TestStationTracksWithoutMetadata(t *testing.T) {
+	r, err := NewContextResolver(context.Background(), &librespot.NullLogger{}, nil, &connectpb.Context{
+		Uri:   "spotify:station:track:3j7BhP71ROCpc9R3w9P9UE",
+		Pages: []*connectpb.ContextPage{{Tracks: []*connectpb.ContextTrack{{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"}}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.ctx.Pages[0].Tracks[0].Metadata["autoplay.is_autoplay"] != "true" {
+		t.Error("not marked autoplay")
 	}
 }
