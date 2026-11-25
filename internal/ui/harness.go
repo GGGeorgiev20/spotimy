@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
@@ -223,6 +224,8 @@ func (hr *harness) mux() *http.ServeMux {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(v)
 	}
+	// Go's profiles (heap, goroutines...) of the running UI, for memory work.
+	m.HandleFunc("/debug/pprof/", pprof.Index)
 	m.HandleFunc("/nav", func(w http.ResponseWriter, r *http.Request) {
 		hr.do(func() { Navigate(r.URL.Query().Get("path")) })
 		hr.settle(15 * time.Second)

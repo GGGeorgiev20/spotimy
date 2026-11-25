@@ -2,6 +2,8 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -24,8 +26,15 @@ func main() {
 		level = slog.LevelDebug
 	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-	// Trade a little CPU for a smaller heap; the app is mostly idle.
+	// Trade a little CPU for a smaller heap; the app is mostly idle. Past the
+	// soft limit the GC works harder and gives memory back sooner.
 	debug.SetGCPercent(50)
+	debug.SetMemoryLimit(300 << 20)
+
+	// SPOTIMY_PPROF=127.0.0.1:port serves Go's profiles, for memory work.
+	if addr := os.Getenv("SPOTIMY_PPROF"); addr != "" {
+		go func() { log.Warn("pprof", "err", http.ListenAndServe(addr, nil)) }()
+	}
 
 	setCursorTheme()
 

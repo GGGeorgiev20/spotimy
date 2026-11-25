@@ -41,9 +41,18 @@ type imgEntry struct {
 	// readyAt is when it finished loading: it fades in from then.
 	readyAt time.Time
 	w, h    int
+	// errAt is when loading failed: it is tried again after imgRetry.
+	errAt time.Time
 }
 
-const imgBudget = 160 << 20
+// imgBudget bounds the decoded images kept. A page of covers is ~20MB; going
+// back to an evicted one decodes it again from the disk cache, which is quick.
+// It was 160MB, which with the GC's headroom kept the app near 500MB by the end
+// of a day.
+const imgBudget = 64 << 20
+
+// imgRetry is how long a failed image waits before it is tried again.
+const imgRetry = 30 * time.Second
 
 var (
 	imgLRU   = list.New() // front = most recent
@@ -66,15 +75,21 @@ func bucket(px int) int {
 func lookupImage(url string, px int) (*imgEntry, bool) {
 	k := imgKey{url, bucket(px)}
 	if el, ok := imgIndex[k]; ok {
-		imgLRU.MoveToFront(el)
 		e := el.Value.(*imgEntry)
-		return e, e.ready
+		if !e.err || time.Since(e.errAt) < imgRetry {
+			imgLRU.MoveToFront(el)
+			return e, e.ready
+		}
+		imgLRU.Remove(el) // failed a while ago (offline, say): try again
 	}
 	e := &imgEntry{key: k}
 	imgIndex[k] = imgLRU.PushFront(e)
 	Async(func() (*image.RGBA, error) { return decodeImage(url, k.size) }, func(m *image.RGBA, err error) {
+		if el, ok := imgIndex[k]; !ok || el.Value != e {
+			return // evicted while loading: kept, its bytes were never let go of
+		}
 		if err != nil || m == nil {
-			e.err = true
+			e.err, e.errAt = true, time.Now()
 			return
 		}
 		e.op, e.ready, e.readyAt = paint.NewImageOp(m), true, time.Now()
