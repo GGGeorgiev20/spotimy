@@ -3,14 +3,17 @@
 package audio
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -340,5 +343,27 @@ func testCloseCancelsFetchChunk(t *testing.T, transport http.RoundTripper, start
 		require.ErrorIs(t, err, net.ErrClosed)
 	case <-time.After(2 * time.Second):
 		t.Fatal("fetchChunk did not return")
+	}
+}
+
+// A chunk whose body breaks off partway is fetched again, as a failed request
+// is, rather than ending the track there.
+func TestChunkBodyCutIsRetried(t *testing.T) {
+	var reqs atomic.Int32
+	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		n := reqs.Add(1)
+		data := bytes.Repeat([]byte{1}, DefaultChunkSize)
+		var body io.Reader = bytes.NewReader(data)
+		if n == 1 {
+			body = io.MultiReader(bytes.NewReader(data[:1000]), readerFunc(func([]byte) (int, error) {
+				return 0, errors.New("read tcp: connection reset by peer")
+			}))
+		}
+		return &http.Response{StatusCode: 206, Body: io.NopCloser(body),
+			Header: http.Header{"Content-Length": {strconv.Itoa(len(data))}}}, nil
+	})
+	r := newFetchTestReader(t, rt)
+	if _, err := r.ReadAt(make([]byte, 4096), 0); err != nil {
+		t.Errorf("read after one cut body: %v (%d requests)", err, reqs.Load())
 	}
 }

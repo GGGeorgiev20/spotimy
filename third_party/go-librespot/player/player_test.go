@@ -491,3 +491,31 @@ func TestSilenceStopsTheOutputUntilTheNextStream(t *testing.T) {
 		t.Fatalf("expected the next stream to resume the output, got %v", calls)
 	}
 }
+
+// A track's end held back for the output's delay is dropped when another
+// stream is set meanwhile: it would otherwise end the new one too.
+func TestTrackEndDroppedWhenAnotherStreamIsSet(t *testing.T) {
+	out := &recordingOutput{delayMs: 150}
+	p := newTestPlayer(t, out)
+	if err := p.SetPrimaryStream(rampSource(100, 0, 0), false, false); err != nil {
+		t.Fatal(err)
+	}
+	<-p.Receive()
+	buf := make([]float32, 256)
+	for {
+		if _, err := out.source.Read(buf); err != nil {
+			break
+		}
+	}
+	if err := p.SetPrimaryStream(rampSource(44100*2, 0, 0), false, false); err != nil {
+		t.Fatal(err)
+	}
+	if ev := <-p.Receive(); ev.Type != EventTypePlay {
+		t.Fatalf("expected the new stream's play, got %v", ev.Type)
+	}
+	select {
+	case ev := <-p.Receive():
+		t.Fatalf("the old track's end arrived after the new stream was set: %v", ev.Type)
+	case <-time.After(400 * time.Millisecond):
+	}
+}

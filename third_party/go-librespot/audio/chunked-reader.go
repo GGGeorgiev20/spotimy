@@ -184,17 +184,33 @@ func (r *HttpChunkedReader) downloadChunk(idx int) (*http.Response, error) {
 	}, retryBackoff)
 }
 
+// downloadAndRead fetches a chunk. Reading its body is retried along with the
+// request: a connection reset partway through a chunk is as transient as one
+// before it, and failing there ended the track at that point.
 func (r *HttpChunkedReader) downloadAndRead(idx int) ([]byte, error) {
-	resp, err := r.downloadChunk(idx)
+	retryBackoff := backoff.WithContext(
+		backoff.WithMaxRetries(backoff.NewConstantBackOff(1*time.Second), 3),
+		r.ctx,
+	)
+
+	data, err := backoff.RetryWithData(func() ([]byte, error) {
+		resp, err := r.downloadChunk(idx)
+		if err != nil {
+			return nil, backoff.Permanent(err) // retried already
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		data, err := io.ReadAll(r.measureLatency(resp.Body))
+		if err != nil {
+			if err = r.closeErr(err); errors.Is(err, net.ErrClosed) {
+				return nil, backoff.Permanent(err)
+			}
+			return nil, fmt.Errorf("failed reading chunk %d: %w", idx, err)
+		}
+		return data, nil
+	}, retryBackoff)
 	if err != nil {
 		return nil, fmt.Errorf("failed downloading chunk %d: %w", idx, r.closeErr(err))
-	}
-
-	defer func() { _ = resp.Body.Close() }()
-
-	data, err := io.ReadAll(r.measureLatency(resp.Body))
-	if err != nil {
-		return nil, fmt.Errorf("failed reading chunk %d: %w", idx, r.closeErr(err))
 	}
 
 	return data, nil

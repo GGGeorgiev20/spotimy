@@ -835,3 +835,67 @@ func TestTrackEndingDuringPlayKeepsThePlay(t *testing.T) {
 	require.Empty(t, p.loader.queue)
 	require.Equal(t, uint64(7), p.loadGen)
 }
+
+// The end of a stream since replaced is dropped: arriving two seconds late, it
+// would otherwise skip the track that replaced it.
+func TestEndOfAReplacedStreamIsDropped(t *testing.T) {
+	p := newTestAppPlayer(t)
+	p.sess = session.NewWithEvents(player.NewMockEventManager(t)) // expects nothing
+	p.player.SetStreamGen(5)
+
+	p.handlePlayerEvent(&player.Event{Type: player.EventTypeNotPlaying, StreamGen: 4})
+
+	require.Empty(t, p.loader.queue)
+}
+
+// An output that fails under a track leaves it paused where it stopped, and
+// play loads it again from there.
+func TestOutputFailureLeavesTheTrackPaused(t *testing.T) {
+	p := newTestAppPlayer(t)
+	events := player.NewMockEventManager(t)
+	p.sess = session.NewWithEvents(events)
+	stream := &player.Stream{}
+	p.primaryStream = stream
+	p.state.player.Track = &connectpb.ProvidedTrack{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"}
+	p.state.player.IsPlaying = true
+	p.state.setPaused(false)
+	p.state.player.Timestamp = time.Now().Add(-30 * time.Second).UnixMilli()
+	events.EXPECT().OnPrimaryStreamUnload(stream, mock.Anything).Once()
+
+	p.handlePlayerEvent(&player.Event{Type: player.EventTypeStop, Err: errors.New("connection reset")})
+
+	require.Nil(t, p.primaryStream)
+	require.True(t, p.state.player.IsPaused)
+	require.InDelta(t, 30000, p.state.player.PositionAsOfTimestamp, 1000)
+
+	require.NoError(t, p.play())
+	require.Len(t, p.loader.queue, 1, "play loads the track again")
+}
+
+// A track ending while paused (in its last seconds, whose sound the output
+// still held) moves on to the next one paused.
+func TestTrackEndingWhilePausedStaysPaused(t *testing.T) {
+	p := newTestAppPlayer(t)
+	p.app.cfg = &Config{}
+	events := player.NewMockEventManager(t)
+	events.EXPECT().OnPlayerEnd(mock.Anything, mock.Anything).Maybe()
+	p.sess = session.NewWithEvents(events)
+	list, err := tracks.NewTrackListFromContext(t.Context(), &librespot.NullLogger{}, nil, &connectpb.Context{
+		Uri: "spotify:album:3KIlhMEiSYNn8VD7e6yglU",
+		Pages: []*connectpb.ContextPage{{Tracks: []*connectpb.ContextTrack{
+			{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE", Uid: "u0"},
+			{Uri: "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", Uid: "u1"},
+		}}},
+	})
+	require.NoError(t, err)
+	require.True(t, list.GoStart(t.Context()))
+	p.state.tracks = list
+	p.state.player.Track = &connectpb.ProvidedTrack{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"}
+	p.state.setPaused(true)
+
+	p.handlePlayerEvent(&player.Event{Type: player.EventTypeNotPlaying})
+	runQueuedJob(t, p)
+
+	require.Equal(t, "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", p.state.player.Track.GetUri())
+	require.True(t, p.state.player.IsPaused)
+}

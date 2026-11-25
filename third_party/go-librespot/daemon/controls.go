@@ -192,6 +192,14 @@ func (p *AppPlayer) emitMprisUpdate(playbackStatus mpris.PlaybackStatus) {
 }
 
 func (p *AppPlayer) handlePlayerEvent(ev *player.Event) {
+	// The end or stop of a stream since replaced is about that one. A track's
+	// end arrives once the output has played it, two seconds after the decoder
+	// moved on, by when a skip may already have: taken for the current track's,
+	// it would skip that one too.
+	if (ev.Type == player.EventTypeNotPlaying || ev.Type == player.EventTypeStop) && ev.StreamGen < p.player.StreamGen() {
+		return
+	}
+
 	switch ev.Type {
 	case player.EventTypePlay:
 		p.state.player.IsPlaying = true
@@ -290,13 +298,15 @@ func (p *AppPlayer) handlePlayerEvent(ev *player.Event) {
 		// the same call the duration-based timer already uses, which also
 		// emits the normal EventTypePause follow-up (see above) that
 		// reports paused/MPRIS state - no need to duplicate that here.
+		// Sleeping at the end of the track stops here: the next one loads
+		// paused, cut off at once. Pausing the output instead would pause the
+		// next track, which it already plays (gapless), under this one's name.
+		drop := false
 		if p.sleepAtEndOfTrack {
 			p.sleepAtEndOfTrack = false
 			p.state.player.SleepTimer = nil
-			if err := p.pause(); err != nil {
-				p.app.log.WithError(err).Warn("failed pausing playback for sleep timer")
-			}
-			return
+			p.state.setPaused(true)
+			drop = true
 		}
 
 		// A context asked for is about to replace this one.
@@ -304,7 +314,7 @@ func (p *AppPlayer) handlePlayerEvent(ev *player.Event) {
 			return
 		}
 
-		p.advanceNext(false, false, 0, func(hasNextTrack bool, err error) {
+		p.advanceNext(false, drop, 0, func(hasNextTrack bool, err error) {
 			if err != nil {
 				p.app.log.WithError(err).Error("failed advancing to next track")
 			}
@@ -321,6 +331,20 @@ func (p *AppPlayer) handlePlayerEvent(ev *player.Event) {
 			}
 		})
 	case player.EventTypeStop:
+		// The output failed under the track (its stream broke off, the sound
+		// server went away): it shows paused where it stopped, and play loads
+		// it again from there, rather than showing playing in silence with
+		// nothing that brings the sound back but picking another track.
+		if ev.Err != nil && p.primaryStream != nil {
+			pos := p.state.trackPosition()
+			p.sess.Events().OnPrimaryStreamUnload(p.primaryStream, pos)
+			p.primaryStream = nil
+			p.state.player.Timestamp = time.Now().UnixMilli()
+			p.state.player.PositionAsOfTimestamp = pos
+			p.state.player.IsBuffering = false
+			p.state.setPaused(true)
+			p.updateState()
+		}
 		p.emitPlaybackError(playbackErrorStagePlayback, p.state.player.Track.GetUri(), ev.Err)
 		p.app.server.Emit(&ApiEvent{
 			Type: ApiEventTypeStopped,
@@ -1537,7 +1561,6 @@ func (p *AppPlayer) advanceNext(forceNext, drop bool, delay time.Duration, then 
 	// Repeat-track means the next thing to play is this same track: nothing to
 	// navigate, and so no walk of the context either.
 	if !forceNext && p.state.player.Options.RepeatingTrack {
-		p.state.player.IsPaused = false
 		p.advanceTo(true, nil, drop, delay, then)
 		return
 	}
@@ -1574,7 +1597,10 @@ func (p *AppPlayer) advanceNext(forceNext, drop bool, delay time.Duration, then 
 				return
 			}
 
-			p.state.player.IsPaused = !hasNextTrack
+			// A skip plays what it lands on, as the official clients do; a
+			// track ending carries on as it was, paused in its last seconds
+			// or by the sleep timer.
+			p.state.player.IsPaused = !hasNextTrack || !forceNext && p.state.player.IsPaused
 			p.publishSnapshot(snap)
 			p.advanceTo(hasNextTrack, seed, drop, delay, then)
 		})
@@ -1604,7 +1630,7 @@ func (p *AppPlayer) advanceTo(hasNextTrack bool, seed []string, drop bool, delay
 	// playlist playback — even though they play on official clients, which establish a licensed
 	// context. We cannot decrypt a refused track, so skip it instead of freezing the player.
 	// Remove once proper key licensing (PlayPlay) is implemented — tracked separately.
-	p.loadCurrentTrack(!hasNextTrack, drop, true, delay, func(err error) {
+	p.loadCurrentTrack(!hasNextTrack || p.state.player.IsPaused, drop, true, delay, func(err error) {
 		if err == nil {
 			p.consecutiveUnplayableSkips = 0
 			then(hasNextTrack, nil)

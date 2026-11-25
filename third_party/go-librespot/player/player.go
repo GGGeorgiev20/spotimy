@@ -296,6 +296,18 @@ func (p *Player) manageLoop() {
 		source = NewSwitchingAudioSource(p.crossfadeSamples)
 	}
 
+	// endTimer holds back the end of a track until the output has played it.
+	// A new stream, or the output stopping, makes that end old news: left to
+	// fire, it would end whatever plays next.
+	var endTimer *time.Timer
+	cancelEnd := func() {
+		if endTimer != nil {
+			endTimer.Stop()
+			endTimer = nil
+		}
+	}
+	defer cancelEnd()
+
 loop:
 	for {
 		select {
@@ -332,6 +344,7 @@ loop:
 				// Counted before the events below so they carry the stream they
 				// describe, and so that whoever set it can tell which that was.
 				p.streamGen.Add(1)
+				cancelEnd()
 
 				source.SetPrimary(data.source)
 				if data.paused {
@@ -382,6 +395,7 @@ loop:
 					cmd.resp <- nil
 				}
 			case playerCmdStop:
+				cancelEnd()
 				if out != nil {
 					_ = out.Close()
 					out = nil
@@ -479,6 +493,7 @@ loop:
 			case playerCmdSilence:
 				// The output stops at once, buffer and all, and stays stopped
 				// until the next stream is set: nothing reads the current one.
+				cancelEnd()
 				if out != nil {
 					_ = out.Drop()
 				}
@@ -516,7 +531,8 @@ loop:
 				p.ev <- ev
 				break
 			}
-			time.AfterFunc(time.Duration(delay)*time.Millisecond, func() {
+			cancelEnd()
+			endTimer = time.AfterFunc(time.Duration(delay)*time.Millisecond, func() {
 				select {
 				case p.ev <- ev:
 				case <-p.closed:
