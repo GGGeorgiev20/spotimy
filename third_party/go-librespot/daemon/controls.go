@@ -420,7 +420,7 @@ func (p *AppPlayer) loadContext(spotCtx *connectpb.Context, skipTo skipToFunc, p
 					p.state.player.Timestamp = time.Now().UnixMilli()
 
 					// skip forward if the track it landed on (or a run of them) is unplayable.
-					p.loadCurrentTrackOrSkip(paused, drop, true, func(err error) {
+					p.loadCurrentTrackOrSkip(paused, drop, true, 0, func(err error) {
 						if err != nil {
 							err = fmt.Errorf("failed loading current track (load context): %w", err)
 						}
@@ -572,7 +572,7 @@ func (p *AppPlayer) transferContext(transferState *connectpb.TransferState, sent
 
 					// skip forward if the transferred track is unplayable, so a
 					// cast onto a refused track does not freeze the player.
-					p.loadCurrentTrackOrSkip(paused, true, false, func(err error) {
+					p.loadCurrentTrackOrSkip(paused, true, false, 0, func(err error) {
 						if err != nil {
 							p.app.log.WithError(err).Warn("failed loading current track (transfer)")
 						}
@@ -779,10 +779,10 @@ func isUnplayableMedia(err error) bool {
 // advances forward to the first playable one instead of failing — so a
 // transfer, cast or context load that lands on a refused track does not freeze
 // the player. advanceNext walks a run of unplayable tracks, bounded.
-func (p *AppPlayer) loadCurrentTrackOrSkip(paused, drop, resume bool, then func(error)) {
+func (p *AppPlayer) loadCurrentTrackOrSkip(paused, drop, resume bool, delay time.Duration, then func(error)) {
 	uri := p.state.player.Track.GetUri()
 
-	p.loadCurrentTrack(paused, drop, resume, 0, func(err error) {
+	p.loadCurrentTrack(paused, drop, resume, delay, func(err error) {
 		if err == nil || !isUnplayableMedia(err) {
 			then(err)
 			return
@@ -1499,7 +1499,9 @@ func (p *AppPlayer) skipNext(track *connectpb.ContextTrack) error {
 
 			// A track picked out (clicked in the queue) plays, paused or not,
 			// as in the official clients; next and previous keep the state.
-			p.loadCurrentTrack(false, true, true, delay, func(err error) {
+			// One that can't be played gives way to the next that can, as when
+			// a context starts on one.
+			p.loadCurrentTrackOrSkip(false, true, true, delay, func(err error) {
 				if err != nil {
 					p.app.log.WithError(err).Warn("failed loading current track (skip next)")
 				}
