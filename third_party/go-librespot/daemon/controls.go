@@ -1245,8 +1245,15 @@ func (p *AppPlayer) setOptions(repeatingContext *bool, repeatingTrack *bool, shu
 }
 
 func (p *AppPlayer) addToQueue(track *connectpb.ContextTrack) {
+	// With nothing loaded there is no queue to add to: the track is loaded
+	// paused instead, so play plays it. It used to be dropped, while the
+	// caller was told it had been queued.
 	if p.state.tracks == nil {
-		p.app.log.Warnf("cannot add to queue without a context")
+		p.loadContext(&connectpb.Context{Uri: track.Uri}, nil, true, false, func(err error) {
+			if err != nil {
+				p.app.log.WithError(err).Warnf("failed loading %s to queue it", track.Uri)
+			}
+		})
 		return
 	}
 

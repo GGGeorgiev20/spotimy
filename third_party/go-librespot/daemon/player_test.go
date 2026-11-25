@@ -945,3 +945,14 @@ func TestSkipToEntry(t *testing.T) {
 	require.True(t, second(&connectpb.ContextTrack{Uri: song}), "an album's entry")
 	require.True(t, p.skipToEntry(song, "")(&connectpb.ContextTrack{Uri: song, Uid: "u1"}))
 }
+
+// Queueing a track with nothing loaded loads it paused, rather than dropping
+// it while saying it was queued.
+func TestQueueWithNothingLoadedLoadsTheTrack(t *testing.T) {
+	p := newTestAppPlayer(t)
+	p.addToQueue(&connectpb.ContextTrack{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"})
+
+	require.Equal(t, "spotify:track:3j7BhP71ROCpc9R3w9P9UE", p.state.player.ContextUri)
+	require.True(t, p.state.player.IsPaused)
+	require.Len(t, p.loader.queue, 1, "the track resolves to be loaded")
+}
