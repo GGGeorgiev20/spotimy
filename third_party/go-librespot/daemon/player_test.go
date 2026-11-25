@@ -899,3 +899,35 @@ func TestTrackEndingWhilePausedStaysPaused(t *testing.T) {
 	require.Equal(t, "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", p.state.player.Track.GetUri())
 	require.True(t, p.state.player.IsPaused)
 }
+
+// A context that fails to resolve leaves nothing showing as loading, nor the
+// track it was replacing ready to come back nameless.
+func TestFailedContextStopsLoading(t *testing.T) {
+	p := newTestAppPlayer(t)
+	events := player.NewMockEventManager(t)
+	p.sess = session.NewWithEvents(events)
+	old := &player.Stream{}
+	p.primaryStream = old
+	events.EXPECT().OnPrimaryStreamUnload(old, mock.Anything).Once()
+
+	p.loadContext(&connectpb.Context{Uri: "spotify:nothing:here"}, nil, false, true, func(error) {})
+	require.True(t, p.state.player.IsBuffering)
+	runQueuedJob(t, p)
+
+	require.False(t, p.state.player.IsBuffering)
+	require.True(t, p.state.player.IsPaused)
+	require.Nil(t, p.primaryStream)
+}
+
+// Running out of context with no station to carry on with loads the track the
+// context stopped at, so play plays the track shown.
+func TestContextEndWithoutStationLoadsTheShownTrack(t *testing.T) {
+	p := newTestAppPlayer(t)
+	p.app.cfg = &Config{}
+	p.sess = session.NewWithEvents(player.NewMockEventManager(t))
+	p.state.player.Track = &connectpb.ProvidedTrack{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"}
+
+	p.advanceTo(false, nil, false, 0, func(bool, error) {})
+
+	require.Len(t, p.loader.queue, 1, "the shown track loads")
+}

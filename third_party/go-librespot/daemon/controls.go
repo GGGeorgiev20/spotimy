@@ -434,7 +434,16 @@ func (p *AppPlayer) loadContext(spotCtx *connectpb.Context, skipTo skipToFunc, p
 				return loaderResult{
 					err: err,
 					commit: func(p *AppPlayer, err error) {
+						// Nothing is going to play: say so, rather than go on
+						// showing it loading. The track this replaced stopped
+						// when it was asked for, so it is let go of too: play
+						// would otherwise bring it back with nothing to name it.
 						p.resolvingGen = 0
+						if p.primaryStream != nil {
+							p.sess.Events().OnPrimaryStreamUnload(p.primaryStream, p.player.PositionMs())
+							p.primaryStream = nil
+						}
+						p.failedLoad()
 						then(err)
 					},
 				}
@@ -1614,8 +1623,18 @@ func (p *AppPlayer) advanceTo(hasNextTrack bool, seed []string, drop bool, delay
 	p.state.player.Timestamp = time.Now().UnixMilli()
 	p.state.player.PositionAsOfTimestamp = 0
 
-	if !hasNextTrack && !p.app.cfg.DisableAutoplay && !strings.HasPrefix(p.state.player.ContextUri, "spotify:station:") {
-		p.startAutoplay(seed, drop, then)
+	if !hasNextTrack && len(seed) > 0 && !p.app.cfg.DisableAutoplay && !strings.HasPrefix(p.state.player.ContextUri, "spotify:station:") {
+		p.startAutoplay(seed, drop, func(started bool, err error) {
+			if started || err != nil {
+				then(started, err)
+				return
+			}
+			// No station to carry on with: stop at the context's start, as
+			// without autoplay. Left as it was, the track shown (the first)
+			// wasn't the one loaded (the last, played out), and play
+			// replayed that under the first one's name.
+			p.advanceTo(false, nil, drop, 0, then)
+		})
 		return
 	}
 
