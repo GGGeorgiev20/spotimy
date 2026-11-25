@@ -423,8 +423,13 @@ func (tl *List) SetQueue(_ []*connectpb.ContextTrack, next []*connectpb.ContextT
 			break
 		}
 
-		tl.queue = append(tl.queue, track)
 		n++
+		// Listed as upcoming by a controller that hadn't seen it start: it
+		// is playing, and would otherwise play again after itself.
+		if tl.playingQueue && sameTrack(track, tl.queue[0]) {
+			continue
+		}
+		tl.queue = append(tl.queue, track)
 	}
 
 	tl.reorderUpcoming(next[n:])
@@ -459,6 +464,11 @@ func (tl *List) reorderUpcoming(next []*connectpb.ContextTrack) {
 	covered := 0 // tail[:covered] is what next spans
 	out := make([]pagedListItem[*connectpb.ContextTrack], 0, len(tail)+len(next))
 	for _, t := range next {
+		// Upcoming to a controller that hadn't seen it start, but playing:
+		// put in again, it would play twice.
+		if sameTrack(l.list[l.pos].item, t) {
+			continue
+		}
 		found := -1
 		for k, it := range tail {
 			if !used[k] && sameTrack(it.item, t) {

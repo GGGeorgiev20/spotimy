@@ -303,6 +303,23 @@ func (suite *TrackListInternalSuite) TestPrevFromQueuedTrack() {
 	suite.Equal("spotify:track:queued", suite.list.current().Uri)
 }
 
+// A queue edit made before the controller saw a queued track start still lists
+// it as upcoming: it isn't queued again behind itself.
+func (suite *TrackListInternalSuite) TestSetQueueSkipsTheTrackPlaying() {
+	suite.expectEndlessPages()
+	ctx := context.Background()
+	suite.Require().True(suite.list.GoStart(ctx))
+	q0 := &connectpb.ContextTrack{Uri: "spotify:track:q0", Uid: "q0", Metadata: map[string]string{"is_queued": "true"}}
+	q1 := &connectpb.ContextTrack{Uri: "spotify:track:q1", Uid: "q1", Metadata: map[string]string{"is_queued": "true"}}
+	suite.list.AddToQueue(q0)
+	suite.list.AddToQueue(q1)
+	suite.Require().True(suite.list.GoNext(ctx)) // q0 plays
+
+	suite.list.SetQueue(nil, []*connectpb.ContextTrack{q0, q1})
+
+	suite.Equal([]*connectpb.ContextTrack{q1}, suite.list.UpcomingQueue())
+}
+
 func TestTrackListInternalSuite(t *testing.T) {
 	suite.Run(t, new(TrackListInternalSuite))
 }
