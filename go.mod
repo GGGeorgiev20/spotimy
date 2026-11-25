@@ -52,3 +52,5 @@ require (
 replace github.com/devgianlu/go-librespot => ./third_party/go-librespot
 
 replace gioui.org => ./third_party/gioui.org
+
+replace github.com/jfreymuth/pulse => ./third_party/pulse
