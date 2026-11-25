@@ -241,7 +241,12 @@ func (s *ConcreteServer) connect() (_ *DBusInstance, err error) {
 func (s *ConcreteServer) serve(d *DBusInstance, want MediaState) MediaState {
 	var last *MediaState
 	if err := d.executeStateUpdate(want, nil); err == nil {
-		last = &want
+		// A copy: want is overwritten by each update below, and pointing at
+		// it, the first update compared equal to itself and was never
+		// published (a track restored at startup showed as stopped and
+		// nameless until the next track).
+		published := want
+		last = &published
 	}
 
 	for {
