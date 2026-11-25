@@ -285,6 +285,24 @@ func (suite *TrackListInternalSuite) TestAllTracksIsResidentAndBounded() {
 	suite.Equal(loaded, suite.list.tracks.len(), "nothing was fetched")
 }
 
+// Previous from a queued track goes back to the track played before it, and
+// the queued one stays next.
+func (suite *TrackListInternalSuite) TestPrevFromQueuedTrack() {
+	suite.expectEndlessPages()
+	ctx := context.Background()
+	suite.Require().True(suite.list.GoStart(ctx))
+	suite.Require().True(suite.list.GoNext(ctx)) // track 1
+	queued := &connectpb.ContextTrack{Uri: "spotify:track:queued", Uid: "q0"}
+	suite.list.AddToQueue(queued)
+	suite.Require().True(suite.list.GoNext(ctx))
+	suite.Require().Equal("spotify:track:queued", suite.list.current().Uri)
+
+	suite.Require().True(suite.list.GoPrev())
+	suite.Equal(trackUri(1), suite.list.current().Uri)
+	suite.Require().True(suite.list.GoNext(ctx))
+	suite.Equal("spotify:track:queued", suite.list.current().Uri)
+}
+
 func TestTrackListInternalSuite(t *testing.T) {
 	suite.Run(t, new(TrackListInternalSuite))
 }

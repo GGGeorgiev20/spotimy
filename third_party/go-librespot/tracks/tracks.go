@@ -379,8 +379,11 @@ func (tl *List) GoNext(ctx context.Context) bool {
 }
 
 func (tl *List) GoPrev() bool {
+	// Back from a queued track is the context track played before it, which
+	// is where the context still stands; the queued track stays next.
 	if tl.playingQueue {
 		tl.playingQueue = false
+		return true
 	}
 
 	iter := tl.tracks.iterHere()
