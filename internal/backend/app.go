@@ -299,6 +299,12 @@ func (a *App) do(typ daemon.ApiRequestType, data any) (any, error) {
 	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
 	defer cancel()
 	res, err := a.player.Do(ctx, typ, data)
+	// A newer command took its place: that is what was asked for last, so
+	// this one didn't fail.
+	if errors.Is(err, daemon.ErrSuperseded) {
+		a.log.Debug("player request superseded", "type", typ)
+		return res, nil
+	}
 	if err != nil && !errors.Is(err, daemon.ErrNoSession) {
 		a.log.Warn("player request failed", "type", typ, "err", err)
 	} else if typ != daemon.ApiRequestTypeStatus {
