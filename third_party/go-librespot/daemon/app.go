@@ -546,6 +546,9 @@ func (app *App) withAppPlayer(ctx context.Context, appPlayerFunc func(context.Co
 		}()
 
 		appPlayer.Run(app.server.Receive(), app.mpris.Receive())
+		// Run returns as soon as Close starts; wait for it to finish, so that
+		// the listen of the track playing reaches Spotify before the app exits.
+		appPlayer.Close()
 
 		select {
 		case <-sessionLost:

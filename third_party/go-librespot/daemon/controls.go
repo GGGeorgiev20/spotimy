@@ -1792,6 +1792,13 @@ func (p *AppPlayer) stopPlayback() {
 	p.loadInFlight = false
 	p.pendingPlayerEvents = nil
 
+	// The track stops being listened to here, whether it was handed to another
+	// device or just stopped; left open, its listen would count on as played
+	// until whatever this device plays next.
+	if p.primaryStream != nil {
+		p.sess.Events().OnPrimaryStreamUnload(p.primaryStream, p.player.PositionMs())
+	}
+
 	p.player.Stop()
 	p.primaryStream = nil
 	p.secondaryStream = nil
