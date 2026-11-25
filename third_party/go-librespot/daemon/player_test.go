@@ -20,6 +20,7 @@ import (
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/spclient"
 	"github.com/devgianlu/go-librespot/tracks"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
@@ -815,4 +816,22 @@ func TestSlowContextStartsTrackFromTheTop(t *testing.T) {
 	runQueuedJob(t, p)
 
 	require.Contains(t, log.lines, "loading track (paused: false, position: 0ms)")
+}
+
+// The track playing ending while a context resolves to replace it doesn't
+// advance the old context, which would throw the new one away as superseded.
+func TestTrackEndingDuringPlayKeepsThePlay(t *testing.T) {
+	p := newTestAppPlayer(t)
+	p.app.cfg = &Config{DisableAutoplay: true}
+	events := player.NewMockEventManager(t)
+	events.EXPECT().OnPlayerEnd(mock.Anything, mock.Anything).Maybe()
+	p.sess = session.NewWithEvents(events)
+	p.state.player.Track = &connectpb.ProvidedTrack{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE"}
+	p.loadGen = 7
+	p.resolvingGen = 7
+
+	p.handlePlayerEvent(&player.Event{Type: player.EventTypeNotPlaying})
+
+	require.Empty(t, p.loader.queue)
+	require.Equal(t, uint64(7), p.loadGen)
 }

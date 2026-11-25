@@ -299,6 +299,11 @@ func (p *AppPlayer) handlePlayerEvent(ev *player.Event) {
 			return
 		}
 
+		// A context asked for is about to replace this one.
+		if p.resolvingGen != 0 && p.resolvingGen == p.loadGen {
+			return
+		}
+
 		p.advanceNext(false, false, 0, func(hasNextTrack bool, err error) {
 			if err != nil {
 				p.app.log.WithError(err).Error("failed advancing to next track")
@@ -384,6 +389,7 @@ func (p *AppPlayer) loadContext(spotCtx *connectpb.Context, skipTo skipToFunc, p
 
 	shuffle := p.state.player.Options.ShufflingContext
 	p.loadGen++
+	p.resolvingGen = p.loadGen
 
 	// Starting a context leaves the queue alone, as the official clients do.
 	// In a Jam it holds what the participants added, and the host starting a
@@ -402,8 +408,11 @@ func (p *AppPlayer) loadContext(spotCtx *connectpb.Context, skipTo skipToFunc, p
 			list, snap, err := resolveContext(ctx, p.app.log, p.sess.Spclient(), spotCtx, skipTo, shuffle, queued)
 			if err != nil {
 				return loaderResult{
-					err:    err,
-					commit: func(_ *AppPlayer, err error) { then(err) },
+					err: err,
+					commit: func(p *AppPlayer, err error) {
+						p.resolvingGen = 0
+						then(err)
+					},
 				}
 			}
 

@@ -76,6 +76,12 @@ type AppPlayer struct {
 	loadInFlight        bool
 	pendingPlayerEvents []player.Event
 
+	// resolvingGen is the loadGen of a context being resolved to play, zero
+	// when there is none. The track playing ending meanwhile doesn't advance
+	// the context it is about to replace: that would bump loadGen and throw
+	// the play away as superseded.
+	resolvingGen uint64
+
 	// lastSkipAt is when the previous next or prev was pressed; a press that
 	// follows it within SkipDebounce is part of a burst.
 	lastSkipAt time.Time
@@ -825,6 +831,7 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 		}
 
 		p.loadGen++
+		p.resolvingGen = p.loadGen
 		p.loader.submit(loaderJob{
 			name:  "resolve " + data.Uri,
 			class: classLoad,
@@ -833,7 +840,10 @@ func (p *AppPlayer) handleApiRequest(req ApiRequest) (any, error) {
 			run: func(ctx context.Context) loaderResult {
 				spotCtx, err := p.sess.Spclient().ContextResolve(ctx, data.Uri)
 				if err != nil {
-					return loaderResult{err: fmt.Errorf("failed resolving context: %w", err)}
+					return loaderResult{
+						err:    fmt.Errorf("failed resolving context: %w", err),
+						commit: func(p *AppPlayer, _ error) { p.resolvingGen = 0 },
+					}
 				}
 
 				return loaderResult{commit: func(p *AppPlayer, err error) {
