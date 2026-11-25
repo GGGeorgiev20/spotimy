@@ -4,8 +4,13 @@ package spclient
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	librespot "github.com/devgianlu/go-librespot"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
@@ -86,5 +91,42 @@ func TestStationTracksWithoutMetadata(t *testing.T) {
 	}
 	if r.ctx.Pages[0].Tracks[0].Metadata["autoplay.is_autoplay"] != "true" {
 		t.Error("not marked autoplay")
+	}
+}
+
+// An artist's album pages, all listed up front, are fetched a few at a time
+// rather than one after another.
+func TestPrefetchPagesInParallel(t *testing.T) {
+	var inFlight, most atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := inFlight.Add(1)
+		defer inFlight.Add(-1)
+		for m := most.Load(); n > m && !most.CompareAndSwap(m, n); m = most.Load() {
+		}
+		time.Sleep(20 * time.Millisecond)
+		_, _ = w.Write([]byte(`{"tracks":[{"uri":"spotify:track:3j7BhP71ROCpc9R3w9P9UE"}]}`))
+	}))
+	defer srv.Close()
+	base, _ := url.Parse(srv.URL + "/")
+	sp := &Spclient{log: &librespot.NullLogger{}, client: srv.Client(), baseUrl: base,
+		accessToken: func(context.Context, bool) (string, error) { return "t", nil }}
+	spotCtx := &connectpb.Context{Uri: "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb", Pages: []*connectpb.ContextPage{{Tracks: []*connectpb.ContextTrack{{Uri: "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn"}}}}}
+	for i := range 20 {
+		spotCtx.Pages = append(spotCtx.Pages, &connectpb.ContextPage{PageUrl: fmt.Sprintf("hm://artistplaycontext/v1/page/%d", i)})
+	}
+	r, err := NewContextResolver(context.Background(), &librespot.NullLogger{}, sp, spotCtx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r.PrefetchPages(context.Background(), 256)
+
+	for i, p := range r.ctx.Pages {
+		if len(p.Tracks) == 0 {
+			t.Fatalf("page %d not loaded", i)
+		}
+	}
+	if most.Load() < 2 {
+		t.Errorf("pages were fetched one at a time")
 	}
 }

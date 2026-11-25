@@ -7,6 +7,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 
 	librespot "github.com/devgianlu/go-librespot"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
@@ -227,4 +228,38 @@ func (r *ContextResolver) Page(ctx context.Context, idx int) ([]*connectpb.Conte
 	}
 
 	return page.Tracks, nil
+}
+
+// PrefetchPages loads up to max of the pages whose url is already known, a
+// few at a time. An artist's context lists every album as such a page, and a
+// walk of all of it (to shuffle it) fetched them one after another: dozens of
+// round trips, seconds, before anything played. A page that fails is left for
+// Page to fetch again.
+func (r *ContextResolver) PrefetchPages(ctx context.Context, max int) {
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 8)
+	pages := r.ctx.Pages[:min(len(r.ctx.Pages), max)]
+	loaded := make([]*connectpb.ContextPage, len(pages))
+	for i, page := range pages {
+		if len(page.Tracks) > 0 || len(page.PageUrl) == 0 {
+			continue
+		}
+		wg.Go(func() {
+			select {
+			case sem <- struct{}{}:
+			case <-ctx.Done():
+				return
+			}
+			defer func() { <-sem }()
+			if p, err := r.loadPage(ctx, page.PageUrl); err == nil && len(p.Tracks) > 0 {
+				loaded[i] = p
+			}
+		})
+	}
+	wg.Wait()
+	for i, p := range loaded {
+		if p != nil {
+			r.ctx.Pages[i] = p
+		}
+	}
 }

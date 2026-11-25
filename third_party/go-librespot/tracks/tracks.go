@@ -509,6 +509,12 @@ func (tl *List) ToggleShuffle(ctx context.Context, shuffle bool) error {
 		// the command that asked for the shuffle never returns.
 		walkCtx, cancel := context.WithTimeout(ctx, seekWalkTimeout)
 
+		if p, ok := tl.ctx.(interface {
+			PrefetchPages(context.Context, int)
+		}); ok {
+			p.PrefetchPages(walkCtx, seekMaxPages)
+		}
+
 		iter := tl.tracks.iterStart()
 		for iter.next(walkCtx) {
 			if pageIdx := iter.get().pageIdx; pageIdx >= seekMaxPages {
