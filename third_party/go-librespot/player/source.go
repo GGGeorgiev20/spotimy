@@ -211,7 +211,19 @@ func (s *SwitchingAudioSource) readDirect(p []float32) (n int, err error) {
 		s.cond.Wait()
 	}
 
-	n, err = s.source[s.which].Read(p)
+	// The lock is let go of while the source reads: a read waits on the
+	// network when a chunk is slow to come (minutes, retries included), and
+	// the player's position, skips and pauses would all wait with it.
+	src := s.source[s.which]
+	s.cond.L.Unlock()
+	n, err = src.Read(p)
+	s.cond.L.Lock()
+	if s.source[s.which] != src {
+		// Replaced meanwhile: what was read belongs to the stream skipped
+		// away from.
+		return 0, nil
+	}
+
 	if errors.Is(err, io.EOF) {
 		// notify this source is done
 		s.reportDone()

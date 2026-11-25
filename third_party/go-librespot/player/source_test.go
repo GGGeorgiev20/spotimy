@@ -772,3 +772,44 @@ func TestSetCrossfadeWaitsForTrackChange(t *testing.T) {
 		t.Fatalf("after the track change: crossfade %d pending %d", s.crossfadeSamples, s.pendingCrossfade)
 	}
 }
+
+// stallingSource blocks in Read, as a decoder waiting on a slow chunk does.
+type stallingSource struct{ reading, release chan struct{} }
+
+func (s *stallingSource) Read(p []float32) (int, error) {
+	close(s.reading)
+	<-s.release
+	return len(p), nil
+}
+func (s *stallingSource) SetPositionMs(int64) error { return nil }
+func (s *stallingSource) PositionMs() int64         { return 1000 }
+
+// A read stalled on the network holds up neither the position nor a skip,
+// and what it read once it returns isn't played over the track skipped to.
+func TestStalledReadDoesNotBlock(t *testing.T) {
+	s := NewSwitchingAudioSource(0)
+	stalled := &stallingSource{reading: make(chan struct{}), release: make(chan struct{})}
+	s.SetPrimary(stalled)
+	read := make(chan int)
+	go func() {
+		n, _ := s.Read(make([]float32, 256))
+		read <- n
+	}()
+	<-stalled.reading
+
+	done := make(chan struct{})
+	go func() {
+		s.PositionMs()
+		s.SetPrimary(rampSource(1024, 0, 0))
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("the position and a skip waited on the stalled read")
+	}
+	close(stalled.release)
+	if n := <-read; n != 0 {
+		t.Errorf("the skipped-from stream's %d samples were played", n)
+	}
+}
