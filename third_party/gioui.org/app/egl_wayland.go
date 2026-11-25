@@ -49,8 +49,15 @@ func init() {
 			return nil, err
 		}
 		// We're in charge of the frame callbacks, don't let eglSwapBuffers
-		// wait for callbacks that may never arrive.
-		ctx.EnableVSync(false)
+		// wait for callbacks that may never arrive. The swap interval is the
+		// current surface's, so the surface has to be made current first: set
+		// without one, it fails and the interval stays 1, and then a swap made
+		// while the window is minimized waits for good on a frame callback the
+		// compositor never sends a hidden window, freezing its event loop.
+		if ctx.MakeCurrent() == nil {
+			ctx.EnableVSync(false)
+			ctx.ReleaseCurrent()
+		}
 
 		return &wlContext{Context: ctx, win: w, eglWin: eglWin}, nil
 	}

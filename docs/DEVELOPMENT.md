@@ -50,6 +50,8 @@ go-librespot is vendored in `third_party/go-librespot` (go.mod replaces the modu
 
 Its own tests run with `cd third_party/go-librespot && go test -tags test_unit ./...`.
 
+Gio is vendored in `third_party/gioui.org` the same way, patched so that on Wayland a minimized window doesn't freeze: Gio turned off the swap interval before making the window's surface current, which fails, so the first frame drawn while minimized waited in eglSwapBuffers for a frame callback the compositor never sends a hidden window. The event loop stopped with it, so the window couldn't even be closed, and logging out of KDE killed the app after 40 seconds.
+
 `cmd/spdev` is a development tool. It logs in with the credentials the app stored and calls the internal API directly. Use it to probe variables, capture fixtures, or check a broken operation:
 
 ```bash
