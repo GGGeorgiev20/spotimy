@@ -50,7 +50,8 @@ const (
 type Impl struct{}
 
 func (Impl) NewEventManager(log librespot.Logger, store librespot.StateStore, _ *mercury.Client, sp *spclient.Spclient, _ string) (player.EventManager, error) {
-	m := &manager{log: log, sp: sp, sessionId: random(16), sequenceId: random(20), clock: time.Now()}
+	m := &manager{log: log, sp: sp, sessionId: random(16), sequenceId: random(20), clock: time.Now(), now: time.Now}
+	m.post = m.sendAsync
 	if store == nil {
 		return m, nil
 	}
@@ -73,6 +74,8 @@ type manager struct {
 
 	sessionId, sequenceId []byte
 	clock                 time.Time // the monotonic clock's zero
+	now                   func() time.Time
+	post                  func(report) // hands a finished listen over to be sent
 
 	mu       sync.Mutex
 	sequence int64
@@ -119,9 +122,15 @@ func (m *manager) track(stream *player.Stream, ctxUri string, shuffle bool) *lis
 		return m.cur
 	}
 	m.finish(m.cur, "endplay")
+	// How the previous track ended is how this one started, as in the
+	// official clients, except that a track picked over another one (which
+	// ends it with "endplay") starts with "clickrow".
 	start := m.lastEnd
-	if start == "" {
+	switch start {
+	case "":
 		start = "playbtn"
+	case "endplay":
+		start = "clickrow"
 	}
 	m.cur = &listen{stream: stream, context: ctxUri, shuffle: shuffle, reasonStart: start}
 	return m.cur
@@ -139,17 +148,28 @@ func (m *manager) finish(l *listen, reason string) {
 		reason = l.reasonEnd
 	}
 	m.lastEnd = reason
-	now := time.Now()
+	now := m.now()
 	l.pause(now)
 	if l.played <= 0 || l.stream == nil || l.stream.Media == nil || l.stream.File == nil {
 		return
 	}
 	m.sequence++
+	// A track Spotify relinked to another (a regional version) is reported as
+	// the track asked for, as the official clients do, so its plays count where
+	// it shows; the audio is the relinked one's.
+	id := l.stream.RequestedId
+	if len(id.Id()) == 0 {
+		id = l.stream.Media.Id()
+	}
 	ev := report{
-		id: l.stream.Media.Id(), file: l.stream.File, context: l.context, shuffle: l.shuffle,
+		id: id, audio: l.stream.Media.Id(), file: l.stream.File, context: l.context, shuffle: l.shuffle,
 		started: l.started, ended: now, played: l.played, reasonStart: l.reasonStart, reasonEnd: reason,
 		sequence: m.sequence,
 	}
+	m.post(ev)
+}
+
+func (m *manager) sendAsync(ev report) {
 	m.sending.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -164,19 +184,19 @@ func (m *manager) finish(l *listen, reason string) {
 func (m *manager) OnPlayerPlay(stream *player.Stream, ctxUri string, shuffle bool, _ *connectpb.PlayOrigin, _ *connectpb.ProvidedTrack, _ int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.track(stream, ctxUri, shuffle).resume(time.Now())
+	m.track(stream, ctxUri, shuffle).resume(m.now())
 }
 
 func (m *manager) OnPlayerResume(stream *player.Stream, _ int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.track(stream, "", false).resume(time.Now())
+	m.track(stream, "", false).resume(m.now())
 }
 
 func (m *manager) OnPlayerPause(stream *player.Stream, ctxUri string, shuffle bool, _ *connectpb.PlayOrigin, _ *connectpb.ProvidedTrack, _ int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.track(stream, ctxUri, shuffle).pause(time.Now())
+	m.track(stream, ctxUri, shuffle).pause(m.now())
 }
 
 func (m *manager) OnPlayerSkipForward(stream *player.Stream, _ int64, _ bool) {
@@ -236,7 +256,7 @@ func (m *manager) OnPlayerSeek(*player.Stream, int64, int64)                    
 
 // report is a finished listen, ready to send.
 type report struct {
-	id                     librespot.SpotifyId
+	id, audio              librespot.SpotifyId // the track listened to, and the one whose audio played
 	file                   *metadatapb.AudioFile
 	context                string
 	shuffle                bool
@@ -273,7 +293,7 @@ func (m *manager) send(ctx context.Context, r report) error {
 		return fmt.Errorf("unreported audio format %s", r.file.GetFormat())
 	}
 	var files audiofilespb.AudioFilesExtensionResponse
-	if err := m.sp.ExtendedMetadataSimple(ctx, r.id, extmetadatapb.ExtensionKind_AUDIO_FILES, &files); err != nil {
+	if err := m.sp.ExtendedMetadataSimple(ctx, r.audio, extmetadatapb.ExtensionKind_AUDIO_FILES, &files); err != nil {
 		return fmt.Errorf("audio id: %w", err)
 	}
 	if len(files.AudioId) == 0 {

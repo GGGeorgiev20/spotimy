@@ -6,7 +6,10 @@ import (
 	"testing"
 
 	"github.com/devgianlu/go-librespot/dealer"
+	"github.com/devgianlu/go-librespot/player"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
+	"github.com/devgianlu/go-librespot/session"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
@@ -88,6 +91,21 @@ func TestPlayYieldsWhenTheOldDevicePlaysAgain(t *testing.T) {
 // Another device taking over reports a state newer than the play's.
 func TestPlayYieldsToAThirdDevice(t *testing.T) {
 	p := playOverOtherDevice(t, 1000)
+
+	require.NoError(t, p.handleDealerMessage(clusterMessage(t, thirdDevice, 1500)))
+
+	require.False(t, p.state.active)
+}
+
+// Another device taking over ends the listen of the track playing here, or it
+// would count as played until this device played something else.
+func TestTransferAwayEndsTheListen(t *testing.T) {
+	p := playOverOtherDevice(t, 1000)
+	events := player.NewMockEventManager(t)
+	p.sess = session.NewWithEvents(events)
+	stream := &player.Stream{}
+	p.primaryStream = stream
+	events.EXPECT().OnPrimaryStreamUnload(stream, mock.Anything).Once()
 
 	require.NoError(t, p.handleDealerMessage(clusterMessage(t, thirdDevice, 1500)))
 
