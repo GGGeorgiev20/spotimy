@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/GGGeorgiev20/personal-spotify/internal/imgcache"
@@ -81,7 +82,8 @@ type App struct {
 	mu         sync.Mutex
 	settings   Settings
 	connect    *spotify.Connect
-	connecting bool // startConnect is running
+	connecting bool        // startConnect is running
+	played     atomic.Bool // something was played: the startup resume stands back
 	state      player.State
 	stateErr   string
 	loginURL   string

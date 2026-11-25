@@ -224,6 +224,7 @@ func (a *App) cmd(endpoint string, fields map[string]any) error {
 // entry's uid in a playlist, picks out which copy of a track was meant, and
 // finds one listed under its relinked uri.
 func (a *App) Play(uri, skipToURI, skipToUID string) error {
+	a.played.Store(true)
 	if a.sandboxed("Play", uri, skipToURI) {
 		a.fakePlay(uri, skipToURI)
 		return nil
@@ -544,7 +545,9 @@ func (a *App) Resume(last LastPlayback) error {
 	if cn.State().ActiveDevice != "" {
 		return nil
 	}
-	if s, err := a.Status(); err != nil || s.Track != nil {
+	// Something asked for meanwhile wins: it may still be loading, with no
+	// track to show for it yet, and the paused resume would replace it.
+	if s, err := a.Status(); err != nil || s.Track != nil || a.played.Load() {
 		return err
 	}
 	if _, err := a.do(daemon.ApiRequestTypePlay, resumePlay(last)); err != nil {
