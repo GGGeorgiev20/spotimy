@@ -111,3 +111,14 @@ func TestTransferAwayEndsTheListen(t *testing.T) {
 
 	require.False(t, p.state.active)
 }
+
+// Spotify naming no device active is it letting go of an idle session, not a
+// transfer: the paused track stays, so play carries on with it.
+func TestNoActiveDeviceKeepsTheTrack(t *testing.T) {
+	p := playOverOtherDevice(t, 1000)
+	p.state.setPaused(true)
+
+	require.NoError(t, p.handleDealerMessage(clusterMessage(t, "", 5000)))
+
+	require.True(t, p.state.active, "a paused track left alone isn't taken away")
+}

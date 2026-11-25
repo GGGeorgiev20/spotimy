@@ -266,6 +266,18 @@ func (p *AppPlayer) handleDealerMessage(msg dealer.Message) error {
 			p.state.lastClusterTimestamp = clusterUpdate.Cluster.GetPlayerState().GetTimestamp()
 		}
 
+		// No device active at all is Spotify letting go of an idle session (a
+		// track left paused a while, or a connection that dropped), not
+		// playback moving to another device: keep the track, so that play
+		// carries on with it, as the official clients do. Still playing, say
+		// so again.
+		if p.state.active && clusterUpdate.Cluster.ActiveDeviceId == "" {
+			if !p.state.player.IsPaused {
+				p.pushState(connectpb.PutStateReason_PLAYER_STATE_CHANGED)
+			}
+			return nil
+		}
+
 		otherActive := p.state.active && clusterUpdate.Cluster.ActiveDeviceId != p.app.deviceId
 		stopBeingActive := otherActive && clusterUpdate.Cluster.PlayerState.Timestamp > p.state.activationTimestamp
 
@@ -278,7 +290,7 @@ func (p *AppPlayer) handleDealerMessage(msg dealer.Message) error {
 			return nil
 		}
 
-		name := "<unknown>"
+		name := "<unknown> " + clusterUpdate.Cluster.ActiveDeviceId
 		if device := clusterUpdate.Cluster.Device[clusterUpdate.Cluster.ActiveDeviceId]; device != nil {
 			name = device.Name
 		}
