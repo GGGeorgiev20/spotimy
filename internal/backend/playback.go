@@ -39,30 +39,64 @@ type PlayerStatus struct {
 	VolumeMax     int       `json:"volumeMax"`
 }
 
+// startConnect connects to Spotify Connect, trying again until it can, and
+// again whenever the connection is lost for good (the dealer gives up after a
+// long time offline): without it the queue and devices go stale.
 func (a *App) startConnect() {
 	a.mu.Lock()
-	running := a.connect != nil
-	a.mu.Unlock()
-	if running {
+	if a.connect != nil || a.connecting {
+		a.mu.Unlock()
 		return
 	}
+	a.connecting = true
+	a.mu.Unlock()
+	defer func() {
+		a.mu.Lock()
+		a.connecting = false
+		a.mu.Unlock()
+	}()
+
 	if _, err := a.sp.Me(a.ctx); err != nil { // ownership checks and playlist edits need the user
 		a.log.Warn("profile unavailable", "err", err)
 	}
-	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
-	defer cancel()
 	id := a.player.DeviceID()
 	if a.opts.Sandbox {
 		id = a.deviceID
 	}
-	cn, err := a.sp.StartConnect(ctx, id, a.emitPlayer)
-	if err != nil {
-		a.log.Warn("connect unavailable; remote devices won't show", "err", err)
-		return
+	for wait := 5 * time.Second; ; wait = min(wait*2, time.Minute) {
+		ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+		cn, err := a.sp.StartConnect(ctx, id, a.emitPlayer)
+		cancel()
+		if err == nil {
+			a.mu.Lock()
+			a.connect = cn
+			a.mu.Unlock()
+			go a.reconnectWhenLost(cn)
+			return
+		}
+		a.log.Warn("connect unavailable; remote devices won't show", "err", err, "retry", wait)
+		select {
+		case <-time.After(wait):
+		case <-a.ctx.Done():
+			return
+		}
 	}
+}
+
+// reconnectWhenLost starts Connect again once cn is over, unless it was
+// closed on purpose.
+func (a *App) reconnectWhenLost(cn *spotify.Connect) {
+	<-cn.Done()
 	a.mu.Lock()
-	a.connect = cn
+	lost := a.connect == cn
+	if lost {
+		a.connect = nil
+	}
 	a.mu.Unlock()
+	if lost && a.ctx.Err() == nil {
+		a.log.Warn("connect lost; reconnecting")
+		a.startConnect()
+	}
 }
 
 func (a *App) stopConnect() {

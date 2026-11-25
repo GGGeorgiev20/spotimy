@@ -78,12 +78,13 @@ type App struct {
 	// coverColors caches CoverColor by image URL.
 	coverColors sync.Map
 
-	mu       sync.Mutex
-	settings Settings
-	connect  *spotify.Connect
-	state    player.State
-	stateErr string
-	loginURL string
+	mu         sync.Mutex
+	settings   Settings
+	connect    *spotify.Connect
+	connecting bool // startConnect is running
+	state      player.State
+	stateErr   string
+	loginURL   string
 
 	// Sandbox only.
 	deviceID string

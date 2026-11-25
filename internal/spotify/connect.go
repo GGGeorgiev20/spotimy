@@ -37,6 +37,7 @@ type Connect struct {
 	cluster *connectpb.Cluster
 	dealer  *dealer.Dealer
 	cancel  context.CancelFunc
+	done    chan struct{} // closed once the dealer is gone for good
 }
 
 // StartConnect connects the dealer and registers the observer. playerID is the
@@ -49,7 +50,7 @@ func (c *Client) StartConnect(ctx context.Context, playerID string, onChange fun
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
 	cn := &Connect{
-		c: c, log: c.log, self: "hobs_" + playerID, playerID: playerID, onChange: onChange, cancel: cancel,
+		c: c, log: c.log, self: "hobs_" + playerID, playerID: playerID, onChange: onChange, cancel: cancel, done: make(chan struct{}),
 		dealer: dealer.NewDealer(&librespot.NullLogger{}, c.http, addr, func(ctx context.Context, force bool) (string, error) {
 			return c.bearerToken(ctx, force)
 		}),
@@ -67,7 +68,12 @@ func (cn *Connect) Close() {
 	cn.dealer.Close()
 }
 
+// Done is closed when the connection is over: closed, or the dealer gave up
+// reconnecting.
+func (cn *Connect) Done() <-chan struct{} { return cn.done }
+
 func (cn *Connect) run(ctx context.Context) {
+	defer close(cn.done)
 	msgs := cn.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/cluster")
 	for {
 		select {
