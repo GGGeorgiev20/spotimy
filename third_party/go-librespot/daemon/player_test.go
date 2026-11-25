@@ -15,6 +15,7 @@ import (
 	"github.com/devgianlu/go-librespot/dealer"
 	"github.com/devgianlu/go-librespot/mpris"
 	"github.com/devgianlu/go-librespot/player"
+	"github.com/devgianlu/go-librespot/session"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/spclient"
@@ -783,4 +784,35 @@ func TestFailedLoadLeavesTheTrackPausedAndPlayRetries(t *testing.T) {
 	require.True(t, p.state.player.IsBuffering, "loading it again")
 	require.False(t, p.state.player.IsPaused)
 	require.Len(t, p.loader.queue, 1)
+}
+
+// debugLog keeps what was logged at debug level.
+type debugLog struct {
+	librespot.NullLogger
+	lines []string
+}
+
+func (l *debugLog) Debugf(format string, args ...interface{}) {
+	l.lines = append(l.lines, fmt.Sprintf(format, args...))
+}
+func (l *debugLog) WithField(string, interface{}) librespot.Logger { return l }
+
+// A context that takes a while to resolve still starts its track from the
+// beginning: the wait isn't playing time.
+func TestSlowContextStartsTrackFromTheTop(t *testing.T) {
+	p := newTestAppPlayer(t)
+	log := &debugLog{}
+	p.app.log = log
+	p.app.cfg = &Config{}
+	p.sess = session.NewWithEvents(player.NewMockEventManager(t))
+	spotCtx := &connectpb.Context{
+		Uri:   "spotify:album:3KIlhMEiSYNn8VD7e6yglU",
+		Pages: []*connectpb.ContextPage{{Tracks: []*connectpb.ContextTrack{{Uri: "spotify:track:3j7BhP71ROCpc9R3w9P9UE", Uid: "u0"}}}},
+	}
+
+	p.loadContext(spotCtx, nil, false, false, func(error) {})
+	p.state.player.Timestamp -= 2000 // resolving took two seconds
+	runQueuedJob(t, p)
+
+	require.Contains(t, log.lines, "loading track (paused: false, position: 0ms)")
 }

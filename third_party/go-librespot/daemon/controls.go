@@ -414,6 +414,11 @@ func (p *AppPlayer) loadContext(spotCtx *connectpb.Context, skipTo skipToFunc, p
 					p.publishSnapshot(snap)
 					p.scheduleContextMetaPrefetch(spotCtx.Uri)
 
+					// The track starts now, not when the context was asked for:
+					// counted from then, the time it took to resolve would be
+					// taken for playing and the track would start that far in.
+					p.state.player.Timestamp = time.Now().UnixMilli()
+
 					// skip forward if the track it landed on (or a run of them) is unplayable.
 					p.loadCurrentTrackOrSkip(paused, drop, true, func(err error) {
 						if err != nil {
