@@ -430,6 +430,14 @@ func (d *Decoder) SetPositionMs(pos int64) (err error) {
 	return nil
 }
 
+// PositionMs is how far into the track what has been read reaches: the end of
+// the last page decoded, less its samples not read yet. Counting those ran a
+// page (~0.2s) ahead, and every resume, which seeks back to the position
+// paused at, skipped that much.
 func (d *Decoder) PositionMs() int64 {
-	return int64(vorbis.GranuleTime(&d.dspState, d.lastGranulepos) * 1000)
+	pos := int64(vorbis.GranuleTime(&d.dspState, d.lastGranulepos) * 1000)
+	if d.Channels > 0 && d.SampleRate > 0 {
+		pos -= int64(len(d.buf)) / int64(d.Channels) * 1000 / int64(d.SampleRate)
+	}
+	return max(pos, 0)
 }

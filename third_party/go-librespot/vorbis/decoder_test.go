@@ -93,3 +93,27 @@ func TestSeekStartsClean(t *testing.T) {
 	}
 	t.Fatal("audio after the seek isn't the track's")
 }
+
+// The position is how far reading has got, not the end of the page decoded.
+func TestPositionIsWhatWasRead(t *testing.T) {
+	data, err := os.ReadFile("testdata/tone-1s.ogg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := New(&librespot.NullLogger{}, io.NewSectionReader(bytes.NewReader(data), 0, int64(len(data))), nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	buf := make([]float32, 2*22050) // half a second of stereo
+	for read := 0; read < len(buf); {
+		n, err := d.Read(buf[read:])
+		if err != nil {
+			t.Fatal(err)
+		}
+		read += n
+	}
+	if pos := d.PositionMs(); pos < 490 || pos > 510 {
+		t.Errorf("half a second read, position %dms", pos)
+	}
+}

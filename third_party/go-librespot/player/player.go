@@ -431,7 +431,9 @@ loop:
 						delay = 0
 					}
 
-					cmd.resp <- pos - delay
+					// Just after a gapless switch the source is a moment into
+					// the next track while the output still plays this one.
+					cmd.resp <- max(pos-delay, 0)
 				} else {
 					cmd.resp <- pos
 				}
