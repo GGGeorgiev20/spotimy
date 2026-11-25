@@ -6,6 +6,7 @@ import (
 	"errors"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -517,5 +518,47 @@ func TestTrackEndDroppedWhenAnotherStreamIsSet(t *testing.T) {
 	case ev := <-p.Receive():
 		t.Fatalf("the old track's end arrived after the new stream was set: %v", ev.Type)
 	case <-time.After(400 * time.Millisecond):
+	}
+}
+
+// failingOutput won't start playing.
+type failingOutput struct{ recordingOutput }
+
+func (o *failingOutput) Resume() error { return errors.New("server gone") }
+
+// An output that won't resume is let go of and reported as failed, so the
+// next play opens a new one instead of "resuming" with none, in silence.
+func TestOutputThatWontResumeIsReplaced(t *testing.T) {
+	out := &failingOutput{}
+	var opened atomic.Int32
+	p := &Player{
+		log: &librespot.NullLogger{}, cmd: make(chan playerCmd), ev: make(chan Event, 128), closed: make(chan struct{}),
+		newOutput: func(reader librespot.Float32Reader, volume float32, device string) (output.Output, error) {
+			opened.Add(1)
+			return out, nil
+		},
+	}
+	go p.manageLoop()
+	t.Cleanup(p.Close)
+	if err := p.SetPrimaryStream(rampSource(44100*2, 0, 0), true, false); err != nil {
+		t.Fatal(err)
+	}
+	<-p.Receive() // paused
+	if err := p.Play(); err == nil {
+		t.Fatal("play succeeded on an output that won't start")
+	}
+	select {
+	case ev := <-p.Receive():
+		if ev.Type != EventTypeStop || ev.Err == nil {
+			t.Fatalf("expected a failed stop, got %v", ev)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the failed resume wasn't reported")
+	}
+	if err := p.SetPrimaryStream(rampSource(44100*2, 0, 0), true, false); err != nil {
+		t.Fatal(err)
+	}
+	if n := opened.Load(); n != 2 {
+		t.Errorf("outputs opened: %d, want a new one", n)
 	}
 }

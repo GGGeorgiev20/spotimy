@@ -354,6 +354,11 @@ loop:
 					}
 				} else {
 					if err := out.Resume(); err != nil {
+						// An output that won't start is let go of: the next
+						// stream opens a new one rather than fail on it again.
+						_ = out.Close()
+						out = nil
+						outErr = make(<-chan error)
 						cmd.resp <- err
 						break
 					}
@@ -371,7 +376,14 @@ loop:
 			case playerCmdPlay:
 				if out != nil {
 					if err := out.Resume(); err != nil {
+						// Reported as the output failing: the daemon then lets
+						// go of the stream, and play loads it again on a new
+						// output rather than "resume" with none.
+						_ = out.Close()
+						out = nil
+						outErr = make(<-chan error)
 						cmd.resp <- err
+						p.ev <- Event{Type: EventTypeStop, StreamGen: p.streamGen.Load(), Err: err}
 					} else {
 						paused = false
 						cmd.resp <- nil

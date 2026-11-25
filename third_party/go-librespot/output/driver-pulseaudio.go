@@ -1,10 +1,12 @@
 package output
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	librespot "github.com/devgianlu/go-librespot"
 	"github.com/jfreymuth/pulse"
@@ -25,6 +27,8 @@ type pulseAudioOutput struct {
 
 	// ended is set once the source has run out; see float32Reader.
 	ended atomic.Bool
+
+	done chan struct{} // closed by Close
 }
 
 func newPulseAudioOutput(opts *NewOutputOptions) (*pulseAudioOutput, error) {
@@ -49,6 +53,7 @@ func newPulseAudioOutput(opts *NewOutputOptions) (*pulseAudioOutput, error) {
 		client:               client,
 		externalVolumeUpdate: opts.VolumeUpdate,
 		err:                  make(chan error, 2),
+		done:                 make(chan struct{}),
 	}
 
 	// Create a new playback.
@@ -96,6 +101,8 @@ func newPulseAudioOutput(opts *NewOutputOptions) (*pulseAudioOutput, error) {
 	cvol, _ := out.stream.Volume()
 	out.volume = cvol.Avg()
 	sendVolumeUpdate(opts.VolumeUpdate, float32(out.volume.Norm()))
+
+	go out.watchServer()
 
 	// Listen for volume changes (through the volume mixer application, usually
 	// built into the desktop environment), and send them back to Spotify.
@@ -147,6 +154,38 @@ func (out *pulseAudioOutput) float32Reader(buf []float32) (int, error) {
 	return n, err
 }
 
+// watchServer reports the sound server going away (PipeWire restarted by an
+// update, say). The library only marks the stream lost and stops asking for
+// samples, so nothing else would: the output went on taking tracks and
+// playing none of them, silent until the app was restarted. Reported, the
+// output is closed, and the next track opens a new one.
+func (out *pulseAudioOutput) watchServer() {
+	tick := time.NewTicker(time.Second)
+	defer tick.Stop()
+	for {
+		select {
+		case <-out.done:
+			return
+		case <-tick.C:
+			if out.stream.Closed() {
+				select {
+				case out.err <- pulse.ErrConnectionClosed:
+				default:
+				}
+				return
+			}
+		}
+	}
+}
+
+// errNotStarted is a stream that didn't start playing in time.
+var errNotStarted = errors.New("pulseaudio: playback did not start")
+
+// startTimeout bounds how long Resume waits for playback to start. The library
+// waits for the server's word that it has, which never comes if the stream
+// fails first, and the player, waiting on Resume, would wait with it for good.
+const startTimeout = 10 * time.Second
+
 func (out *pulseAudioOutput) Pause() error {
 	if out.stream.Running() {
 		// Stop() will stop new samples from being requested, but will continue
@@ -180,8 +219,20 @@ func (out *pulseAudioOutput) Resume() error {
 		}
 		out.ended.Store(false)
 	}
-	out.stream.Start()
-	return nil
+	if out.stream.Closed() {
+		return pulse.ErrConnectionClosed
+	}
+	started := make(chan struct{})
+	go func() {
+		out.stream.Start()
+		close(started)
+	}()
+	select {
+	case <-started:
+		return nil
+	case <-time.After(startTimeout):
+		return errNotStarted
+	}
 }
 
 func (out *pulseAudioOutput) Drop() error {
@@ -232,6 +283,11 @@ func (out *pulseAudioOutput) Error() <-chan error {
 }
 
 func (out *pulseAudioOutput) Close() error {
+	select {
+	case <-out.done:
+	default:
+		close(out.done)
+	}
 	out.stream.Close()
 	out.client.Close()
 	return nil
