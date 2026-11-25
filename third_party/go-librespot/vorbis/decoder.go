@@ -128,13 +128,19 @@ func (d *Decoder) Close() {
 	d.decoderStateCleanup()
 }
 
+// decoderStateCleanup frees libvorbis state in the reverse of its making: the
+// block and the synthesis state read the stream info, so they go before it.
+// Freed the other way round, closing a decoder partway through a track aborted
+// the process in vorbis_dsp_clear.
 func (d *Decoder) decoderStateCleanup() {
-	vorbis.OggSyncClear(&d.syncState)
-	d.syncState.Free()
+	if d.block.Ref() != nil {
+		vorbis.BlockClear(&d.block)
+		d.block.Free()
+	}
 
-	if d.streamState.Ref() != nil {
-		vorbis.OggStreamClear(&d.streamState)
-		d.streamState.Free()
+	if d.dspState.Ref() != nil {
+		vorbis.DspClear(&d.dspState)
+		d.dspState.Free()
 	}
 
 	if d.comment.Ref() != nil {
@@ -147,15 +153,13 @@ func (d *Decoder) decoderStateCleanup() {
 		d.info.Free()
 	}
 
-	if d.dspState.Ref() != nil {
-		vorbis.DspClear(&d.dspState)
-		d.dspState.Free()
+	if d.streamState.Ref() != nil {
+		vorbis.OggStreamClear(&d.streamState)
+		d.streamState.Free()
 	}
 
-	if d.block.Ref() != nil {
-		vorbis.BlockClear(&d.block)
-		d.block.Free()
-	}
+	vorbis.OggSyncClear(&d.syncState)
+	d.syncState.Free()
 
 	d.packet.Free()
 	d.page.Free()
@@ -386,6 +390,14 @@ func (d *Decoder) SetPositionMs(pos int64) (err error) {
 	// the buffer will contain the correct page data
 	d.buf = nil
 	d.ended = false
+
+	// Start the stream over from the page found: left as they were, the sync
+	// buffer, the stream and the synthesis overlap the first block after the
+	// seek with what was decoded before it, garbling ~20ms of every seek (and
+	// so of every resume, which seeks).
+	vorbis.OggSyncReset(&d.syncState)
+	vorbis.OggStreamReset(&d.streamState)
+	vorbis.SynthesisRestart(&d.dspState)
 
 	// we trust that the bytes offset we were given is accurate and process the data at this point
 	if _, err = d.readChunk(); err != nil {

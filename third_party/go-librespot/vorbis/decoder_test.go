@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"slices"
 	"testing"
 
 	librespot "github.com/devgianlu/go-librespot"
@@ -39,4 +40,56 @@ func TestDecodesToTheEnd(t *testing.T) {
 	if frames := samples / 2; frames < 44100 || frames > 44100+2048 {
 		t.Errorf("decoded %d frames, want 44100", frames)
 	}
+}
+
+// Audio after a seek is the track's own: none of what was decoded before the
+// seek is blended into it.
+func TestSeekStartsClean(t *testing.T) {
+	data, err := os.ReadFile("testdata/tone-1s.ogg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	open := func() *Decoder {
+		m := &MetadataPage{seekSamples: 44100, seekSize: uint32(len(data)), seekTable: make([]int32, 100)}
+		for k := range m.seekTable {
+			m.seekTable[k] = int32((k + 1) * 65536 / 100)
+		}
+		d, err := New(&librespot.NullLogger{}, io.NewSectionReader(bytes.NewReader(data), 0, int64(len(data))), m, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(d.Close)
+		return d
+	}
+	read := func(d *Decoder, max int) []float32 {
+		var out []float32
+		buf := make([]float32, 1024)
+		for len(out) < max {
+			n, err := d.Read(buf)
+			out = append(out, buf[:n]...)
+			if err != nil {
+				break
+			}
+		}
+		return out
+	}
+
+	ref := read(open(), 1<<20)
+	d := open()
+	read(d, 30000) // decoding, as a playing track is
+	if err := d.SetPositionMs(500); err != nil {
+		t.Fatal(err)
+	}
+	got := read(d, 8192)
+	// Find where in the track the seek landed by its later samples, then
+	// compare from the first one.
+	for off := 0; off+len(got) <= len(ref); off += 2 {
+		if slices.Equal(ref[off+4096:off+len(got)], got[4096:]) {
+			if !slices.Equal(ref[off:off+4096], got[:4096]) {
+				t.Error("the samples right after the seek differ from the track's")
+			}
+			return
+		}
+	}
+	t.Fatal("audio after the seek isn't the track's")
 }
